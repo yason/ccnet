@@ -1,0 +1,242 @@
+/* -*- Mode: C; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
+ *
+ * Copyright (C) 2008, 2009 Lingtao Pan
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, 
+ * Boston, MA 02111-1307, USA.
+ */
+
+
+#ifndef CCNET_PEER_H
+#define CCNET_PEER_H
+
+
+#include <glib.h>
+#include <glib-object.h>
+#include <openssl/rsa.h>
+
+#include "processor.h"
+
+
+#define CCNET_TYPE_PEER                  (ccnet_peer_get_type ())
+#define CCNET_PEER(obj)                  (G_TYPE_CHECK_INSTANCE_CAST ((obj), CCNET_TYPE_PEER, CcnetPeer))
+#define CCNET_IS_PEER(obj)               (G_TYPE_CHECK_INSTANCE_TYPE ((obj), CCNET_TYPE_PEER))
+#define CCNET_PEER_CLASS(klass)          (G_TYPE_CHECK_CLASS_CAST ((klass), CCNET_TYPE_PEER, CcnetPeerClass))
+#define CCNET_IS_PEER_CLASS(klass)       (G_TYPE_CHECK_CLASS_TYPE ((klass), CCNET_TYPE_PEER))
+#define CCNET_PEER_GET_CLASS(obj)        (G_TYPE_INSTANCE_GET_CLASS ((obj), CCNET_TYPE_PEER, CcnetPeerClass))
+
+
+enum {
+    PEER_DOWN,
+    PEER_CONNECTED
+};
+
+enum {
+    BIND_UNKNOWN,
+    BIND_YES,
+    BIND_NO
+};
+
+typedef struct _CcnetPeer CcnetPeer;
+typedef struct _CcnetPeerClass CcnetPeerClass;
+
+
+struct CcnetPacketIO;
+
+#define NON_RESOLVED_PEERID  "0000000000000000000000000000000000000000"
+
+struct _CcnetUser;
+
+struct _CcnetPeer
+{
+    GObject       parent_instance;
+
+    /* fields from pubinfo */
+    char          id[41];
+
+    RSA          *pubkey;
+
+    char         *name;         /* hostname */
+    char         *public_addr;
+    uint16_t      public_port;  /* port from pubinfo */
+    char         *service_url;
+    gboolean      login_started;
+    char         *login_error;
+    gboolean      logout_started;
+
+    gint64        timestamp;    /* timestamp of public info */
+
+    /* fields not from pubinfo */
+    char         *addr_str;     /* hold dynamic ip */
+    uint16_t      port;
+
+    int           net_state;
+
+    GList        *role_list;
+    GList        *myrole_list;  /* my role on this peer */
+
+    char         *intend_role;  /* used in peer resolving */
+
+    unsigned int  in_nat : 1;
+    unsigned int  is_self : 1;
+    unsigned int  is_local : 1;
+    unsigned int  can_connect : 1;
+    unsigned int  in_local_network : 1;
+
+    unsigned int  is_ready : 1;
+    unsigned int  dns_done : 1;
+    unsigned int  need_saving : 1;
+    unsigned int  temp_flag : 1;
+
+    unsigned int  want_tobe_relay : 1; /* is the peer used as relay */
+    unsigned int  want_tobe_default_relay : 1; /* is the peer used as our default relay */
+
+    unsigned int  in_shutdown : 1;
+    unsigned int  in_writecb  : 1;
+    unsigned int  in_connection : 1;
+    unsigned int  keepalive_sending : 1;
+
+    unsigned int  to_resolve : 1; /* the peer's identity need to be resolved,
+                                   * we only have its IP address now.
+                                   */
+
+    unsigned int  cluster_member : 1;
+
+    struct CcnetPacketIO  *io;
+
+
+    int      last_net_state;
+
+    /* for connection management */
+    time_t   last_down;         /* for peer gc in relay */
+    time_t   last_try_time;     /* last time try to connect it */
+    int      num_fails;
+
+    int      reqID;
+
+    struct _CcnetPeerManager *manager;
+
+    struct evbuffer      *packet;
+    
+    GHashTable *processors;
+
+    GList      *write_cbs;
+    GList      *pending_requests;
+
+    gint8       bind_status;
+
+    int         last_mult_recv;
+    int         next_check;        /* for info syncher */
+
+    CcnetPeer    *redirect_to;
+    CcnetPeer    *redirect_from;
+};
+
+struct _CcnetPeerClass
+{
+    GObjectClass    parent_class;
+};
+
+GType ccnet_peer_get_type (void);
+
+CcnetPeer*  ccnet_peer_from_string (char *content);
+void        ccnet_peer_update_from_string (CcnetPeer *peer, char *string);
+GString *   ccnet_peer_to_string (CcnetPeer *peer);
+
+CcnetPeer*  ccnet_peer_new (const char *id);
+void        ccnet_peer_free (CcnetPeer *peer);
+
+void        ccnet_peer_shutdown (CcnetPeer *peer);
+
+int         ccnet_peer_get_request_id (CcnetPeer *peer);
+
+void        ccnet_peer_add_processor (CcnetPeer *peer, 
+                                      CcnetProcessor *processor);
+void        ccnet_peer_remove_processor (CcnetPeer *peer, 
+                                         CcnetProcessor *processor);
+CcnetProcessor *
+            ccnet_peer_get_processor (CcnetPeer *peer, unsigned int id);
+
+void        ccnet_peer_set_net_state (CcnetPeer *peer, int net_state);
+
+void        ccnet_peer_update_address (CcnetPeer *peer,
+                                       const char *addr_str,
+                                       uint16_t port);
+
+void        ccnet_peer_set_pubkey (CcnetPeer *peer, char *str);
+
+
+/* role management */
+void
+ccnet_peer_set_roles (CcnetPeer *peer, const char *roles);
+
+void
+ccnet_peer_set_myroles (CcnetPeer *peer, const char *roles);
+
+void
+ccnet_peer_get_roles_str (CcnetPeer *peer, GString *buf);
+
+void
+ccnet_peer_get_myroles_str (CcnetPeer *peer, GString *buf);
+
+void
+ccnet_peer_add_role (CcnetPeer *peer, const char *role);
+
+void
+ccnet_peer_remove_role (CcnetPeer *peer, const char *role);
+
+gboolean
+ccnet_peer_has_role (CcnetPeer *peer, const char *role);
+
+gboolean
+ccnet_peer_has_my_role (CcnetPeer *peer, const char *role);
+
+
+
+/*  */
+typedef gboolean (*PeerWriteCallback) (CcnetPeer *peer, void *user_data);
+
+void        ccnet_peer_add_write_callback (CcnetPeer *peer,
+                                           PeerWriteCallback func,
+                                           void *user_data);
+
+void        ccnet_peer_remove_write_callback (CcnetPeer *peer,
+                                              PeerWriteCallback func,
+                                              void *user_data);
+
+/* IO */
+void        ccnet_peer_send_request (const CcnetPeer *peer,
+                                     int req_id, const char *req);
+void        ccnet_peer_send_response (const CcnetPeer *peer, int req_id,
+                                      const char *code, const char *reason,
+                                      const char *content, int clen);
+void        ccnet_peer_send_update (const CcnetPeer *peer, int req_id,
+                                    const char *code, const char *reason,
+                                    const char *content, int clen);
+
+/* middle level IO */
+
+void        ccnet_peer_set_io (CcnetPeer *peer, struct CcnetPacketIO *io);
+
+
+void
+ccnet_peer_redirect_to (CcnetPeer *peer, CcnetPeer *to);
+
+void
+ccnet_peer_unset_redirect (CcnetPeer *peer);
+
+
+#endif

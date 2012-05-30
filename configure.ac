@@ -1,0 +1,332 @@
+dnl Process this file with autoconf to produce a configure script.
+
+
+AC_PREREQ(2.61)
+AC_INIT([ccnet], [0.9.3], [freeplant@gmail.com])
+AC_CONFIG_SRCDIR([net/daemon/ccnet-daemon.c])
+AC_CONFIG_HEADER([config.h])
+
+AC_CONFIG_MACRO_DIR([m4])
+
+AM_INIT_AUTOMAKE([1.9 foreign])
+
+AC_MINGW32
+
+dnl enable the build of share library by default
+AC_ENABLE_SHARED
+
+AC_SUBST(LIBTOOL_DEPS)
+
+# Checks for programs.
+AC_PROG_CC
+AM_C_PROTOTYPES
+AC_C_CONST
+AC_PROG_MAKE_SET
+# AC_PROG_RANLIB
+AC_PROG_LIBTOOL
+
+# python
+AM_PATH_PYTHON([2.4]) 
+
+# Checks for headers.
+AC_HEADER_DIRENT
+AC_HEADER_STDC
+AC_HEADER_MAJOR
+AC_HEADER_SYS_WAIT
+AC_CHECK_HEADERS([arpa/inet.h fcntl.h inttypes.h libintl.h limits.h locale.h netdb.h netinet/in.h stdint.h stdlib.h string.h strings.h sys/ioctl.h sys/socket.h sys/time.h termios.h unistd.h utime.h utmp.h])
+
+# Checks for typedefs, structures, and compiler characteristics.
+AC_C_CONST
+AC_C_INLINE
+AC_TYPE_MODE_T
+AC_TYPE_OFF_T
+AC_TYPE_PID_T
+AC_TYPE_SIZE_T
+AC_TYPE_SSIZE_T
+AC_STRUCT_ST_BLOCKS
+AC_CHECK_MEMBERS([struct stat.st_rdev])
+AC_HEADER_TIME
+AC_STRUCT_TM
+AC_TYPE_UINT16_T
+AC_TYPE_UINT32_T
+AC_C_VOLATILE
+
+AC_SYS_LARGEFILE
+
+# Checks for library functions.
+AC_FUNC_CHOWN
+AC_FUNC_CLOSEDIR_VOID
+AC_FUNC_FORK
+AC_PROG_GCC_TRADITIONAL
+AC_FUNC_LSTAT
+AC_FUNC_LSTAT_FOLLOWS_SLASHED_SYMLINK
+AC_FUNC_MALLOC
+AC_FUNC_MKTIME
+AC_FUNC_REALLOC
+AC_FUNC_SELECT_ARGTYPES
+AC_TYPE_SIGNAL
+AC_FUNC_STAT
+AC_FUNC_STRFTIME
+AC_FUNC_STRTOD
+AC_FUNC_UTIME_NULL
+AC_CHECK_FUNCS([alarm dup2 ftruncate getcwd gethostbyname gettimeofday memmove memset mkdir rmdir select setlocale socket strcasecmp strchr strdup strrchr strstr strtol uname utime strtok_r sendfile])
+
+# check platform
+AC_MSG_CHECKING(for WIN32)
+if test "$MINGW32" = yes; then
+  bwin32=true
+  AC_MSG_RESULT(compile in mingw32)
+else
+  AC_MSG_RESULT(no)
+fi
+
+AC_MSG_CHECKING(for Mac)
+if test "$TERM_PROGRAM" = "Apple_Terminal"; then
+  bmac=true
+  AC_MSG_RESULT(compile in mac)
+else
+  AC_MSG_RESULT(no)
+fi
+
+AC_MSG_CHECKING(for Linux)
+if test "$bmac" != "true" -a "$bwin32" != "true"; then
+  blinux=true
+  AC_MSG_RESULT(compile in linux)
+else
+  AC_MSG_RESULT(no)
+fi
+
+# test which sub-component to compile
+
+if test "$bwin32" = true; then
+   compile_client=yes
+   compile_cli=no
+   compile_tools=no
+   compile_server=no
+fi
+
+if test "$bmac" = true; then
+   compile_client=yes
+   compile_cli=no
+   compile_tools=no
+   compile_server=no
+fi
+
+if test "$blinux" = true; then
+   compile_cli=yes
+   compile_tools=yes
+
+   compile_server=no
+   
+
+   AC_ARG_ENABLE(client, AC_HELP_STRING([--enable-client], [enable server]),
+      [compile_client=$enableval],[compile_client="yes"])
+
+   if test "$compile_client" = yes; then
+      compile_gui=yes
+   fi
+
+
+   AC_ARG_ENABLE(server, AC_HELP_STRING([--enable-server], [enable server]),
+      [compile_server=$enableval],[compile_server="no"])
+
+fi
+
+AC_ARG_ENABLE(python,
+              AC_HELP_STRING([--enable-python],[build ccnet python binding]),
+              [compile_python=$enableval],
+              [compile_python=yes])
+
+
+AC_ARG_ENABLE(static-build, AC_HELP_STRING([--enable-static-build], [enable static compile]),
+    [static_comp=$enableval],[static_comp="no"])
+
+if test x${static_comp} = xyes; then
+  STATIC_COMPILE=-static
+fi
+AC_SUBST(STATIC_COMPILE)
+
+
+AM_CONDITIONAL([COMPILE_CLI], [test "${compile_cli}" = "yes"])
+AM_CONDITIONAL([COMPILE_TOOLS], [test "${compile_tools}" = "yes"])
+AM_CONDITIONAL([COMPILE_PYTHON], [test "${compile_python}" = "yes"])
+AM_CONDITIONAL([COMPILE_CLIENT], [test "${compile_client}" = "yes"])
+AM_CONDITIONAL([COMPILE_SERVER], [test "${compile_server}" = "yes"])
+
+AM_CONDITIONAL([WIN32], [test "$bwin32" = "true"])
+AM_CONDITIONAL([MACOS], [test "$bmac" = "true"])
+AM_CONDITIONAL([LINUX], [test "$blinux" = "true"])
+
+
+# check libraries
+if test "$bwin32" != true; then
+  AC_CHECK_LIB(uuid, uuid_generate, ,
+      dnl - if failed, try uuid_create
+      AC_CHECK_LIB(uuid, uuid_create, ,
+          AC_MSG_ERROR([*** Unable to find uuid library]), )
+      , )
+
+  AC_CHECK_LIB(event, event_init, ,
+    AC_MSG_ERROR([*** Unable to find libevent library]), )
+else
+  AC_CHECK_LIB(event, event_init, ,
+    AC_MSG_ERROR([*** Unable to find libevent library]), [-lwsock32])
+fi
+
+AC_CHECK_LIB(pthread, pthread_create, , AC_MSG_ERROR([*** Unable to find pthread library]), )
+AC_CHECK_LIB(sqlite3, sqlite3_open, , AC_MSG_ERROR([*** Unable to find sqlite3 library]), )
+AC_CHECK_LIB(crypto, SHA1_Init, , AC_MSG_ERROR([*** Unable to find openssl crypto library]), )
+
+dnl Do we need to use AX_LIB_SQLITE3 to check sqlite?
+dnl AX_LIB_SQLITE3
+
+CONSOLE=
+if test "$bwin32" = "true"; then
+  AC_ARG_ENABLE(console, AC_HELP_STRING([--enable-console], [enable console]),
+      [console=$enableval],[console="yes"])
+  if test x${console} != xyes ; then
+    CONSOLE="-Wl,--subsystem,windows -Wl,--entry,_mainCRTStartup"
+  fi
+fi
+AC_SUBST(CONSOLE)
+
+if test "$bwin32" = true; then
+  LIB_WS32=-lws2_32
+  LIB_GDI32=-lgdi32
+  LIB_RT=
+  LIB_INTL=-lintl
+  LIBS=
+  LIB_PYTHON=-lpython26
+  LIB_RESOLV=
+  LIB_UUID=-lRpcrt4
+  LIB_IPHLPAPI=-liphlpapi
+  LIB_SHELL32=-lshell32
+  LIB_PSAPI=-lpsapi
+  MSVC_CFLAGS=-D__MSVCRT_VERSION__=0x0601
+  LIB_DIRWATCH=
+elif test "$bmac" = true ; then
+  LIB_WS32=
+  LIB_GDI32=
+  LIB_RT=
+  LIB_INTL=
+  LIB_PYTHON=-lpython
+  LIB_RESOLV=-lresolv
+  LIB_UUID=-luuid
+  LIB_IPHLPAPI=
+  LIB_SHELL32=
+  LIB_PSAPI=
+  MSVC_CFLAGS=
+  LIB_DIRWATCH=-framework CoreServices
+else
+  LIB_WS32=
+  LIB_GDI32=
+  LIB_RT=
+  LIB_INTL=
+  LIB_PYTHON=
+  LIB_RESOLV=-lresolv
+  LIB_UUID=-luuid
+  LIB_IPHLPAPI=
+  LIB_SHELL32=
+  LIB_PSAPI=
+  MSVC_CFLAGS=
+  LIB_DIRWATCH=
+fi
+
+AC_SUBST(LIB_WS32)
+AC_SUBST(LIB_GDI32)
+AC_SUBST(LIB_RT)
+AC_SUBST(LIB_PYTHON)
+AC_SUBST(LIB_INTL)
+AC_SUBST(LIB_RESOLV)
+AC_SUBST(LIB_UUID)
+AC_SUBST(LIB_IPHLPAPI)
+AC_SUBST(LIB_SHELL32)
+AC_SUBST(LIB_PSAPI)
+AC_SUBST(MSVC_CFLAGS)
+AC_SUBST(LIB_DIRWATCH)
+
+
+# gtk and glib
+APPINDICATOR_REQUIRED=0.0.7
+GLIB_REQUIRED=2.16.0
+GTK_REQUIRED=2.16.0
+SEARPC_REQUIRED=1.0
+ZDB_REQUIRED=2.10
+LIBNAUTILUS_EXTENSION_REQUIRED=2.30.1
+
+PKG_CHECK_MODULES(GLIB2, [glib-2.0 >= $GLIB_REQUIRED])
+AC_SUBST(GLIB2_CFLAGS)
+AC_SUBST(GLIB2_LIBS)
+
+PKG_CHECK_MODULES(GOBJECT, [gobject-2.0 >= $GLIB_REQUIRED])
+AC_SUBST(GOBJECT_CFLAGS)
+AC_SUBST(GOBJECT_LIBS)
+
+PKG_CHECK_MODULES(SEARPC, [libsearpc >= $SEARPC_REQUIRED])
+AC_SUBST(SEARPC_CFLAGS)
+AC_SUBST(SEARPC_LIBS)
+
+
+if test x${compile_python} = xyes; then
+   AM_PATH_PYTHON([2.4])
+   AM_CHECK_PYTHON_HEADERS(,[AC_MSG_ERROR(could not find Python headers)])
+
+   if test "$bwin32" == true; then
+       # set pyexecdir to somewhere like /c/Python26/Lib/site-packages
+       pyexecdir=${PYTHON_DIR}/Lib/site-packages
+       pythondir=${pyexecdir}
+       pkgpyexecdir=${pyexecdir}/${PACKAGE}
+       pkgpythondir=${pythondir}/${PACKAGE}
+
+   fi # end for bwin32
+
+fi
+
+
+# Check mysql client library and libzdb if compile seafile server
+if test "${compile_server}" = "yes"; then
+   PKG_CHECK_MODULES(ZDB, [zdb >= $ZDB_REQUIRED])
+   AC_SUBST(ZDB_CFLAGS)
+   AC_SUBST(ZDB_LIBS)
+
+   AC_CHECK_LIB(mysqlclient, mysql_init, ,
+      AC_MSG_ERROR([*** Unable to find mysql client library]), )
+
+   MYSQL_LIBS=`mysql_config --libs_r`
+   MYSQL_CFLAGS=`mysql_config --cflags`
+   AC_SUBST(MYSQL_LIBS)
+   AC_SUBST(MYSQL_CFLAGS)
+fi
+
+ac_configure_args="$ac_configure_args -q"
+
+AC_CONFIG_FILES(
+	Makefile
+    net/Makefile
+    net/daemon/Makefile
+    net/server/Makefile
+    cli/Makefile
+    lib/Makefile
+    tools/Makefile
+    include/Makefile
+    include/ccnet/Makefile
+    python/Makefile
+    python/ccnet/Makefile
+)
+
+AC_OUTPUT
+
+
+echo
+echo "The following modules will be built:"
+echo
+if test x${compile_python} = xyes; then
+   echo     "python"
+fi
+if test x${compile_client} = xyes; then
+   echo    "ccnet-daemon"
+fi
+if test x${compile_server} = xyes; then
+   echo    "ccnet-server"
+fi
+echo
