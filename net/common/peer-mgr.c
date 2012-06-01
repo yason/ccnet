@@ -770,22 +770,6 @@ void ccnet_peer_manager_on_exit (CcnetPeerManager *manager)
 #include "user-mgr.h"
 
 static void
-send_bind_status (CcnetPeerManager *manager, CcnetPeer *peer,
-                  const char *result)
-{
-    CcnetMessage *msg = NULL;
-    char buf[256];
-
-    snprintf (buf, 256, "v%d\n%s\n%s\n", PEERMGR_VERSION, BIND_STATUS,
-              result);
-    msg = ccnet_message_new (manager->session->base.id,
-                             peer->id, IPEERMGR_APP,
-                             buf, 0);
-    ccnet_send_message (manager->session, msg);
-    ccnet_message_unref (msg);
-}
-
-static void
 handle_bind_query_message (CcnetPeerManager *manager,
                            CcnetMessage *msg,
                            char *body)
@@ -796,11 +780,28 @@ handle_bind_query_message (CcnetPeerManager *manager,
     email = ccnet_user_manager_get_binding_email (manager->session->user_mgr,
                                                   msg->from);
     if (email)
-        send_bind_status (manager, peer, email);
+        ccnet_peer_manager_send_bind_status (manager, peer->id, email);
     else
-        send_bind_status (manager, peer, "not-bind");
+        ccnet_peer_manager_send_bind_status (manager, peer->id, "not-bind");
 
     g_object_unref (peer);
+}
+
+void
+ccnet_peer_manager_send_bind_status (CcnetPeerManager *manager,
+                                     const char *peer_id,
+                                     const char *result)
+{
+    CcnetMessage *msg = NULL;
+    char buf[256];
+
+    snprintf (buf, 256, "v%d\n%s\n%s\n", PEERMGR_VERSION, BIND_STATUS,
+              result);
+    msg = ccnet_message_new (manager->session->base.id,
+                             peer_id, IPEERMGR_APP,
+                             buf, 0);
+    ccnet_send_message (manager->session, msg);
+    ccnet_message_unref (msg);
 }
 
 #endif  /* CCNET_SERVER */

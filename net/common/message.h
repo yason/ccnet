@@ -1,6 +1,5 @@
 /* -*- Mode: C; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
 
-
 #ifndef CCNET_MESSAGE_H
 #define CCNET_MESSAGE_H
 

@@ -108,7 +108,7 @@ handle_response (CcnetProcessor *processor,
     if (g_strcmp0(code, SC_OK) == 0) {
         ccnet_message ("[Send Login] Successfully send login to relay %.10s\n",
                        processor->peer->id);
-        set_login_relay_status (processor, TRUE, NULL); 
+        set_login_relay_status (processor, TRUE, NULL);
         ccnet_processor_done (processor, TRUE);
 
     } else {

@@ -94,6 +94,13 @@ ccnet_peer_manager_set_peer_public_addr (CcnetPeerManager *manager,
                                          const char *addr,
                                          int port);
 
+#ifdef CCNET_SERVER
+void
+ccnet_peer_manager_send_bind_status (CcnetPeerManager *manager,
+                                     const char *peer_id,
+                                     const char *result);
+#endif /* CCNET_SERVER */
+
 /* function of resolving peer */
 CcnetPeer *
 ccnet_peer_manager_add_resolve_peer (CcnetPeerManager *manager,

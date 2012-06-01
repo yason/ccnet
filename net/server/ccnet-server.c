@@ -57,7 +57,7 @@ on_ccnet_exit(void)
 }
 
 
-static const char *short_options = "hvdc:D:f:P:";
+static const char *short_options = "hvdc:D:f:P:r";
 static struct option long_options[] = {
     { "help", no_argument, NULL, 'h', }, 
     { "version", no_argument, NULL, 'v', }, 
@@ -66,6 +66,7 @@ static struct option long_options[] = {
     { "debug", required_argument, NULL, 'D' },
     { "daemon", no_argument, NULL, 'd' },
     { "pidfile", required_argument, NULL, 'P' },
+    { "redirect", no_argument, NULL, 'r' },
     { NULL, 0, NULL, 0, },
 };
 
@@ -89,7 +90,9 @@ static void usage()
 "    -f LOG_FILE\n"
 "        Log file path\n"
 "    -P PIDFILE\n"
-"        Specify the file to store pid\n",
+"        Specify the file to store pid\n"
+"    --redirect\n"
+"        Enable redirect\n",
         stdout);
 }
 
@@ -101,6 +104,7 @@ main (int argc, char **argv)
     char *log_file = 0;
     const char *debug_str = 0;
     int daemon_mode = 0;
+    int redirect = 0;
     const char *log_level_str = "debug";
 
     config_dir = DEFAULT_CONFIG_DIR;
@@ -130,6 +134,9 @@ main (int argc, char **argv)
             break;
         case 'P':
             pidfile = optarg;
+            break;
+        case 'r':
+            redirect = 1;
             break;
         default:
             fprintf (stderr, "unknown option \"-%c\"\n", (char)c);
@@ -179,6 +186,8 @@ main (int argc, char **argv)
                "see log file for the detail.\n", stderr);
         return -1;
     }
+    if (redirect)
+        session->redirect = 1;
         
     if (ccnet_session_prepare(session) < 0) {
         fputs ("Error: failed to start ccnet session, "

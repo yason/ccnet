@@ -22,7 +22,8 @@ PROC_HEADER_FILES =  $(addprefix processors/, \
 	keepalive2-proc.h \
 	mqserver-proc.h \
 	service-proxy-proc.h service-stub-proc.h \
-	rpcserver-proc.h )
+	rpcserver-proc.h \
+	echo-proc.h )
 
 # sync-kvitem-proc.h sync-kvitem-slave-proc.h 
 #	update-user-slave-proc.h \
@@ -64,7 +65,7 @@ common_headers =
 # ../common/groupmgr-message.h
 
 noinst_HEADERS = $(common_headers) \
-	user-mgr.h group-mgr.h \
+	user-mgr.h group-mgr.h cluster-mgr.h \
 	$(PROC_HEADER_FILES)
 
 
@@ -87,10 +88,11 @@ common_srcs = ../common/ccnet-db.c \
 	../common/processors/mqserver-proc.c \
 	../common/processors/service-proxy-proc.c \
 	../common/processors/service-stub-proc.c \
-	../common/processors/rpcserver-proc.c
+	../common/processors/rpcserver-proc.c \
+	../common/processors/echo-proc.c
 
 ccnet_server_SOURCES = ccnet-server.c \
-	user-mgr.c group-mgr.c \
+	user-mgr.c group-mgr.c cluster-mgr.c \
 	processors/recvlogin-proc.c processors/recvlogout-proc.c \
 	$(common_srcs)
 
@@ -130,5 +132,5 @@ ccnet_server_LDADD = -levent $(top_builddir)/lib/libccnetd.la \
            @LIB_WS32@ @LIB_INTL@ @LIB_IPHLPAPI@ @SEARPC_LIBS@ @ZDB_LIBS@
 
 
-ccnet_server_LDFLAGS = @STATIC_COMPILE@ @CONSOLE@ @SERVER_PKG_RPATH@ -no-undefined
+ccnet_server_LDFLAGS = @STATIC_COMPILE@ @CONSOLE@ -no-undefined
 

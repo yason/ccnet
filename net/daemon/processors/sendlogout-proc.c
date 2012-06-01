@@ -82,11 +82,13 @@ handle_response (CcnetProcessor *processor,
         ccnet_message ("[Send Logout] Successfully send logout to relay %.10s\n",
                        processor->peer->id);
         processor->peer->logout_started = FALSE;
+        /* processor->peer->bind_status = BIND_NO; */
         ccnet_processor_done (processor, TRUE);
 
     } else {
         ccnet_warning ("[Send Logout] Error: get repsonse: %s, %s.\n", code, code_msg);
         processor->peer->logout_started = FALSE;
+        /* processor->peer->bind_status = BIND_YES; */
         ccnet_processor_done (processor, FALSE);
     }
 }

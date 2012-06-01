@@ -1,3 +1,5 @@
+/* -*- Mode: C; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+
 #ifndef RPC_SERVICE_H
 #define RPC_SERVICE_H
 
@@ -111,6 +113,10 @@ ccnet_rpc_get_binding_peerids (const char *email, GError **error);
 int
 ccnet_rpc_remove_binding (const char *email, GError **error);
 
+int
+ccnet_rpc_remove_one_binding (const char *email, const char *peer_id,
+                              GError **error);
+
 GList *
 ccnet_rpc_get_peers_by_email (const char *email, GError **error);
 
@@ -124,7 +130,8 @@ ccnet_rpc_verify_message (const char *message,
                           GError **error);
 
 int
-ccnet_rpc_create_group (const char *group_name, const char *user_name, GError **error);
+ccnet_rpc_create_group (const char *group_name, const char *user_name,
+                        GError **error);
 int
 ccnet_rpc_remove_group (int group_id, const char *user_name, GError **error);
 
@@ -140,6 +147,9 @@ ccnet_rpc_quit_group (int group_id, const char *user_name, GError **error);
 
 GList *
 ccnet_rpc_get_groups (const char *username, GError **error);
+
+GList *
+ccnet_rpc_get_all_groups (int start, int limit, GError **error);
 
 GObject *
 ccnet_rpc_get_group (int group_id, GError **error);

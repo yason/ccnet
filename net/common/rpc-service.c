@@ -168,6 +168,10 @@ ccnet_start_rpc(CcnetSession *session)
                                      "remove_binding",
                                      searpc_signature_int__string());
     searpc_server_register_function ("ccnet-rpcserver",
+                                     ccnet_rpc_remove_one_binding,
+                                     "remove_one_binding",
+                                     searpc_signature_int__string_string());
+    searpc_server_register_function ("ccnet-rpcserver",
                                      ccnet_rpc_get_peers_by_email,
                                      "get_peers_by_email",
                                      searpc_signature_objlist__string());
@@ -208,6 +212,10 @@ ccnet_start_rpc(CcnetSession *session)
                                      ccnet_rpc_get_groups,
                                      "get_groups",
                                      searpc_signature_objlist__string());
+    searpc_server_register_function ("ccnet-rpcserver",
+                                     ccnet_rpc_get_all_groups,
+                                     "get_all_groups",
+                                     searpc_signature_objlist__int_int());
     searpc_server_register_function ("ccnet-rpcserver",
                                      ccnet_rpc_get_group,
                                      "get_group",
@@ -666,6 +674,21 @@ ccnet_rpc_remove_binding (const char *email, GError **error)
     return ccnet_user_manager_remove_binding (mgr, email);
 }
 
+int
+ccnet_rpc_remove_one_binding (const char *email, const char *peer_id,
+                              GError **error)
+{
+    CcnetUserManager *mgr = session->user_mgr;
+
+    if (!email || !peer_id) {
+        g_set_error (error, CCNET_DOMAIN, CCNET_ERR_INTERNAL,
+                     "Email and peer_id can not be NULL");
+        return -1;
+    }
+
+    return ccnet_user_manager_remove_one_binding (mgr, email, peer_id);
+}
+
 GList *
 ccnet_rpc_get_peers_by_email (const char *email, GError **error)
 {
@@ -754,7 +777,8 @@ ccnet_rpc_verify_message (const char *message,
 }
 
 int
-ccnet_rpc_create_group (const char *group_name, const char *user_name, GError **error)
+ccnet_rpc_create_group (const char *group_name, const char *user_name,
+                        GError **error)
 {
     CcnetGroupManager *mgr = session->group_mgr;
     int ret;
@@ -864,9 +888,10 @@ ccnet_rpc_get_groups (const char *username, GError **error)
     ptr = group_ids;
     while (ptr) {
         int group_id = (int)ptr->data;
-        CcnetGroup *group = ccnet_group_manager_get_group (mgr, group_id, error);
+        CcnetGroup *group = ccnet_group_manager_get_group (mgr, group_id,
+                                                           error);
         if (group != NULL) {
-            g_object_ref (group);
+            /* g_object_ref (group); */
             ret = g_list_prepend (ret, group);
         }
 
@@ -874,6 +899,17 @@ ccnet_rpc_get_groups (const char *username, GError **error)
     }
 
     g_list_free (group_ids);
+    return g_list_reverse (ret);
+}
+
+GList *
+ccnet_rpc_get_all_groups (int start, int limit, GError **error)
+{
+    CcnetGroupManager *mgr = session->group_mgr;
+    GList *ret = NULL;
+
+    ret = ccnet_group_manager_get_all_groups (mgr, start, limit, error);
+
     return g_list_reverse (ret);
 }
 
@@ -888,7 +924,7 @@ ccnet_rpc_get_group (int group_id, GError **error)
         return NULL;
     }
 
-    g_object_ref (group);
+    /* g_object_ref (group); */
     return (GObject *)group;
 }
 

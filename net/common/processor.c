@@ -161,7 +161,11 @@ ccnet_processor_shutdown (CcnetProcessor *processor, int reason)
                                          NULL, 0);
     }
 
-    g_signal_emit (processor, signals[DONE_SIG], 0, FALSE);
+    if (reason == PROC_DONE)
+        g_signal_emit (processor, signals[DONE_SIG], 0, TRUE);
+    else
+        g_signal_emit (processor, signals[DONE_SIG], 0, FALSE);
+
     if (!processor->peer->in_shutdown) {
         ccnet_peer_remove_processor (processor->peer, processor);
     }
