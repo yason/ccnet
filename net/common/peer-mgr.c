@@ -157,8 +157,10 @@ ccnet_peer_manager_get_peers_with_role (CcnetPeerManager *manager,
     g_hash_table_iter_init (&iter, manager->peer_hash);
     while (g_hash_table_iter_next (&iter, &key, &value)) {
         peer = value;
-        if (ccnet_peer_has_role(peer, role))
+        if (ccnet_peer_has_role(peer, role)) {
             list = g_list_prepend (list, peer);
+            g_object_ref (peer);
+        }
     }
     return list;
 }
@@ -784,6 +786,7 @@ handle_bind_query_message (CcnetPeerManager *manager,
     else
         ccnet_peer_manager_send_bind_status (manager, peer->id, "not-bind");
 
+    g_free (email);
     g_object_unref (peer);
 }
 

@@ -450,8 +450,8 @@ makeSocketNonBlocking (evutil_socket_t fd)
     {
         if (evutil_make_socket_nonblocking(fd))
         {
-            ccnet_error ("Couldn't make socket nonblock: %s",
-                         evutil_socket_error_to_string(EVUTIL_SOCKET_ERROR()));
+            ccnet_warning ("Couldn't make socket nonblock: %s",
+                           evutil_socket_error_to_string(EVUTIL_SOCKET_ERROR()));
             evutil_closesocket(fd);
             fd = -1;
         }
@@ -536,16 +536,24 @@ ccnet_net_bind_tcp (int port, int nonblock)
 
     snprintf (buf, sizeof(buf), "%d", port);
 
-    if ( (n = getaddrinfo(NULL, buf, &hints, &res) ) != 0)
-        ccnet_error ("getaddrinfo fails: %s\n", gai_strerror(n));
+    if ( (n = getaddrinfo(NULL, buf, &hints, &res) ) != 0) {
+        ccnet_warning ("getaddrinfo fails: %s\n", gai_strerror(n));
+        return -1;
+    }
 
     ressave = res;
     
     do {
         int on = 1;
+
         sockfd = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
-		if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on)) < 0)
-			ccnet_error ("setsockopt of SO_REUSEADDR error\n");
+        if (sockfd < 0)
+            continue;       /* error - try next one */
+
+		if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on)) < 0) {
+			ccnet_warning ("setsockopt of SO_REUSEADDR error\n");
+            continue;
+        }
 
         if (nonblock)
             sockfd = makeSocketNonBlocking (sockfd);
@@ -558,10 +566,12 @@ ccnet_net_bind_tcp (int port, int nonblock)
         close(sockfd);      /* bind error - close and try next one */
     } while ( (res = res->ai_next) != NULL);
 
-    if (res == NULL)
-        ccnet_error ("bind fails: %s\n", strerror(errno));
-
     freeaddrinfo (ressave);
+
+    if (res == NULL) {
+        ccnet_warning ("bind fails: %s\n", strerror(errno));
+        return -1;
+    }
 
     return sockfd;
 #else
@@ -586,7 +596,7 @@ ccnet_net_bind_tcp (int port, int nonblock)
 
     if ( bind(s, (struct sockaddr *)&sock, sizeof(struct sockaddr_in)) < 0)
     {
-        ccnet_error ("bind fails: %s\n", strerror(errno));
+        ccnet_warning ("bind fails: %s\n", strerror(errno));
         evutil_closesocket (s);
         return -1;
     }
@@ -607,7 +617,10 @@ ccnet_net_accept (evutil_socket_t b, struct sockaddr_storage *cliaddr,
     s = accept (b, (struct sockaddr *)cliaddr, len);
 
     /* setsockopt (s, IPPROTO_TCP, TCP_NODELAY, &nodelay, sizeof(nodelay)); */
-    return makeSocketNonBlocking(s);
+    if (nonblock)
+        makeSocketNonBlocking(s);
+
+    return s;
 }
 
 
@@ -782,9 +795,11 @@ udp_client (const char *host, const char *serv,
 	hints.ai_family = AF_UNSPEC;
 	hints.ai_socktype = SOCK_DGRAM;
 
-	if ( (n = getaddrinfo(host, serv, &hints, &res)) != 0)
-        ccnet_error ("udp_client error for %s, %s: %s",
-                     host, serv, gai_strerror(n));
+	if ((n = getaddrinfo(host, serv, &hints, &res)) != 0) {
+        ccnet_warning ("udp_client error for %s, %s: %s",
+                       host, serv, gai_strerror(n));
+        return -1;
+    }
 	ressave = res;
 
 	do {
@@ -793,8 +808,11 @@ udp_client (const char *host, const char *serv,
 			break;		/* success */
 	} while ( (res = res->ai_next) != NULL);
 
-	if (res == NULL)	/* errno set from final socket() */
-		ccnet_error ("udp_client error for %s, %s", host, serv);
+	if (res == NULL) {	/* errno set from final socket() */
+		ccnet_warning ("udp_client error for %s, %s", host, serv);
+        freeaddrinfo (ressave);
+        return -1;
+    }
 
 	*saptr = malloc(res->ai_addrlen);
 	memcpy(*saptr, res->ai_addr, res->ai_addrlen);

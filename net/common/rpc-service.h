@@ -11,8 +11,8 @@ char *ccnet_rpc_list_peers(GError **error);
 GList *ccnet_rpc_list_resolving_peers (GError **error);
 
 
-char *ccnet_rpc_get_peers_by_role(const char *role, GError **error);
-char *ccnet_rpc_get_peers_by_myrole(const char *myrole, GError **error);
+GList* ccnet_rpc_get_peers_by_role(const char *role, GError **error);
+
 
 GObject *ccnet_rpc_get_peer(const char *peerid, GError **error);
 

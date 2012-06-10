@@ -448,6 +448,8 @@ static int reconnect_pulse (void *vmanager)
         } else {
             reconnect_peer (manager, peer);
         }
+
+        g_object_unref (peer);
     }
     g_list_free (peers);
 #endif

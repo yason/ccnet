@@ -217,7 +217,7 @@ make_configure_file (const char *config_file)
 
     fprintf (fp, "\n");
     fprintf (fp, "[Client]\n");
-    fprintf (fp, "PORT = 10000\n");
+    fprintf (fp, "PORT = 13419\n");
 
     fclose (fp);
 

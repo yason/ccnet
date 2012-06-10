@@ -82,6 +82,7 @@ check_emailuser (CcnetProcessor *processor,
         }
         ccnet_processor_send_response (processor, SC_OK, SS_OK, NULL, 0);
     }
+    g_free (prev_email);
 }
 
 static int

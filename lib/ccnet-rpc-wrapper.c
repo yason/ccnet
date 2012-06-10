@@ -7,6 +7,7 @@
 #include <searpc-client.h>
 #include <ccnetrpc-transport.h>
 
+
 SearpcClient *
 ccnet_create_rpc_client (CcnetClient *cclient, const char *peer_id,
                          const char *service_name)
@@ -14,36 +15,72 @@ ccnet_create_rpc_client (CcnetClient *cclient, const char *peer_id,
     SearpcClient *rpc_client;
     CcnetrpcTransportParam *priv;
     
+    g_assert (cclient->mode == CCNET_CLIENT_SYNC);
     priv = g_new0(CcnetrpcTransportParam, 1);
     priv->session = cclient;
     priv->peer_id = g_strdup(peer_id);
     priv->service = g_strdup(service_name);
 
     rpc_client = searpc_client_new ();
-    rpc_client->transport = ccnetrpc_transport_send;
+    rpc_client->send = ccnetrpc_transport_send;
     rpc_client->arg = priv;
 
     return rpc_client;
 }
 
+SearpcClient *
+ccnet_create_async_rpc_client (CcnetClient *cclient, const char *peer_id,
+                               const char *service_name)
+{
+    SearpcClient *rpc_client;
+    CcnetrpcAsyncTransportParam *async_priv;
 
-SEARPC_CLIENT_DEFUN_OBJECT__STRING(get_peer, CCNET_TYPE_PEER);
-SEARPC_CLIENT_DEFUN_OBJECT__STRING(get_peer_by_idname, CCNET_TYPE_PEER);
-SEARPC_CLIENT_DEFUN_OBJECT__VOID(get_session_info, CCNET_TYPE_SESSION_BASE);
-SEARPC_CLIENT_DEFUN_STRING__STRING(get_binding_email);
-SEARPC_CLIENT_DEFUN_STRING__STRING(sign_message);
-SEARPC_CLIENT_DEFUN_INT__STRING_STRING_STRING(verify_message);
-SEARPC_CLIENT_DEFUN_OBJLIST__STRING(get_groups, CCNET_TYPE_GROUP);
+    g_assert (cclient->mode == CCNET_CLIENT_ASYNC);
+    async_priv = g_new0 (CcnetrpcAsyncTransportParam, 1);
+    async_priv->session = cclient;
+    async_priv->peer_id = g_strdup(peer_id);
+    async_priv->service = g_strdup (service_name);
 
-SEARPC_CLIENT_ASYNC_DEFUN_OBJECT__STRING(get_peer, CCNET_TYPE_PEER);
-SEARPC_CLIENT_ASYNC_DEFUN_STRING__STRING(get_binding_email, 0);
+    rpc_client = searpc_client_new ();
+    rpc_client->async_send = ccnetrpc_async_transport_send;
+    rpc_client->async_arg = async_priv;
+
+    return rpc_client;
+}
+
+void
+ccnet_rpc_client_free (SearpcClient *client)
+{
+    CcnetrpcTransportParam *priv = client->arg;
+
+    g_free (priv->peer_id);
+    g_free (priv->service);
+    g_free (priv);
+
+    searpc_client_free (client);
+}
+
+void
+ccnet_async_rpc_client_free (SearpcClient *client)
+{
+    CcnetrpcAsyncTransportParam *priv = client->arg;
+
+    g_free (priv->peer_id);
+    g_free (priv->service);
+    g_free (priv);
+
+    searpc_client_free (client);
+}
 
 CcnetPeer *
 ccnet_get_peer (SearpcClient *client, const char *peer_id)
 {
     if (!peer_id)
         return NULL;
-    return (CcnetPeer *)get_peer (client, peer_id, NULL);
+
+    return (CcnetPeer *) searpc_client_call__object(
+        client, "get_peer",CCNET_TYPE_PEER, NULL,
+        1, "string", peer_id);
 }
 
 CcnetPeer *
@@ -51,7 +88,9 @@ ccnet_get_peer_by_idname (SearpcClient *client, const char *idname)
 {
     if (!idname)
         return NULL;
-    return (CcnetPeer *)get_peer_by_idname (client, idname, NULL);
+    return (CcnetPeer *) searpc_client_call__object(
+        client, "get_peer_by_idname", CCNET_TYPE_PEER, NULL,
+        1, "string", idname);
 }
 
 int
@@ -67,21 +106,30 @@ ccnet_get_peer_net_state (SearpcClient *client, const char *peer_id)
     return ret;
 }
 
-char *
-ccnet_get_default_relay_id (SearpcClient *client)
+CcnetPeer *
+ccnet_get_default_relay (SearpcClient *client)
 {
-    CcnetSessionBase *base = (CcnetSessionBase *)get_session_info(client, NULL);
-    if (base) {
-        char *relay_id = NULL;
+    CcnetSessionBase *base = (CcnetSessionBase *)
+        searpc_client_call__object(
+            client, "get_session_info", CCNET_TYPE_SESSION_BASE, NULL, 0);
 
-        if (base->relay_id) {
-            relay_id = g_strdup(base->relay_id);
-        }
+    if (!base)
+        return NULL;
 
-        g_object_unref (base);
-        return relay_id;
-    }
-    return NULL;
+    CcnetPeer *relay = ccnet_get_peer (client, base->relay_id);
+    g_object_unref (base);
+    return relay;
+}
+
+GList *
+ccnet_get_peers_by_role (SearpcClient *client, const char *role)
+{
+    if (!role)
+        return NULL;
+
+    return searpc_client_call__objlist (
+        client, "get_peers_by_role", CCNET_TYPE_PEER, NULL,
+        1, "string", role);
 }
 
 char *
@@ -89,7 +137,10 @@ ccnet_get_binding_email (SearpcClient *client, const char *peer_id)
 {
     if (!peer_id)
         return NULL;
-    return get_binding_email (client, peer_id, NULL);
+
+    return searpc_client_call__string (
+        client, "get_binding_email", NULL,
+        1, "string", peer_id);
 }
 
 GList *
@@ -97,21 +148,28 @@ ccnet_get_groups_by_user (SearpcClient *client, const char *user)
 {
     if (!user)
         return NULL;
-    return get_groups (client, user, NULL);
+
+    return searpc_client_call__objlist (
+        client, "get_groups", CCNET_TYPE_GROUP, NULL,
+        1, "string", user);
 }
 
+#if 0
 int
 ccnet_get_peer_async (SearpcClient *client, const char *peer_id,
                       AsyncCallback callback, void *user_data)
 {
     return get_peer_async (client, peer_id, callback, user_data);
 }
+#endif
 
 int
 ccnet_get_binding_email_async (SearpcClient *client, const char *peer_id,
                                AsyncCallback callback, void *user_data)
 {
-    return get_binding_email_async (client, peer_id, callback, user_data);
+    return searpc_client_async_call__string (
+        client, "get_binding_email", callback, user_data,
+        1, "string", peer_id);
 }
 
 char *
@@ -119,7 +177,10 @@ ccnet_sign_message (SearpcClient *client, const char *message)
 {
     if (!message)
         return NULL;
-    return sign_message (client, message, NULL);
+
+    return searpc_client_call__string (
+        client, "sign_message", NULL,
+        1, "string", message);
 }
 
 int
@@ -131,5 +192,39 @@ ccnet_verify_message (SearpcClient *client,
     if (!message || !sig_base64 || !peer_id)
         return -1;
 
-    return verify_message (client, message, sig_base64, peer_id, NULL);
+    return searpc_client_call__int (
+        client, "verify_message", NULL,
+        3, "string", message, "string", sig_base64, "string", peer_id);
+}
+
+
+char *
+ccnet_get_config (SearpcClient *client, const char *key)
+{
+    if (!key)
+        return NULL;
+
+    return searpc_client_call__string (
+        client, "get_config", NULL, 
+        1, "string", key);
+}
+
+int
+ccnet_set_config (SearpcClient *client, const char *key, const char *value)
+{
+    if (!key || !value)
+        return -1;
+
+    return searpc_client_call__int (
+        client, "set_config", NULL,
+        2, "string", key, "string", value);
+}
+
+void
+ccnet_login_to_relay (SearpcClient *client, const char *relay_id,
+                      const char *username, const char *passwd)
+{
+    searpc_client_call__int (client, "login_to_relay", NULL,
+                             3, "string", relay_id,
+                             "string", username, "string", passwd);
 }

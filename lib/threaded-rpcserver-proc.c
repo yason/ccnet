@@ -68,14 +68,9 @@ call_function_job (void *vprocessor)
     CcnetProcessor *processor = vprocessor;
     CcnetThreadedRpcserverProcPriv *priv = GET_PRIV(processor);
     char *svc_name = processor->name;
-    GError *error = NULL;
 
     priv->buf = searpc_server_call_function (svc_name, priv->call_buf, priv->call_len,
-                                             &priv->len, &error);
-    if (error && error->message) {
-        priv->error_message = g_strdup(error->message);
-        g_error_free (error);
-    }
+                                             &priv->len);
 
     return vprocessor;
 }

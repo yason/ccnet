@@ -239,8 +239,8 @@ get_emailuser_cb (CcnetDBRow *row, void *data)
     CcnetEmailUser **p_emailuser = data;
 
     int id = ccnet_db_row_get_column_int (row, 0);
-    char *email = g_strdup((const char *)ccnet_db_row_get_column_text (row, 1));
-    char* passwd = g_strdup((const char *)ccnet_db_row_get_column_text (row, 2));
+    const char *email = (const char *)ccnet_db_row_get_column_text (row, 1);
+    const char* passwd = (const char *)ccnet_db_row_get_column_text (row, 2);
     int is_staff = ccnet_db_row_get_column_int (row, 3);
     int is_active = ccnet_db_row_get_column_int (row, 4);
     gint64 ctime = ccnet_db_row_get_column_int64 (row, 5);
@@ -296,8 +296,8 @@ get_emailusers_cb (CcnetDBRow *row, void *data)
     CcnetEmailUser *emailuser;
 
     int id = ccnet_db_row_get_column_int (row, 0);
-    char *email = g_strdup((const char *)ccnet_db_row_get_column_text (row, 1));
-    char* passwd = g_strdup((const char *)ccnet_db_row_get_column_text (row, 2));
+    const char *email = (const char *)ccnet_db_row_get_column_text (row, 1);
+    const char* passwd = (const char *)ccnet_db_row_get_column_text (row, 2);
     int is_staff = ccnet_db_row_get_column_int (row, 3);
     int is_active = ccnet_db_row_get_column_int (row, 4);
     gint64 ctime = ccnet_db_row_get_column_int64 (row, 5);
@@ -385,6 +385,7 @@ ccnet_user_manager_add_binding (CcnetUserManager *manager, const char *email,
                                              peer_id, email);
     }
 
+    g_free (binding_email);
     return ret;
 }
 

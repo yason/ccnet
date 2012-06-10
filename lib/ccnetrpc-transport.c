@@ -27,9 +27,9 @@ ccnetrpc_transport_send (void *arg, const gchar *fcall_str,
 
     proc_name = g_string_new (NULL);
     if (!priv->peer_id)
-        g_string_append_printf (proc_name, "%s-rpcserver", priv->service);
+        g_string_append_printf (proc_name, "%s", priv->service);
     else
-        g_string_append_printf (proc_name, "remote %s %s-rpcserver",
+        g_string_append_printf (proc_name, "remote %s %s",
                                 priv->peer_id, priv->service);
     ccnet_client_send_request (session, req_id, proc_name->str);
     g_string_free (proc_name, TRUE);

@@ -64,37 +64,31 @@ handle_update (CcnetProcessor *processor,
                char *content, int clen)
 {
     CcnetRpcserverProcPriv *priv = GET_PRIV (processor);
-    GError *error = NULL;
 
     if (memcmp (code, SC_CLIENT_CALL, 3) == 0) {
         gsize ret_len;
         char *svc_name = processor->name;
-        char *ret = searpc_server_call_function (svc_name, content, clen, &ret_len, &error);
+        char *ret = searpc_server_call_function (svc_name, content, clen, &ret_len);
 
-        if (ret) {
-            if (ret_len < MAX_TRANSFER_LENGTH) {
-                ccnet_processor_send_response (
-                    processor, SC_SERVER_RET, SS_SERVER_RET, ret, ret_len + 1);
-                g_free (ret);
-                /* ccnet_processor_done (processor, TRUE); */
-                return;
-            }
-
-            /* we need to split data into multiple segments */
-            priv->buf = ret;
-            priv->len = ret_len + 1; /* include trailing '\0' */
-            priv->off = 0;
-
-            ccnet_processor_send_response (processor, SC_SERVER_MORE,
-                                           SS_SERVER_MORE, priv->buf,
-                                           MAX_TRANSFER_LENGTH);
-            priv->off = MAX_TRANSFER_LENGTH;
-        } else {
-            ccnet_processor_send_response (processor, SC_SERVER_ERR, 
-                                           error->message,
-                                           NULL, 0);
-            ccnet_processor_done (processor, FALSE);
+        g_assert (ret != NULL);
+        if (ret_len < MAX_TRANSFER_LENGTH) {
+            ccnet_processor_send_response (
+                processor, SC_SERVER_RET, SS_SERVER_RET, ret, ret_len + 1);
+            g_free (ret);
+            /* ccnet_processor_done (processor, TRUE); */
+            return;
         }
+
+        /* we need to split data into multiple segments */
+        priv->buf = ret;
+        priv->len = ret_len + 1; /* include trailing '\0' */
+        priv->off = 0;
+
+        ccnet_processor_send_response (processor, SC_SERVER_MORE,
+                                       SS_SERVER_MORE, priv->buf,
+                                       MAX_TRANSFER_LENGTH);
+        priv->off = MAX_TRANSFER_LENGTH;
+
         return;
     }
 

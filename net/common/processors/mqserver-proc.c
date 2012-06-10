@@ -148,9 +148,10 @@ static void handle_update (CcnetProcessor *processor,
 
         msg = ccnet_message_from_string_local (content, clen);
 
-        ccnet_debug ("[msg] send msg: %.10s\n", msg->body);
+        /* ccnet_debug ("[msg] send msg: %.10s\n", msg->body); */
 
         ccnet_send_message (processor->session, msg);
+        ccnet_message_unref (msg);
     } else if (code[2] == '1') {
         /* SC_UNSUBSCRIBE */
         ccnet_processor_done (processor, TRUE);

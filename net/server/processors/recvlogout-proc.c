@@ -70,6 +70,7 @@ start (CcnetProcessor *processor, int argc, char **argv)
         ccnet_processor_send_response (processor, SC_OK, SS_OK, NULL, 0);
     }
 
+    g_free (email);
     ccnet_processor_done (processor, TRUE);
     return 0;
 }

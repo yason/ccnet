@@ -85,7 +85,7 @@ static void check_db_table (CcnetDB *db)
     int db_type = ccnet_db_type (db);
     if (db_type == CCNET_DB_TYPE_MYSQL) {
         sql = "CREATE TABLE IF NOT EXISTS `Group` (`group_id` INTEGER"
-            " PRIMARY KEY AUTO_INCREMENT `group_name` VARCHAR(255),"
+            " PRIMARY KEY AUTO_INCREMENT, `group_name` VARCHAR(255),"
             " `creator_name` VARCHAR(255), `timestamp` BIGINT)";
         ccnet_db_query (db, sql);
 
@@ -315,7 +315,7 @@ get_group_ids_cb (CcnetDBRow *row, void *data)
 
     int group_id = ccnet_db_row_get_column_int (row, 0);
 
-    *plist = g_list_prepend (*plist, (gpointer)group_id);
+    *plist = g_list_prepend (*plist, (gpointer)(long)group_id);
 
     return TRUE;
 }
@@ -346,13 +346,13 @@ get_ccnetgroup_cb (CcnetDBRow *row, void *data)
 {
     CcnetGroup **p_group = data;
     int group_id;
-    char *group_name;
-    char *creator;
+    const char *group_name;
+    const char *creator;
     gint64 ts;
     
     group_id = ccnet_db_row_get_column_int (row, 0);
-    group_name = g_strdup ((const char *)ccnet_db_row_get_column_text (row, 1));
-    creator = g_strdup ((const char *)ccnet_db_row_get_column_text (row, 2));
+    group_name = (const char *)ccnet_db_row_get_column_text (row, 1);
+    creator = (const char *)ccnet_db_row_get_column_text (row, 2);
     ts = ccnet_db_row_get_column_int64 (row, 3);
 
     *p_group = g_object_new (CCNET_TYPE_GROUP,
@@ -389,7 +389,7 @@ get_ccnet_groupuser_cb (CcnetDBRow *row, void *data)
     CcnetGroupUser *group_user;
     
     int group_id = ccnet_db_row_get_column_int (row, 0);
-    char *user = g_strdup ((const char *)ccnet_db_row_get_column_text (row, 1));
+    const char *user = (const char *)ccnet_db_row_get_column_text (row, 1);
     int is_staff = ccnet_db_row_get_column_int (row, 2);
 
     group_user = g_object_new (CCNET_TYPE_GROUP_USER,
@@ -447,13 +447,13 @@ get_all_ccnetgroups_cb (CcnetDBRow *row, void *data)
 {
     GList **plist = data;
     int group_id;
-    char *group_name;
-    char *creator;
+    const char *group_name;
+    const char *creator;
     gint64 ts;
 
     group_id = ccnet_db_row_get_column_int (row, 0);
-    group_name = g_strdup ((const char *)ccnet_db_row_get_column_text (row, 1));
-    creator = g_strdup ((const char *)ccnet_db_row_get_column_text (row, 2));
+    group_name = (const char *)ccnet_db_row_get_column_text (row, 1);
+    creator = (const char *)ccnet_db_row_get_column_text (row, 2);
     ts = ccnet_db_row_get_column_int64 (row, 3);
 
     CcnetGroup *group = g_object_new (CCNET_TYPE_GROUP,

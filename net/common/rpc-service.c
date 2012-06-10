@@ -48,7 +48,7 @@ ccnet_start_rpc(CcnetSession *session)
     searpc_server_register_function ("ccnet-rpcserver",
                                      ccnet_rpc_get_peers_by_role,
                                      "get_peers_by_role",
-                                     searpc_signature_string__string());
+                                     searpc_signature_objlist__string());
 
     searpc_server_register_function ("ccnet-rpcserver",
                                      ccnet_rpc_get_peer,
@@ -279,39 +279,20 @@ ccnet_rpc_list_resolving_peers (GError **error)
     return ccnet_peer_manager_get_resolve_peers(peer_mgr);
 }
 
-char *
+GList *
 ccnet_rpc_get_peers_by_role(const char *role, GError **error)
 {
     CcnetPeerManager *peer_mgr = session->peer_mgr;
-    GList *peer_list, *ptr;
-    GString *result;
-    CcnetPeer *peer;
-
-    peer_list = ccnet_peer_manager_get_peers_with_role (peer_mgr, role);
-    if (peer_list == NULL) {
-        g_set_error(error, CCNET_DOMAIN, CCNET_ERR_INTERNAL, "Failed to get peer list");
-        return NULL;
-    }
-
-    result = g_string_new("");
-    ptr = peer_list;
-    while (ptr) {
-        peer = ptr->data;
-        g_string_append_printf(result, "%s\n", peer->id);
-        ptr = ptr->next;
-    }
-    g_list_free(peer_list);
-
-    return g_string_free(result, FALSE);
+    return ccnet_peer_manager_get_peers_with_role (peer_mgr, role);
 }
 
 
 GObject *
 ccnet_rpc_get_peer(const char *peer_id, GError **error)
 {
-    if (!peer_id) {
+    if (!peer_id)
         return NULL;
-    }
+
     CcnetPeerManager *peer_mgr = session->peer_mgr;
     CcnetPeer *peer = ccnet_peer_manager_get_peer(peer_mgr, peer_id);
     return (GObject*)peer;
@@ -321,9 +302,9 @@ ccnet_rpc_get_peer(const char *peer_id, GError **error)
 GObject *
 ccnet_rpc_get_peer_by_idname(const char *idname, GError **error)
 {
-    if (!idname) {
+    if (!idname)
         return NULL;
-    }
+
     CcnetPeerManager *peer_mgr = session->peer_mgr;
     CcnetPeer *peer = ccnet_peer_manager_get_peer(peer_mgr, idname);
     if (!peer)
@@ -755,7 +736,7 @@ ccnet_rpc_verify_message (const char *message,
                           GError **error)
 {
     unsigned char *sig;
-    unsigned int sig_len;
+    gsize sig_len;
     CcnetPeer *peer;
 
     sig = g_base64_decode (sig_base64, &sig_len);
@@ -767,7 +748,7 @@ ccnet_rpc_verify_message (const char *message,
     }
 
     if (!RSA_verify (NID_sha1, (const unsigned char *)message, strlen(message),
-                     sig, sig_len, peer->pubkey)) {
+                     sig, (guint)sig_len, peer->pubkey)) {
         g_object_unref (peer);
         return -1;
     }
@@ -887,7 +868,7 @@ ccnet_rpc_get_groups (const char *username, GError **error)
 
     ptr = group_ids;
     while (ptr) {
-        int group_id = (int)ptr->data;
+        int group_id = (int)(long)ptr->data;
         CcnetGroup *group = ccnet_group_manager_get_group (mgr, group_id,
                                                            error);
         if (group != NULL) {

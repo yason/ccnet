@@ -134,10 +134,9 @@ class CcnetRpcClient(RpcClientBase):
     def list_resolving_peers(self):
         pass
 
-    @searpc_func("string", ["string"])
+    @searpc_func("objlist", ["string"])
     def get_peers_by_role(self):
         pass
-
     
     @searpc_func("object", ["string"])
     def get_peer(self):
@@ -167,14 +166,6 @@ class CcnetRpcClient(RpcClientBase):
     @searpc_func("int", ["string", "string"])
     def remove_role(self, peer_id, role):
         pass
-
-#    @searpc_func("objlist", ["int", "int"], ret_obj_class=Event)
-#    def get_events(offset, limit):
-#        pass
-
-#    @searpc_func("int", [])
-#    def count_event():
-#        pass
 
     @searpc_func("objlist", ["int", "int"])
     def get_procs_alive(offset, limit):
@@ -244,6 +235,10 @@ class CcnetRpcClient(RpcClientBase):
     def remove_binding(self, email):
         pass
 
+    @searpc_func("int", ["string", "string"])
+    def remove_one_binding(self, email, peer_id):
+        pass
+    
     @searpc_func("objlist", ["string"])
     def get_peers_by_email(self, email):
         pass
@@ -272,6 +267,10 @@ class CcnetRpcClient(RpcClientBase):
     def get_groups(self, user_name):
         pass
 
+    @searpc_func("objlist", ["int", "int"])
+    def get_all_groups(self, start, limit):
+        pass
+    
     @searpc_func("object", ["int"])
     def get_group(self, group_id):
         pass
