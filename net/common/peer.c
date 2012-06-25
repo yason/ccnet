@@ -149,6 +149,7 @@ ccnet_peer_new (const char *id)
 
     peer->processors = g_hash_table_new_full (g_direct_hash,  g_direct_equal, 
                                               NULL, NULL);
+    INIT_LIST_HEAD (&peer->procs_list);
 
     peer->reqID = CCNET_USER_ID_START;
 
@@ -419,6 +420,22 @@ static void remove_write_callbacks (CcnetPeer *peer)
     g_list_free (peer->write_cbs);
 }
 
+
+int
+shutdown_peer (CcnetPeer *peer)
+{
+    ccnet_peer_shutdown (peer);
+    g_object_unref (peer);
+    return FALSE;
+}
+
+static void
+schedule_shutdown (CcnetPeer *peer)
+{
+    g_object_ref (peer);
+    ccnet_timer_new ((TimerCB)shutdown_peer, peer, 1);
+}
+
 void
 ccnet_peer_shutdown (CcnetPeer *peer)
 {
@@ -427,6 +444,12 @@ ccnet_peer_shutdown (CcnetPeer *peer)
 
     if (peer->in_shutdown)
         return;
+
+    if (peer->in_processor_call) {
+        ccnet_debug ("shutdown %s(%.8s) is scheduled\n", peer->name, peer->id);
+        schedule_shutdown (peer);
+        return;
+    }
 
     peer->in_shutdown = 1;
 
@@ -437,6 +460,8 @@ ccnet_peer_shutdown (CcnetPeer *peer)
         g_object_set (peer, "can-connect", 0, NULL);
     }
     peer->is_ready = 0;
+    g_free (peer->dns_addr);
+    peer->dns_addr = NULL;
     peer->dns_done = 0;
 
     ccnet_debug ("Shutdown all processors for peer %s\n", peer->name);
@@ -653,7 +678,9 @@ parsed:
     /*                  GET_PNAME(processor), PRINT_ID(processor->id), */
     /*                  code, code_msg); */
 
+    peer->in_processor_call = 1;
     ccnet_processor_handle_response (processor, code, code_msg, content, clen);
+    peer->in_processor_call = 0;
     return;
 
 error:
@@ -718,8 +745,9 @@ parsed:
     /*     ccnet_debug ("[RECV] handle_update %s id is %d, %s %s\n", */
     /*                  GET_PNAME(processor), PRINT_ID(processor->id), */
     /*                  code, code_msg); */
-    
+    peer->in_processor_call = 1;
     ccnet_processor_handle_update (processor, code, code_msg, content, clen);
+    peer->in_processor_call = 0;
     return;
 
 error:
@@ -738,6 +766,8 @@ canRead (ccnet_packet *packet, void *vpeer)
     /* if (!peer->is_local) */
     /*     ccnet_debug ("[RECV] Recieve packat from %s type is %d, id is %d\n", */
     /*                  peer->id, packet->header.type, packet->header.id); */
+
+    g_assert (packet->header.id != 0);
 
     switch (packet->header.type) {
     case CCNET_MSG_REQUEST:
@@ -1037,9 +1067,11 @@ ccnet_peer_send_update (const CcnetPeer *peer, int req_id,
 void
 ccnet_peer_add_processor (CcnetPeer *peer, CcnetProcessor *processor)
 {
-    ccnet_debug ("[Proc] Add %s(%d) to peer %s\n", GET_PNAME(processor), 
-                 PRINT_ID(processor->id), peer->name);
+    if (!peer->is_local)
+        ccnet_debug ("[Proc] Add %s(%d) to peer %s\n", GET_PNAME(processor),
+                     PRINT_ID(processor->id), peer->name);
     g_hash_table_insert (peer->processors, (gpointer)(long)processor->id, processor);
+    list_add (&processor->per_peer_list, &peer->procs_list);
     processor->detached = 0;
 }
 
@@ -1050,6 +1082,7 @@ ccnet_peer_remove_processor (CcnetPeer *peer, CcnetProcessor *processor)
     /* ccnet_debug ("[Proc] Remove %s(%d) from peer %s\n", GET_PNAME(processor),  */
     /*              PRINT_ID(processor->id), peer->name); */
     g_hash_table_remove (peer->processors, (gpointer)(long)processor->id);
+    list_del (&processor->per_peer_list);
     processor->detached = 1;
 }
 
@@ -1071,34 +1104,19 @@ static void shutdown_processors (CcnetPeer *peer)
 /* -------- redirect related code -------- */
 
 void
-ccnet_peer_redirect_to (CcnetPeer *peer, CcnetPeer *to)
+ccnet_peer_set_redirect (CcnetPeer *peer, const char *addr, uint16_t port)
 {
-    if (peer->redirect_from) {
-        ccnet_warning ("Peer can only redirect once\n");
-        return;
-    }
+    g_return_if_fail (peer->redirected == 0);
 
-    if (to->redirect_from != NULL && to->redirect_from != peer) {
-        ccnet_warning ("Another peer already redirect to it\n");
-        return;
-    }
-
-    if (peer->redirect_to)
-        ccnet_peer_unset_redirect (peer);
-
-    peer->redirect_to = to;
-    to->redirect_from = peer;
-    g_object_ref (to);
-    g_object_ref (peer);
+    peer->redirected = 1;
+    peer->redirect_addr = g_strdup (addr);
+    peer->redirect_port = port;
 }
 
 void
 ccnet_peer_unset_redirect (CcnetPeer *peer)
 {
-    g_assert (peer->redirect_to);
-
-    g_object_unref (peer->redirect_to->redirect_from);
-    peer->redirect_to->redirect_from = NULL;
-    g_object_unref (peer->redirect_to);
-    peer->redirect_to = NULL;
+    peer->redirected = 0;
+    g_free (peer->redirect_addr);
+    peer->redirect_port = 0;
 }

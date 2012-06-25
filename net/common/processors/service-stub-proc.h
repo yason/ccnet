@@ -37,10 +37,4 @@ void ccnet_service_stub_proc_send_update (CcnetServiceStubProc *proc,
                                           char *code, char *code_msg,
                                           char *content, int clen);
 
-void
-ccnet_service_stub_become_orphan (CcnetServiceStubProc *proc);
-
-gboolean
-ccnet_service_stub_is_orphan (CcnetServiceStubProc *proc);
-
 #endif

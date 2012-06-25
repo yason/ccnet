@@ -15,7 +15,6 @@ ccnetrpc_transport_send (void *arg, const gchar *fcall_str,
     CcnetrpcTransportParam *priv;
     CcnetClient *session;
     struct CcnetResponse *rsp;
-    GString *proc_name;
     uint32_t req_id;
 
     g_warn_if_fail (arg != NULL && fcall_str != NULL);
@@ -23,28 +22,7 @@ ccnetrpc_transport_send (void *arg, const gchar *fcall_str,
     priv = (CcnetrpcTransportParam *)arg;
     session = priv->session;
 
-    req_id = ccnet_client_get_request_id (session);
-
-    proc_name = g_string_new (NULL);
-    if (!priv->peer_id)
-        g_string_append_printf (proc_name, "%s", priv->service);
-    else
-        g_string_append_printf (proc_name, "remote %s %s",
-                                priv->peer_id, priv->service);
-    ccnet_client_send_request (session, req_id, proc_name->str);
-    g_string_free (proc_name, TRUE);
-
-    if (ccnet_client_read_response (session) < 0) {
-        *ret_len = 0;
-        return NULL;
-    }
-    rsp = &session->response;
-    if (memcmp (rsp->code, "200", 3) != 0) {
-        g_warning ("[Sea RPC] failed to start rpc server.\n");
-        *ret_len = 0;
-        return NULL;
-    }
-
+    req_id = ccnet_client_get_rpc_request_id (session, priv->peer_id, priv->service);
     ccnet_client_send_update (session, req_id,
                               SC_CLIENT_CALL, SS_CLIENT_CALL,
                               fcall_str, fcall_len);
@@ -52,15 +30,13 @@ ccnetrpc_transport_send (void *arg, const gchar *fcall_str,
     /* read response */
     if (ccnet_client_read_response (session) < 0) {
         *ret_len = 0;
+        ccnet_client_clean_rpc_request (session, req_id);
         return NULL;
     }
     rsp = &session->response;
 
     if (memcmp (rsp->code, SC_SERVER_RET, 3) == 0) {
         *ret_len = (size_t) rsp->clen;
-        ccnet_client_send_update (session, req_id,
-                                  SC_PROC_DONE, SS_PROC_DONE,
-                                  NULL, 0);
         return g_strndup (rsp->content, rsp->clen);
     }
 
@@ -77,6 +53,7 @@ ccnetrpc_transport_send (void *arg, const gchar *fcall_str,
             if (ccnet_client_read_response (session) < 0) {
                 *ret_len = 0;
                 g_string_free (buf, TRUE);
+                ccnet_client_clean_rpc_request (session, req_id);
                 return NULL;
             }
             rsp = &session->response;
@@ -85,6 +62,7 @@ ccnetrpc_transport_send (void *arg, const gchar *fcall_str,
                            rsp->code, rsp->code_msg);
                 *ret_len = 0;
                 g_string_free (buf, TRUE);
+                ccnet_client_clean_rpc_request (session, req_id);
                 return NULL;
             }
 
@@ -92,9 +70,6 @@ ccnetrpc_transport_send (void *arg, const gchar *fcall_str,
             *ret_len += (size_t) rsp->clen;
         } while (memcmp (rsp->code, SC_SERVER_MORE, 3) == 0);
 
-        ccnet_client_send_update (session, req_id,
-                                  SC_PROC_DONE, SS_PROC_DONE,
-                                  NULL, 0);
         return g_string_free (buf, FALSE);
     }
 

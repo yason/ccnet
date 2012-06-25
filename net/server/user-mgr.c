@@ -58,7 +58,6 @@ ccnet_user_manager_new (CcnetSession *session)
     manager = g_object_new (CCNET_TYPE_USER_MANAGER, NULL);
     manager->session = session;
     manager->user_hash = g_hash_table_new (g_str_hash, g_str_equal);
-    manager->userdb_path = g_build_filename (session->config_dir, "user-db", NULL);
 
     return manager;
 }
@@ -66,11 +65,9 @@ ccnet_user_manager_new (CcnetSession *session)
 int
 ccnet_user_manager_prepare (CcnetUserManager *manager)
 {
-    int ret;
-    if ( (ret = open_db(manager)) < 0)
-        return ret;
-
-    return 0;
+    manager->userdb_path = g_build_filename (manager->session->config_dir,
+                                             "user-db", NULL);
+    return open_db(manager);
 }
 
 void
@@ -107,6 +104,7 @@ static void check_db_table (CcnetDB *db)
         sql = "CREATE TABLE IF NOT EXISTS Binding (email VARCHAR(255), peer_id CHAR(41),"
             "UNIQUE INDEX (peer_id), INDEX (email(20)))";
         ccnet_db_query (db, sql);
+
     } else if (db_type == CCNET_DB_TYPE_SQLITE) {
         sql = "CREATE TABLE IF NOT EXISTS EmailUser (id INTEGER NOT NULL PRIMARY KEY,"
             " email TEXT, passwd TEXT, is_staff bool NOT NULL, is_active bool NOT NULL,"

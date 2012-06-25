@@ -9,6 +9,7 @@
 
 #include "processor.h"
 #include "proc-factory.h"
+#include "peer-mgr.h"
 #include "timer.h"
 #include "processors/keepalive2-proc.h"
 #include "processors/rcvcmd-proc.h"
@@ -41,7 +42,7 @@
 #define DEFAULT_NO_PACKET_TIMEOUT    10   /* 10 seconds */
 #define KEEPALIVE_PULSE              5 * 1000 /* 5 seconds */
 #define CONNECTION_TIMEOUT           182
-#define MAX_PROCS_KEEPALIVE          50    /* we check 50 proc at most */
+#define MAX_PROCS_KEEPALIVE          5    /* we check 5 proc for each peer at most */
 
 typedef struct {
     GHashTable *proc_type_table;
@@ -222,11 +223,12 @@ create_processor_common (CcnetProcFactory *factory,
      */
     processor->name = g_strdup(serv_name);
 
-    ccnet_debug ("Create processor %s(%d) %s\n", GET_PNAME(processor),
-                 PRINT_ID(processor->id), processor->name);
+    if (!peer->is_local)
+        ccnet_debug ("Create processor %s(%d) %s\n", GET_PNAME(processor),
+                     PRINT_ID(processor->id), processor->name);
     ccnet_peer_add_processor (processor->peer, processor);
 
-    list_add (&(processor->list), &(factory->procs_list));
+    list_add (&processor->list, &factory->procs_list);
     factory->procs_alive_cnt++;
 
     return processor;
@@ -248,13 +250,6 @@ ccnet_proc_factory_create_master_processor (CcnetProcFactory *factory,
                                             const char *serv_name,
                                             CcnetPeer *peer)
 {
-    if (peer->redirect_to) {
-        ccnet_debug ("Redirect processor request from %s(%.8s) to %s(%.8s)\n",
-                     peer->name, peer->id, 
-                     peer->redirect_to->name, peer->redirect_to->id);
-        peer = peer->redirect_to;
-    }
-
     return create_processor_common (
         factory, serv_name,
         peer, MASTER_ID(ccnet_peer_get_request_id (peer)) );
@@ -263,7 +258,7 @@ ccnet_proc_factory_create_master_processor (CcnetProcFactory *factory,
 static void inline
 recycle (CcnetProcFactory *factory, CcnetProcessor *processor)
 {
-    list_del (&(processor->list));
+    list_del (&processor->list);
     factory->procs_alive_cnt--;
 
 #ifdef DEBUG_PROC
@@ -290,6 +285,21 @@ ccnet_proc_factory_recycle (CcnetProcFactory *factory,
     recycle (factory, processor);
 }
 
+static void
+shutdown_processor (CcnetProcessor *processor,
+                    char *code, char *code_msg)
+{
+    /* Send an error message to shutdown the processor.
+     * If it's a proxy or stub proc, it'll first relay the message.
+     */
+    if (!IS_SLAVE (processor)) {
+        ccnet_processor_handle_response (processor, code, code_msg,
+                                         NULL, 0);
+    } else {
+        ccnet_processor_handle_update (processor, code, code_msg,
+                                       NULL, 0);
+    }
+}
 
 void
 ccnet_proc_factory_shutdown_processors (CcnetProcFactory *factory,
@@ -297,14 +307,20 @@ ccnet_proc_factory_shutdown_processors (CcnetProcFactory *factory,
 {
     GList *list, *ptr;
     CcnetProcessor *processor;
+    char *code = g_strdup (SC_NETDOWN);
+    char *code_msg = g_strdup (SS_NETDOWN);
 
     list = g_hash_table_get_values (peer->processors);
     for (ptr = list; ptr; ptr = ptr->next) {
         processor = CCNET_PROCESSOR (ptr->data);
-        ccnet_processor_shutdown (processor, PROC_NETDOWN);
+        list_del (&processor->per_peer_list);
+        shutdown_processor (processor, code, code_msg);
     }
     g_hash_table_remove_all (peer->processors);
     g_list_free (list);
+
+    g_free (code);
+    g_free (code_msg);
 }
 
 void
@@ -335,53 +351,26 @@ ccnet_proc_factory_set_keepalive_timeout (CcnetProcFactory *factory,
    3. no response, then when if `no_packet_timeout + 30`
       threshold is reached, shutdown the processor.
 */
-static int
-keepalive_pulse (CcnetProcFactory *factory)
+
+static void
+peer_processors_keepalive (CcnetProcFactory *factory, CcnetPeer *peer)
 {
     time_t now = time(NULL);
-
     const int no_packet_timeout1 = factory->no_packet_timeout;
     const int no_packet_timeout2 = factory->no_packet_timeout + CONNECTION_TIMEOUT;
     struct list_head *pos, *tmp;
     CcnetProcessor *processor;
     int count = 0;
+    char *code, *code_msg;
 
     /*
      * Use list_for_each_safe since we may delete an entry when looping. 
      */
-    list_for_each_safe (pos, tmp, &(factory->procs_list)) {
-        processor = list_entry (pos, CcnetProcessor, list);
+    list_for_each_safe (pos, tmp, &(peer->procs_list)) {
+        processor = list_entry (pos, CcnetProcessor, per_peer_list);
 
         if (CCNET_IS_KEEPALIVE2_PROC(processor))
             continue;
-
-        /*
-         * Service proxy and stub processors should be shutdown in pair.
-         * However, we cannot remove 2 procs from the procs_list in one loop.
-         * This may invalidate the 'pos' pointer in case proxy and stub
-         * procs are adjacent in the procs_list.
-         *
-         * When proxy proc is shutting down, it declares the stub becomes an
-         * orphan. Then we shutdown the orphan stub here. The same thing happens
-         * when stub proc shuts down.
-         */
-        if (CCNET_IS_SERVICE_PROXY_PROC(processor) &&
-            ccnet_service_proxy_is_orphan((CcnetServiceProxyProc *)processor))
-        {
-            ccnet_debug ("[proc-fact] Shutdown service_proxy:%d when it's orphan\n",
-                         PRINT_ID(processor->id));
-            ccnet_processor_shutdown (processor, PROC_NOTSET);
-            continue;
-        }
-
-        if (CCNET_IS_SERVICE_STUB_PROC(processor) &&
-            ccnet_service_stub_is_orphan((CcnetServiceStubProc *)processor))
-        {
-            ccnet_debug ("[proc-fact] Shutdown service_stub:%d when it's orphan\n",
-                         PRINT_ID(processor->id));
-            ccnet_processor_shutdown (processor, PROC_NOTSET);
-            continue;
-        }
 
         if (processor->peer->is_local) {
             /* No need to call keepalive to local peer */
@@ -395,7 +384,11 @@ keepalive_pulse (CcnetProcFactory *factory)
                 ccnet_debug ("[proc-fact] Shutdown processsor %s(%d) when connect timeout %ds\n",
                              GET_PNAME(processor), PRINT_ID(processor->id),
                              now - processor->start_time);
-                ccnet_processor_shutdown (processor, PROC_CON_TIMEOUT);
+                code = g_strdup (SC_CON_TIMEOUT);
+                code_msg = g_strdup (SS_CON_TIMEOUT);
+                shutdown_processor (processor, code, code_msg);
+                g_free (code);
+                g_free (code_msg);
             }
             continue;
         }
@@ -418,11 +411,34 @@ keepalive_pulse (CcnetProcFactory *factory)
             /* receive command processor should only be called by 
                local, and they may only timeout when debuging. */
             /* g_assert (!CCNET_IS_RCVCMD_PROC(processor)); */
-            ccnet_processor_shutdown (processor, PROC_TIMEOUT);
+            code = g_strdup (SC_KEEPALIVE_TIMEOUT);
+            code_msg = g_strdup (SS_KEEPALIVE_TIMEOUT);
+            shutdown_processor (processor, code, code_msg);
+            g_free (code);
+            g_free (code_msg);
             continue;
         }
 
     }
+}
+
+static int
+keepalive_pulse (CcnetProcFactory *factory)
+{
+    GList *peers, *ptr;
+    CcnetPeer *peer;
+
+    /* Maintain a separate processor keep-alive list for each peer.
+     * So we don't need to worry about removing proxy proc and stub
+     * proc from the same list in one loop, since they are bound to
+     * different peers.
+     */
+    peers = ccnet_peer_manager_get_peer_list (factory->session->peer_mgr);
+    for (ptr = peers; ptr != NULL; ptr = ptr->next) {
+        peer = ptr->data;
+        peer_processors_keepalive (factory, peer);
+    }
+    g_list_free (peers);
 
     return TRUE;
 }

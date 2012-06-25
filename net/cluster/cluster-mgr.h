@@ -13,15 +13,15 @@ typedef struct CcnetClusterManagerPriv CcnetClusterManagerPriv;
 
 struct _CcnetClusterManager
 {
-    CcnetSession   *session;
-
     GList          *masters;
     GList          *members;
+
+    unsigned int                redirect : 1;
     
     CcnetClusterManagerPriv *priv;
 };
 
-CcnetClusterManager* ccnet_cluster_manager_new (CcnetSession *);
+CcnetClusterManager* ccnet_cluster_manager_new ();
 
 void ccnet_cluster_manager_free (CcnetClusterManager *manager);
 

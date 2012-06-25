@@ -20,6 +20,9 @@
 #include "algorithms.h"
 #include "utils.h"
 
+#ifdef CCNET_DAEMON
+#include "daemon-session.h"
+#endif
 
 #define DEBUG_FLAG  CCNET_DEBUG_PEER
 #include "log.h"
@@ -58,8 +61,7 @@ static guint signals[LAST_SIGNAL] = { 0 };
 static int open_db (CcnetPeerManager *manager);
 static void save_peer_addr(CcnetPeerManager *manager, CcnetPeer *peer);
 static void remove_peer_roles(CcnetPeerManager *manager, char *peer_id);
-static void on_peer_auth_done (CcnetPeerManager *manager,
-                               CcnetPeer *peer, gpointer user_data);
+void ccnet_peer_manager_load_peerdb (CcnetPeerManager *manager);
 
 
 static void
@@ -103,7 +105,6 @@ ccnet_peer_manager_init (CcnetPeerManager *manager)
 CcnetPeerManager*
 ccnet_peer_manager_new (CcnetSession *session)
 {
-    CcnetPeer *peer;
     CcnetPeerManager *manager;
 
     manager = g_object_new (CCNET_TYPE_PEER_MANAGER, NULL);
@@ -111,7 +112,15 @@ ccnet_peer_manager_new (CcnetSession *session)
     manager->session = session;
 
     manager->peer_hash = g_hash_table_new (g_str_hash, g_str_equal);
-    manager->peerdb_path = g_build_filename (session->config_dir, PEERDB_NAME, NULL);
+
+    return manager;
+}
+
+int
+ccnet_peer_manager_prepare (CcnetPeerManager *manager)
+{
+    CcnetPeer *peer;
+    CcnetSession *session = manager->session;
 
     /* peer point to myself */
     peer = ccnet_peer_new (session->base.id);
@@ -128,8 +137,8 @@ ccnet_peer_manager_new (CcnetSession *session)
     g_hash_table_insert (manager->peer_hash, peer->id, peer);
     session->myself = peer;
 
-    open_db(manager);
-    return manager;
+    ccnet_peer_manager_load_peerdb (manager);
+    return 0;
 }
 
 void
@@ -211,9 +220,12 @@ ccnet_peer_manager_remove_peer (CcnetPeerManager *manager,
                                 CcnetPeer *peer)
 {
     ccnet_peer_shutdown (peer);
-#ifndef CCNET_SERVER
-    if (manager->session->default_relay == peer)
-        ccnet_session_unset_relay (manager->session);
+#ifdef CCNET_DAEMON
+    #include "daemon-session.h"
+
+    CcnetDaemonSession *daemon_session = (CcnetDaemonSession *)manager->session;
+    if (daemon_session->default_relay == peer)
+        ccnet_daemon_session_unset_relay (daemon_session);
 #endif
     delete_peer(manager, peer);
 }
@@ -240,6 +252,8 @@ ccnet_peer_manager_add_resolve_peer (CcnetPeerManager *manager,
 
     ccnet_conn_manager_add_to_conn_list (manager->session->connMgr,
                                          peer);
+    ccnet_conn_manager_connect_peer (manager->session->connMgr,
+                                     peer);
     return peer;
 }
 
@@ -302,9 +316,10 @@ ccnet_peer_manager_on_peer_resolved (CcnetPeerManager *manager,
     }
 
     if (peer->want_tobe_default_relay) {
-#ifndef CCNET_SERVER
+#ifdef CCNET_DAEMON
             /* the peer wanted to be the default relay */
-        ccnet_session_set_relay (manager->session, peer);
+        CcnetDaemonSession *daemon_session = (CcnetDaemonSession *)manager->session;
+        ccnet_daemon_session_set_relay (daemon_session, peer);
 #endif
     } else if (peer->want_tobe_relay) {
         ccnet_peer_manager_add_role (manager, peer, "MyRelay");
@@ -589,7 +604,12 @@ ccnet_peer_manager_load_peerdb (CcnetPeerManager *manager)
     const char *dname;
     GDir *dp;
     char buf[PATH_MAX];
+
+    manager->peerdb_path = g_build_filename (manager->session->config_dir,
+                                             PEERDB_NAME, NULL);
     char *peerdb = manager->peerdb_path;
+
+    open_db(manager);
 
     if (checkdir_with_mkdir(peerdb) < 0) {
         ccnet_warning ("Could not open or make peer-db.\n");
@@ -739,7 +759,6 @@ void
 ccnet_peer_manager_start (CcnetPeerManager *manager)
 {
     ccnet_timer_new (save_pulse, manager, SAVING_INTERVAL_MSEC);
-    g_signal_connect (manager, "peer-auth-done", G_CALLBACK(on_peer_auth_done), NULL);
 
     /* manager->priv->notify_timer = ccnet_timer_new ((TimerCB)notify_pulse, */
     /*                                                manager, NOTIFY_MSEC); */
@@ -769,6 +788,7 @@ void ccnet_peer_manager_on_exit (CcnetPeerManager *manager)
 
 #ifdef CCNET_SERVER
 
+#include "server-session.h"
 #include "user-mgr.h"
 
 static void
@@ -776,10 +796,13 @@ handle_bind_query_message (CcnetPeerManager *manager,
                            CcnetMessage *msg,
                            char *body)
 {
+    CcnetUserManager *user_mgr = 
+        ((CcnetServerSession *)manager->session)->user_mgr;
+
     char *email;
     CcnetPeer *peer = ccnet_peer_manager_get_peer (manager, msg->from);
 
-    email = ccnet_user_manager_get_binding_email (manager->session->user_mgr,
+    email = ccnet_user_manager_get_binding_email (user_mgr,
                                                   msg->from);
     if (email)
         ccnet_peer_manager_send_bind_status (manager, peer->id, email);
@@ -809,6 +832,20 @@ ccnet_peer_manager_send_bind_status (CcnetPeerManager *manager,
 
 #endif  /* CCNET_SERVER */
 
+static void
+publish_bind_no_message (CcnetSession *session, CcnetPeer *relay)
+{
+    CcnetMessage *msg;
+    char *self_id = session->base.id;
+    msg = ccnet_message_new (self_id, self_id,           /* from, to  */
+                             "ccnet.relay_not_binded",   /* app */
+                             relay->name,                /* body */
+                             0);                         /* flags */
+    
+    ccnet_send_message (session, msg);
+    ccnet_message_free (msg);
+}
+
 
 static void
 handle_bind_status_message (CcnetPeerManager *manager,
@@ -821,10 +858,24 @@ handle_bind_status_message (CcnetPeerManager *manager,
 
     /* body is end with "\n", so use memcmp */
     if (memcmp(body, "not-bind", 8) == 0) {
+        if (peer->bind_status == BIND_UNKNOWN
+            && !(peer->want_tobe_relay || peer->want_tobe_default_relay)) {
+            publish_bind_no_message (manager->session, peer);
+        }
         peer->bind_status = BIND_NO;
         ccnet_debug ("[peer] set bind status to %d\n", peer->bind_status);
     } else {
         peer->bind_status = BIND_YES;
+        if (peer->bind_email)
+            g_free (peer->bind_email);
+        
+        /* strip trailing '\n' */
+        char *ptr = body;
+        while (*ptr != '\0' && *ptr != '\n') ptr++;
+        *ptr = '\0';
+        
+        peer->bind_email = g_strdup(body);
+        ccnet_debug ("[peer] bind email on %s is %s\n", peer->name, body);
     }
 
     g_object_unref (peer);
@@ -845,8 +896,8 @@ send_bind_query (CcnetPeerManager *manager, CcnetPeer *peer)
 }
 
 
-static void
-send_ready_message (CcnetPeerManager *manager, CcnetPeer *peer)
+void
+ccnet_peer_manager_send_ready_message (CcnetPeerManager *manager, CcnetPeer *peer)
 {
     CcnetMessage *ready_message = NULL;
     char buf[256];
@@ -930,70 +981,64 @@ handle_role_notify_message (CcnetPeerManager *manager,
     g_object_unref (peer);
 }
 
+static int
+redirect (CcnetPeer *peer)
+{
+    ccnet_peer_shutdown (peer);
+    ccnet_debug("[PeerMgr] connect redirect destination %s(%.8s): %s:%d\n",
+                peer->name, peer->id, peer->redirect_addr, peer->redirect_port);
+    ccnet_conn_manager_connect_peer (peer->manager->session->connMgr, peer);
+    g_object_unref (peer);
+    return FALSE;
+}
+
+static void
+schedule_redirect (CcnetPeerManager *manager, CcnetPeer *peer)
+{
+    g_object_ref (peer);
+    ccnet_timer_new ((TimerCB)redirect, peer, 1);
+}
+
 static void
 handle_redirect_message (CcnetPeerManager *manager,
                          CcnetMessage *msg,
                          char *body)
 {
-    int num, port;
-    char *peer_id, *addr_port, *p, *addr;
-    char **tokens;
-    CcnetPeer *peer, *from;
+    int port;
+    char *p, *addr;
+    CcnetPeer *from;
+    int len;
 
     ccnet_debug ("[PeerMgr] Receive redirect message from %.8s\n",
                  msg->from);
 
-    tokens = strsplit_by_space (body, &num);
-    if (num != 2) {
-        ccnet_message ("[PeerMgr] Bad formatted redirect msg\n");
-        goto out;
+    len = strlen(body);
+    if (body[len-1] != '\n') {
+        ccnet_message ("[PeerMgr] Bad formatted redirect msg: not end with '\\n'\n");
+        return;
     }
+    body[len-1] = '\0';
 
-    peer_id = tokens[0];
-    if (!peer_id_valid(peer_id)) {
-        ccnet_message ("[PeerMgr] Redirect peer id invalid\n");
-        goto out;
-    }
-
-    addr_port = tokens[1];
-    addr = addr_port;
-    if ( (p = strchr(addr_port, ':')) == NULL) {
+    addr = body;
+    if ( (p = strchr(body, ':')) == NULL) {
         ccnet_message ("[PeerMgr] Bad formatted redirect msg: port missing\n");
-        goto out;
+        return;
     }
     *p = '\0';
     port = atoi(p+1);
     if (port <= 0) {
         ccnet_message ("[PeerMgr] Bad formatted redirect msg: wrong port\n");
-        goto out;
+        return;
     }
 
-    if (strcmp(peer_id, msg->from) == 0 ||
-        strcmp(peer_id, manager->session->base.id) == 0)
-    {
-        ccnet_debug("[PeerMgr] Invalid redirect destination\n");
-        goto out;
-    }
-
-    peer = ccnet_peer_manager_get_peer (manager, peer_id);
-    if (!peer) {
-        peer = ccnet_peer_new (peer_id);
-        ccnet_peer_manager_add_peer (manager, peer);
-    }
-    peer->public_addr = g_strdup (addr);
-    peer->public_port = port;
 
     from = ccnet_peer_manager_get_peer (manager, msg->from);
-    g_assert (from);
-    ccnet_peer_redirect_to (from, peer);
-    ccnet_debug("[PeerMgr] connect redirect destination %s(%.8s): %s:%d\n",
-                peer->name, peer->id, peer->public_addr, peer->public_port);
-    ccnet_conn_manager_connect_peer (peer->manager->session->connMgr, peer);
+    ccnet_peer_set_redirect (from, addr, port);
+    /* note: can shutdown the connection during this event iteration,
+     * must schedule it */
+    schedule_redirect (manager, from);
 
-    g_object_unref (peer);
     g_object_unref (from);
-out:
-    g_free (tokens);
 }
 
 void
@@ -1030,22 +1075,6 @@ ccnet_peer_manager_receive_message (CcnetPeerManager *manager,
 }
 
 
-
-#ifdef CCNET_DAEMON
-
-static void 
-on_peer_auth_done (CcnetPeerManager *manager, CcnetPeer *peer, gpointer user_data)
-{
-    send_ready_message (manager, peer);
-}
-
-#endif
-
-
-#ifdef CCNET_SERVER
-
-#include "cluster-mgr.h"
-
 static void
 send_redirect_message (CcnetPeerManager *manager, CcnetPeer *peer,
                        CcnetPeer *to)
@@ -1058,8 +1087,8 @@ send_redirect_message (CcnetPeerManager *manager, CcnetPeer *peer,
                        to->name, to->id);
         return;
     }
-    snprintf (buf, 256, "v%d\n%s\n%s %s:%d\n", PEERMGR_VERSION, PEER_REDIRECT,
-              to->id, to->public_addr, to->public_port);
+    snprintf (buf, 256, "v%d\n%s\n%s:%d\n", PEERMGR_VERSION, PEER_REDIRECT,
+              to->public_addr, to->public_port);
 
     msg = ccnet_message_new (manager->session->base.id,
                              peer->id, IPEERMGR_APP,
@@ -1083,35 +1112,3 @@ ccnet_peer_manager_redirect_peer (CcnetPeerManager *manager,
     return;
 }
 
-static void
-redirect_peer (CcnetPeerManager *manager,
-               CcnetPeer *peer)
-{
-    CcnetPeer *dest;
-
-    dest = ccnet_cluster_manager_find_redirect_dest (
-        manager->session->cluster_mgr, peer);
-    if (dest) {
-        ccnet_peer_manager_redirect_peer (manager, peer, dest);
-        g_object_unref (dest);
-    } else {
-        /* serve it myself */
-        send_ready_message (manager, peer);
-    }
-}
-
-static void 
-on_peer_auth_done (CcnetPeerManager *manager, CcnetPeer *peer, gpointer user_data)
-{
-    if (!manager->session->redirect) {
-        send_ready_message (manager, peer);
-        return;
-    }
-
-    if (peer->role_list == NULL) {
-        redirect_peer (manager, peer);
-    } else
-        send_ready_message (manager, peer);
-}
-
-#endif

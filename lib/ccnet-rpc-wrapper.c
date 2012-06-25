@@ -42,6 +42,7 @@ ccnet_create_async_rpc_client (CcnetClient *cclient, const char *peer_id,
     async_priv->service = g_strdup (service_name);
 
     rpc_client = searpc_client_new ();
+
     rpc_client->async_send = ccnetrpc_async_transport_send;
     rpc_client->async_arg = async_priv;
 
@@ -102,6 +103,19 @@ ccnet_get_peer_net_state (SearpcClient *client, const char *peer_id)
     if (!peer)
         return PEER_DOWN;
     ret = peer->net_state;
+    g_object_unref (peer);
+    return ret;
+}
+
+int
+ccnet_get_peer_bind_status (SearpcClient *client, const char *peer_id)
+{
+    CcnetPeer *peer;
+    int ret;
+    peer = ccnet_get_peer (client, peer_id);
+    if (!peer)
+        return BIND_UNKNOWN;
+    ret = peer->bind_status;
     g_object_unref (peer);
     return ret;
 }
@@ -224,7 +238,7 @@ void
 ccnet_login_to_relay (SearpcClient *client, const char *relay_id,
                       const char *username, const char *passwd)
 {
-    searpc_client_call__int (client, "login_to_relay", NULL,
+    searpc_client_call__int (client, "login_relay", NULL,
                              3, "string", relay_id,
                              "string", username, "string", passwd);
 }

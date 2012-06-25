@@ -78,4 +78,16 @@ public class GroupUser : Object {
     public int is_staff { get; set; }
 }
 
+public class Organization : Object {
+
+   public int org_id { get; set; }
+   public string email { get; set; }
+   public int is_staff { get; set; }
+   public string org_name { get; set; }
+   public string url_prefix { get; set; }
+   public string creator { get; set; }
+   public int64 ctime { get; set; }
+   
+}
+
 } // namespace

@@ -60,6 +60,7 @@ struct _CcnetProcessor {
     unsigned int           detached  : 1;
 
     struct list_head       list;
+    struct list_head       per_peer_list;
 
     /* last time when a packet received  */
     time_t                 t_packet_recv;

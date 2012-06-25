@@ -11,7 +11,6 @@
 
 typedef struct {
     CcnetServiceProxyProc *proxy_proc;
-    gboolean is_orphan;
 } ServiceStubPriv;
 
 #define GET_PRIV(o)  \
@@ -30,20 +29,6 @@ static void handle_response (CcnetProcessor *processor,
 G_DEFINE_TYPE (CcnetServiceStubProc, ccnet_service_stub_proc, CCNET_TYPE_PROCESSOR)
 
 
-static void service_stub_shutdown (CcnetProcessor *processor)
-{
-    ServiceStubPriv *priv = GET_PRIV (processor);
-    if (!priv->is_orphan && priv->proxy_proc) {
-        ccnet_debug ("[proc] Shutdown %s %d and set %d orphan because of %d\n",
-                     GET_PNAME(processor), PRINT_ID(processor->id),
-                     PRINT_ID(CCNET_PROCESSOR(priv->proxy_proc)->id),
-                     processor->failure);
-        ccnet_service_proxy_become_orphan (priv->proxy_proc);
-        CCNET_PROCESSOR(priv->proxy_proc)->failure = processor->failure;
-    }
-}
-
-
 static void
 ccnet_service_stub_proc_class_init (CcnetServiceStubProcClass *klass)
 {
@@ -52,7 +37,6 @@ ccnet_service_stub_proc_class_init (CcnetServiceStubProcClass *klass)
 
     proc_class->name = "service-stub-proc";
     proc_class->start = service_stub_start;
-    proc_class->shutdown = service_stub_shutdown;
     proc_class->handle_update = handle_update;
     proc_class->handle_response = handle_response;
 
@@ -111,23 +95,6 @@ ccnet_service_stub_proc_set_proxy_proc (CcnetServiceStubProc *proc,
     ServiceStubPriv *priv = GET_PRIV (proc);
 
     priv->proxy_proc = (CcnetServiceProxyProc *)proxy_proc;
-    priv->is_orphan = FALSE;
-}
-
-void
-ccnet_service_stub_become_orphan (CcnetServiceStubProc *proc)
-{
-    ServiceStubPriv *priv = GET_PRIV(proc);
-
-    priv->is_orphan = TRUE;
-}
-
-gboolean
-ccnet_service_stub_is_orphan (CcnetServiceStubProc *proc)
-{
-    ServiceStubPriv *priv = GET_PRIV(proc);
-
-    return (priv->is_orphan);
 }
 
 static void handle_response (CcnetProcessor *processor,
@@ -138,10 +105,8 @@ static void handle_response (CcnetProcessor *processor,
 
     /* ccnet_debug ("[Svc Stub] %d handle response: %s %s\n", */
     /*              PRINT_ID(processor->id), code, code_msg); */
-    if (!priv->is_orphan) {
-        ccnet_processor_handle_response ((CcnetProcessor *)priv->proxy_proc,
-                                         code, code_msg, content, clen);
-    }
+    ccnet_processor_handle_response ((CcnetProcessor *)priv->proxy_proc,
+                                     code, code_msg, content, clen);
 }
 
 

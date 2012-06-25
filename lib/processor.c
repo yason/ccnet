@@ -128,12 +128,6 @@ ccnet_processor_shutdown (CcnetProcessor *processor, int reason)
     g_debug ("[proc] Shutdown processor %s(%d) with %d\n", GET_PNAME(processor),
              PRINT_ID(processor->id), reason);
 
-    /* Notify */
-    if (!IS_SLAVE (processor)) {
-        ccnet_processor_send_update (processor, SC_PROC_DONE, SS_PROC_DONE,
-                                     NULL, 0); 
-    }
-
     if (reason == PROC_DONE)
         g_signal_emit (processor, signals[DONE_SIG], 0, TRUE);
     else
@@ -157,9 +151,9 @@ ccnet_processor_done (CcnetProcessor *processor,
              PRINT_ID(processor->id));
 
     /* Notify */
-    if (!IS_SLAVE (processor)) {
+    if (!IS_SLAVE (processor) && success) {
         ccnet_processor_send_update (processor, SC_PROC_DONE, SS_PROC_DONE,
-                                     NULL, 0); 
+                                     NULL, 0);
     }
 
     g_signal_emit (processor, signals[DONE_SIG], 0, success);
@@ -220,9 +214,9 @@ void ccnet_processor_handle_response (CcnetProcessor *processor,
     processor->is_active = TRUE;
 
     if (code[0] == '5') {
-        ccnet_warning ("[Proc] Shutdown processor %s(%d) for bad response: %s %s\n",
+        ccnet_warning ("[Proc] Shutdown processor %s(%d) for bad response: %s %s from %s\n",
                        GET_PNAME(processor), PRINT_ID(processor->id),
-                       code, code_msg);
+                       code, code_msg, processor->peer_id);
 
         if (memcmp(code, SC_UNKNOWN_SERVICE, 3) == 0)
             ccnet_processor_shutdown (processor, PROC_NO_SERVICE);

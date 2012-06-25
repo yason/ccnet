@@ -130,6 +130,9 @@ if test "$blinux" = true; then
    AC_ARG_ENABLE(server, AC_HELP_STRING([--enable-server], [enable server]),
       [compile_server=$enableval],[compile_server="no"])
 
+   AC_ARG_ENABLE(cluster, AC_HELP_STRING([--enable-cluster],
+      [enable cluster]), [compile_cluster=$enableval],
+      [compile_cluster="no"])
 fi
 
 AC_ARG_ENABLE(python,
@@ -152,6 +155,7 @@ AM_CONDITIONAL([COMPILE_TOOLS], [test "${compile_tools}" = "yes"])
 AM_CONDITIONAL([COMPILE_PYTHON], [test "${compile_python}" = "yes"])
 AM_CONDITIONAL([COMPILE_CLIENT], [test "${compile_client}" = "yes"])
 AM_CONDITIONAL([COMPILE_SERVER], [test "${compile_server}" = "yes"])
+AM_CONDITIONAL([COMPILE_CLUSTER], [test "${compile_cluster}" = "yes"])
 
 AM_CONDITIONAL([WIN32], [test "$bwin32" = "true"])
 AM_CONDITIONAL([MACOS], [test "$bmac" = "true"])
@@ -160,22 +164,22 @@ AM_CONDITIONAL([LINUX], [test "$blinux" = "true"])
 
 # check libraries
 if test "$bwin32" != true; then
-  AC_CHECK_LIB(uuid, uuid_generate, ,
+  AC_CHECK_LIB(uuid, uuid_generate, [echo "found library uuid"],
       dnl - if failed, try uuid_create
-      AC_CHECK_LIB(uuid, uuid_create, ,
+      AC_CHECK_LIB(uuid, uuid_create,[echo "found library uuid"] ,
           AC_MSG_ERROR([*** Unable to find uuid library]), )
       , )
 
-  AC_CHECK_LIB(event, event_init, ,
+  AC_CHECK_LIB(event, event_init,[echo "found library event"] ,
     AC_MSG_ERROR([*** Unable to find libevent library]), )
 else
-  AC_CHECK_LIB(event, event_init, ,
+  AC_CHECK_LIB(event, event_init, [echo "found library event"],
     AC_MSG_ERROR([*** Unable to find libevent library]), [-lwsock32])
 fi
 
-AC_CHECK_LIB(pthread, pthread_create, , AC_MSG_ERROR([*** Unable to find pthread library]), )
-AC_CHECK_LIB(sqlite3, sqlite3_open, , AC_MSG_ERROR([*** Unable to find sqlite3 library]), )
-AC_CHECK_LIB(crypto, SHA1_Init, , AC_MSG_ERROR([*** Unable to find openssl crypto library]), )
+AC_CHECK_LIB(pthread, pthread_create, [echo "found library pthread"], AC_MSG_ERROR([*** Unable to find pthread library]), )
+AC_CHECK_LIB(sqlite3, sqlite3_open,[echo "found library sqlite3"] , AC_MSG_ERROR([*** Unable to find sqlite3 library]), )
+AC_CHECK_LIB(crypto, SHA1_Init, [echo "found library crypto"], AC_MSG_ERROR([*** Unable to find openssl crypto library]), )
 
 dnl Do we need to use AX_LIB_SQLITE3 to check sqlite?
 dnl AX_LIB_SQLITE3
@@ -209,7 +213,7 @@ elif test "$bmac" = true ; then
   LIB_GDI32=
   LIB_RT=
   LIB_INTL=
-  LIB_PYTHON=-lpython
+  LIB_PYTHON=-lpython2.7
   LIB_RESOLV=-lresolv
   LIB_UUID=-luuid
   LIB_IPHLPAPI=
@@ -271,7 +275,7 @@ if test x${compile_python} = xyes; then
    AM_PATH_PYTHON([2.4])
    AM_CHECK_PYTHON_HEADERS(,[AC_MSG_ERROR(could not find Python headers)])
 
-   if test "$bwin32" == true; then
+   if test "$bwin32" = true; then
        # set pyexecdir to somewhere like /c/Python26/Lib/site-packages
        pyexecdir=${PYTHON_DIR}/Lib/site-packages
        pythondir=${pyexecdir}
@@ -289,7 +293,7 @@ if test "${compile_server}" = "yes"; then
    AC_SUBST(ZDB_CFLAGS)
    AC_SUBST(ZDB_LIBS)
 
-   AC_CHECK_LIB(mysqlclient, mysql_init, ,
+   AC_CHECK_LIB(mysqlclient, mysql_init, [echo "found library mysqlclient"],
       AC_MSG_ERROR([*** Unable to find mysql client library]), )
 
    MYSQL_LIBS=`mysql_config --libs_r`
@@ -305,6 +309,7 @@ AC_CONFIG_FILES(
     net/Makefile
     net/daemon/Makefile
     net/server/Makefile
+    net/cluster/Makefile
     cli/Makefile
     lib/Makefile
     tools/Makefile
@@ -328,5 +333,8 @@ if test x${compile_client} = xyes; then
 fi
 if test x${compile_server} = xyes; then
    echo    "ccnet-server"
+fi
+if test x${compile_cluster} = xyes; then
+   echo    "cluster"
 fi
 echo

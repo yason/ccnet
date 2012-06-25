@@ -21,9 +21,14 @@ CcnetGroupManager* ccnet_group_manager_new (CcnetSession *session)
 
     manager->session = session;
     manager->priv = g_new0 (CcnetGroupManagerPriv, 1);
-    
-    open_db (manager);
+
     return manager;
+}
+
+int
+ccnet_group_manager_prepare (CcnetGroupManager *manager)
+{
+    return open_db(manager);
 }
 
 void ccnet_group_manager_start (CcnetGroupManager *manager)
@@ -155,7 +160,7 @@ int ccnet_group_manager_create_group (CcnetGroupManager *mgr,
         return -1;
     }
     
-    return 0;
+    return group_id;
 }
 
 static gboolean

@@ -15,20 +15,8 @@ struct CcnetConnManager
 
     CcnetTimer      *reconnect_timer;
     CcnetTimer      *listen_timer;
-    CcnetTimer      *dnslookup_timer;
 
     evutil_socket_t  bind_socket;
-
-#ifndef CCNET_SERVER
-    /* multicast */
-    evutil_socket_t  mcsnd_socket;
-    evutil_socket_t  mcrcv_socket;
-    struct sockaddr* mc_sasend;
-    int              mc_salen;
-    struct event     mc_event;
-
-    int              multicast_error : 1;
-#endif
 
     GList           *conn_list;
 };

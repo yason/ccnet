@@ -21,18 +21,21 @@
 #define DEBUG_FLAG  CCNET_DEBUG_PEER
 #include "log.h"
 
+extern CcnetSession  *session;
+extern CcnetSession  *inner_session;
+
+
 struct CcnetClusterManagerPriv {
     int dummy;
 };
 
 
 CcnetClusterManager*
-ccnet_cluster_manager_new (CcnetSession *session)
+ccnet_cluster_manager_new ()
 {
     CcnetClusterManager *manager;
 
     manager = g_new0 (CcnetClusterManager, 1);
-    manager->session = session;
 
     manager->priv = g_new0 (CcnetClusterManagerPriv, 1);
 
@@ -52,7 +55,7 @@ ccnet_cluster_manager_start (CcnetClusterManager *manager)
     GList *peers, *ptr;
 
     peers = ccnet_peer_manager_get_peers_with_role (
-        manager->session->peer_mgr, "ClusterMember");
+        inner_session->peer_mgr, "ClusterMember");
     for (ptr = peers; ptr; ptr = ptr->next) {
         CcnetPeer *peer = ptr->data;
         ccnet_cluster_manager_add_member (manager, peer);
@@ -61,14 +64,12 @@ ccnet_cluster_manager_start (CcnetClusterManager *manager)
 
     /* find peers with role ClusterMaster and add to list */
     peers = ccnet_peer_manager_get_peers_with_role (
-        manager->session->peer_mgr, "ClusterMaster");
+        inner_session->peer_mgr, "ClusterMaster");
     for (ptr = peers; ptr; ptr = ptr->next) {
         CcnetPeer *peer = ptr->data;
         ccnet_cluster_manager_add_master (manager, peer);
     }
     g_list_free (peers);
-
-    
 }
 
 void
@@ -96,7 +97,7 @@ ccnet_cluster_manager_add_master (CcnetClusterManager *manager,
     manager->members = g_list_prepend (manager->members, peer);
     g_object_ref (peer);
     ccnet_conn_manager_add_to_conn_list (
-        manager->session->connMgr, peer);
+        inner_session->connMgr, peer);
 }
 
 void
@@ -109,7 +110,7 @@ ccnet_cluster_manager_remove_master (CcnetClusterManager *manager,
     g_object_unref (peer);
 
     ccnet_conn_manager_remove_from_conn_list (
-        manager->session->connMgr, peer);
+        inner_session->connMgr, peer);
 }
 
 CcnetPeer*

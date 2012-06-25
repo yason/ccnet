@@ -307,6 +307,14 @@ static void send_challenge(CcnetProcessor *processor)
 
     RAND_pseudo_bytes (priv->random_buf, 40);
     buf = public_key_encrypt (peer->pubkey, priv->random_buf, 40, &len);
+    if (len < 0) {
+        ccnet_debug ("[Keepalive] Failed to encrypt challenge "
+                     "with peer %s(%.8s)'s pubkey\n", peer->name, peer->id);
+        close_processor (processor);
+        g_free (buf);
+        return;
+    }
+        
     ccnet_processor_send_update (processor, "311", NULL, (char *)buf, len);
 
     g_free(buf);

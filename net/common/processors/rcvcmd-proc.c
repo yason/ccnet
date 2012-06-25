@@ -21,8 +21,11 @@
 #include "net.h"
 #include "log.h"
 
-#ifdef CCNET_SERVER
+#ifdef CCNET_CLUSTER
   #include "cluster-mgr.h"
+#endif
+#ifdef CCNET_DAEMON
+  #include "daemon-session.h"
 #endif
 
 
@@ -135,8 +138,8 @@ static int disconnect_peer        (CcnetProcessor *, int, char **);
 static int conn_cancel (CcnetProcessor *, int, char **);
 static int invoke_echo (CcnetProcessor *, int, char **);
 
-#ifdef CCNET_SERVER
-static int set_client  (CcnetProcessor *, int, char **);
+
+#ifdef CCNET_CLUSTER
 static int add_member    (CcnetProcessor *, int, char **);
 static int add_master    (CcnetProcessor *, int, char **);
 static int redirect_peer (CcnetProcessor *, int, char **);
@@ -162,8 +165,7 @@ static struct cmd cmdtab[] =  {
 #ifdef CCNET_DAEMON
     { "set-relay", set_relay },
 #endif
-#ifdef CCNET_SERVER
-    { "set-client",  set_client },
+#ifdef CCNET_CLUSTER
     { "add-member",  add_member },
     { "add-master",  add_master },
     { "redirect-peer", redirect_peer },
@@ -446,45 +448,7 @@ set_addr (CcnetProcessor *processor, int argc, char **argv)
     return 0;
 }
 
-#ifdef CCNET_SERVER
-static int
-set_client (CcnetProcessor *processor, int argc, char **argv)
-{
-    argc--;
-    argv++;
-
-    CcnetPeerManager *mgr = processor->session->peer_mgr;
-    CcnetPeer *peer;
-    char *peer_id;
-
-    if (argc != 1) {
-        ccnet_processor_send_response (processor, SC_BAD_CMD_FMT,
-                                       SS_BAD_CMD_FMT, NULL, 0);
-        return -1;
-    }
-
-    if (strlen(argv[0]) != 40) {
-        ccnet_processor_send_response (processor, "400",
-                                       "Peer id must be of length 40", NULL, 0);
-        return -1;
-    }
-    peer_id = argv[0];
-
-    peer = ccnet_peer_manager_get_peer (mgr, peer_id);
-    if (!peer) {
-        ccnet_processor_send_response (processor, SC_BAD_PEER,
-                                       SS_BAD_PEER, NULL, 0);
-        return -1;
-    }
-
-    ccnet_peer_manager_add_role (mgr, peer, "MyClient");
-    ccnet_processor_send_response (processor, SC_OK, SS_OK, NULL, 0);
-
-    g_object_unref (peer);
-    return 0;
-}
-
-#else
+#ifdef CCNET_DAEMON
 
 /* set-relay [--default] [<peer-id>] [--addr <peer-addr:port>]
  */
@@ -568,7 +532,8 @@ set_relay (CcnetProcessor *processor, int argc, char **argv)
             processor, "400", "Can not find peer", NULL, 0);
         return -1;
     }
-    ccnet_session_set_relay (processor->session, peer);
+    ccnet_daemon_session_set_relay ((CcnetDaemonSession *)processor->session, peer);
+    ccnet_conn_manager_connect_peer (processor->session->connMgr, peer);
     ccnet_processor_send_response (processor, SC_OK, SS_OK, NULL, 0);
     g_object_unref (peer);
     return 0;
@@ -945,7 +910,9 @@ invoke_echo (CcnetProcessor *processor, int argc, char **argv)
 }
 
 
-#ifdef CCNET_SERVER
+#ifdef CCNET_CLUSTER
+
+extern CcnetClusterManager *cluster_mgr;
 
 /* add-member [--id <peer-id>]
  */
@@ -1025,7 +992,7 @@ add_member (CcnetProcessor *processor, int argc, char **argv)
         ccnet_peer_manager_set_peer_public_addr (mgr, peer, addr, port);
 
     ccnet_peer_manager_add_role (mgr, peer, "ClusterMember");
-    ccnet_cluster_manager_add_member (processor->session->cluster_mgr, peer);
+    ccnet_cluster_manager_add_member (cluster_mgr, peer);
 
     ccnet_processor_send_response (processor, SC_OK, SS_OK, NULL, 0);
     ret = 0;
@@ -1116,7 +1083,7 @@ add_master (CcnetProcessor *processor, int argc, char **argv)
         ccnet_peer_manager_set_peer_public_addr (mgr, peer, addr, port);
 
     ccnet_peer_manager_add_role (mgr, peer, "ClusterMaster");
-    ccnet_cluster_manager_add_master (processor->session->cluster_mgr, peer);
+    ccnet_cluster_manager_add_master (cluster_mgr, peer);
     
     ccnet_processor_send_response (processor, SC_OK, SS_OK, NULL, 0);
     ret = 0;

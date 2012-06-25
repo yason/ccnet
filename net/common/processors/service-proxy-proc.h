@@ -35,10 +35,4 @@ void ccnet_service_proxy_invoke_local (CcnetProcessor *processor,
                                        CcnetPeer *local,
                                        int argc, char **argv);
 
-void
-ccnet_service_proxy_become_orphan (CcnetServiceProxyProc *proc);
-
-gboolean
-ccnet_service_proxy_is_orphan (CcnetServiceProxyProc *proc);
-
 #endif

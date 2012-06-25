@@ -139,6 +139,16 @@ ccnet_job_manager_new ()
     return mgr;
 }
 
+void
+ccnet_job_manager_free (CcnetJobManager *mgr)
+{
+    g_hash_table_destroy (mgr->jobs);
+#ifndef WIN32
+    g_thread_pool_free (mgr->thread_pool, TRUE, FALSE);
+#endif
+    g_free (mgr);
+}
+
 int
 ccnet_job_manager_schedule_job (CcnetJobManager *mgr,
                                JobThreadFunc func,

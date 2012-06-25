@@ -38,6 +38,7 @@ ccnet_sendlogout_proc_class_init (CcnetSendlogoutProcClass *klass)
 {
     CcnetProcessorClass *proc_class = CCNET_PROCESSOR_CLASS (klass);
 
+    proc_class->name = "sendlogout-proc";
     proc_class->start = start;
     proc_class->handle_response = handle_response;
     proc_class->release_resource = release_resource;

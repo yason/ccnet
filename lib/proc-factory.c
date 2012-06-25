@@ -17,8 +17,15 @@ typedef struct {
 G_DEFINE_TYPE (CcnetProcFactory, ccnet_proc_factory, G_TYPE_OBJECT)
 
 static void
+ccnet_proc_factory_free (GObject *factory);
+
+static void
 ccnet_proc_factory_class_init (CcnetProcFactoryClass *klass)
 {
+    GObjectClass *gobject_class = G_OBJECT_CLASS (klass);
+
+    gobject_class->finalize = ccnet_proc_factory_free;
+
     g_type_class_add_private (klass, sizeof (CcnetProcFactoryPriv));
 }
 
@@ -27,7 +34,16 @@ ccnet_proc_factory_init (CcnetProcFactory *factory)
 {
     CcnetProcFactoryPriv *priv = GET_PRIV (factory);
 
-    priv->proc_type_table = g_hash_table_new (g_str_hash, g_str_equal);
+    priv->proc_type_table = g_hash_table_new_full (g_str_hash, g_str_equal,
+                                                   g_free, NULL);
+}
+
+static void
+ccnet_proc_factory_free (GObject *factory)
+{
+    CcnetProcFactoryPriv *priv = GET_PRIV (factory);
+
+    g_hash_table_destroy (priv->proc_type_table);
 }
 
 void

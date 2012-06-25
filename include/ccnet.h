@@ -9,8 +9,6 @@
 
 #include <ccnet/valid-check.h>
 #include <ccnet/peer.h>
-
-#include <ccnet/buildin-types.h>
 #include <ccnet/message.h>
 #include <ccnet/status-code.h>
 #include <ccnet/processor.h>
@@ -63,6 +61,7 @@ void ccnet_async_rpc_client_free (SearpcClient *client);
 CcnetPeer *ccnet_get_peer (SearpcClient *client, const char *peer_id);
 CcnetPeer *ccnet_get_peer_by_idname (SearpcClient *client, const char *idname);
 int ccnet_get_peer_net_state (SearpcClient *client, const char *peer_id);
+int ccnet_get_peer_bind_status (SearpcClient *client, const char *peer_id);
 CcnetPeer *ccnet_get_default_relay (SearpcClient *client);
 GList *ccnet_get_peers_by_role (SearpcClient *client, const char *role);
 

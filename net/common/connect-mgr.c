@@ -21,14 +21,7 @@
 #define MAX_RECONNECTIONS_PER_PULSE  5
 #define LISTEN_INTERVAL 1000        /* 1s */
 #define RECONNECT_PERIOD_MSEC             10000
-#define DNSLOOKUP_PERIOD_MSEC             (1000 * 30)
 
-#define MULT_RECV_TIMEOUT                 180
-
-#define MULTICAST_PACKET_LEN 4096
-
-#define CCNET_MULTICAST_ADDR   "224.0.1.4"
-#define CCNET_MULTICAST_PORT   "10002"
 
 #define DEBUG_FLAG CCNET_DEBUG_CONNECTION
 #include "log.h"
@@ -271,66 +264,6 @@ myHandshakeDoneCB (CcnetHandshake *handshake,
     g_object_unref (peer);
 }
 
-#ifndef CCNET_SERVER
-static void check_peers_in_lan (CcnetConnManager *manager)
-{
-    int timeout = time(NULL) - MULT_RECV_TIMEOUT;
-    GHashTableIter iter;
-    gpointer key, value;
-    CcnetPeer *peer;
-
-    g_hash_table_iter_init (&iter, manager->session->peer_mgr->peer_hash);
-    while (g_hash_table_iter_next (&iter, &key, &value)) {
-        peer = value;
-        if (peer->in_local_network && peer->last_mult_recv < timeout)
-            peer->in_local_network = 0;
-    }
-}
-
-static void send_multicast_packet (CcnetConnManager *manager)
-{
-    int len;
-    const char *id = manager->session->base.id;
-    char buf[MULTICAST_PACKET_LEN];
-    static char *msg = NULL;
-    ccnet_packet *packet = (ccnet_packet *)buf;
-
-    if (!msg) {
-        GString *str = ccnet_peer_to_string (manager->session->myself);
-        msg = str->str;
-        g_string_free (str, FALSE);
-    }
-
-    packet->header.version = 1;
-    packet->header.type = CCNET_MSG_HANDSHAKE;
-    /* note, if we use snprintf(packet->data, ...) here, We would receive
-     * a warning when use CFLAGS="-g -O2": 
-     *   call to __builtin___snprintf_chk will always overflow destination buffer
-     * This warning will cause runtime buffer overflow.
-     */
-    len = snprintf (buf + sizeof(struct ccnet_header), 
-                    MULTICAST_PACKET_LEN - sizeof(struct ccnet_header),
-                    "%s %d\n%s", id,
-                    manager->session->base.public_port, msg);
-    if (len >= MULTICAST_PACKET_LEN) {
-        /* see the man of snprintf() */
-        ccnet_warning ("packet length exceeds multicast limitation.\n");
-        return;
-    }
-    len += CCNET_PACKET_LENGTH_HEADER;
-    packet->header.length = htons (len);
-    packet->header.id = 0;
-
-    if (sendto (manager->mcsnd_socket, buf, len, 0,
-                manager->mc_sasend, manager->mc_salen) < 0) {
-        ccnet_warning ("multicast send error: %s\n", strerror(errno));
-        manager->multicast_error = 1;
-    }
-
-    check_peers_in_lan (manager);
-    /* ccnet_debug ("[Conn] Send multicast packet %d\n", len); */
-}
-#endif
 
 /**
  * return %TRUE if an outgoing connection is started, %FALSE otherwise.
@@ -343,8 +276,8 @@ ccnet_conn_manager_connect_peer (CcnetConnManager *manager, CcnetPeer *peer)
 {
     CcnetPacketIO *io;
     /* int interval; */
-    const char *addr;
-    int port;
+    const char *addr = NULL;
+    int port = 0;
 
     if (peer->in_connection)
         return FALSE;
@@ -354,28 +287,39 @@ ccnet_conn_manager_connect_peer (CcnetConnManager *manager, CcnetPeer *peer)
     if (peer->net_state == PEER_CONNECTED)
         return FALSE;
 
-    if (peer->port <= 0) {
-        if (peer->public_port <= 0)
-            goto err_connect;
-        peer->port = peer->public_port;
-    }
-    if (peer->addr_str == NULL) {
+    if (peer->dns_addr)
+        addr = peer->dns_addr;
+    else if (!peer->redirected) {
         if (!peer->public_addr)
             goto err_connect;
-        /* dup public ip to addr_str */
+
         if (is_valid_ipaddr(peer->public_addr))
-            peer->addr_str = g_strdup (peer->public_addr);
+            addr = peer->public_addr;
+        else {
+            dns_lookup_peer (peer);
+            return TRUE;        /* same as out going is started */
+        }
+    } else {
+        if (!peer->redirect_addr)
+            goto err_connect;
+
+        if (is_valid_ipaddr(peer->redirect_addr))
+            addr = peer->redirect_addr;
         else {
             dns_lookup_peer (peer);
             return TRUE;        /* same as out going is started */
         }
     }
 
-    addr = peer->addr_str;
-    port = peer->port;
-    /* g_assert(addr); address should not be NULL now */
     if (!addr)
         goto err_connect;
+
+    if (!peer->redirected)
+        port = peer->public_port;
+    else
+        port = peer->redirect_port;
+
+    ccnet_peer_update_address (peer, addr, port);
 
     /* interval = get_reconnect_interval_secs (peer); */
     /* if (now - peer->last_try_time < interval) { */
@@ -428,27 +372,15 @@ static int reconnect_pulse (void *vmanager)
     GList  *ptr;
 
 #ifndef CCNET_SERVER
-    if (!manager->session->disable_multicast && !manager->multicast_error)
-        send_multicast_packet (manager);
-
     GList *peers = ccnet_peer_manager_get_peers_with_role (
         manager->session->peer_mgr, "MyRelay");
     for (ptr = peers; ptr; ptr = ptr->next) {
         CcnetPeer *peer = ptr->data;
-        if (peer->redirect_to) {
-            if (peer->redirect_to->num_fails > 2) {
+        if (peer->redirected) {
+            if (peer->num_fails > 2)
                 ccnet_peer_unset_redirect (peer);
-                reconnect_peer (manager, peer);
-            } else {
-                if (peer->net_state == PEER_CONNECTED) {
-                    ccnet_peer_shutdown (peer);
-                }
-                reconnect_peer (manager, peer->redirect_to);
-            }
-        } else {
-            reconnect_peer (manager, peer);
         }
-
+        reconnect_peer (manager, peer);
         g_object_unref (peer);
     }
     g_list_free (peers);
@@ -456,19 +388,11 @@ static int reconnect_pulse (void *vmanager)
 
     for (ptr = manager->conn_list; ptr; ptr = ptr->next) {
         CcnetPeer *peer = ptr->data;
-        if (peer->redirect_to) {
-            if (peer->redirect_to->num_fails > 2) {
+        if (peer->redirected) {
+            if (peer->num_fails > 2)
                 ccnet_peer_unset_redirect (peer);
-                reconnect_peer (manager, peer);
-            } else {
-                if (peer->net_state == PEER_CONNECTED) {
-                    ccnet_peer_shutdown (peer);
-                }
-                reconnect_peer (manager, peer->redirect_to);
-            }
-        } else {
-            reconnect_peer (manager, peer);
         }
+        reconnect_peer (manager, peer);
     }
 
     /*
@@ -537,105 +461,6 @@ listen_pulse (void * vmanager)
 
 
 #ifndef CCNET_SERVER
-static void
-multicast_recv (evutil_socket_t fd, short event, void *vmanager)
-{
-    CcnetConnManager *manager = vmanager;
-    struct sockaddr_storage from;
-    int len = sizeof (struct sockaddr_storage);
-    int n;
-    char buf[MULTICAST_PACKET_LEN];
-    ccnet_packet *packet = (ccnet_packet *)buf;
-    char *id, *ptr, *end, *info;
-    unsigned short port;
-    
-    /* fprintf (stderr, "Recv a multicast message\n"); */
-
-    n = recvfrom (fd, buf, MULTICAST_PACKET_LEN, 0,
-                  (struct sockaddr *)&from, (socklen_t *)&len);
-    buf[n] = '\0';
-
-    if (G_UNLIKELY (n < 42 + CCNET_PACKET_LENGTH_HEADER 
-                    || packet->data[40] != ' ')) {
-        ccnet_warning ("Bad broadcast message from %s %.10s\n",
-                       sock_ntop((struct sockaddr *)&from, len), buf);
-        return;
-    }
-
-    id = packet->data;
-    packet->data[40] = '\0';
-    end = buf + n;
-    for (ptr = packet->data + 40; *ptr != '\n' && ptr < end; ++ptr);
-    if (ptr == end) {
-        ccnet_warning ("Bad broadcast message from %s\n",
-                       sock_ntop((struct sockaddr *)&from, len));
-        return;
-    }
-    *ptr = '\0';
-    port = atoi (packet->data + 41);
-    info = ptr+1;
-
-    if (port != 0) {
-        CcnetPeer *peer;
-        CcnetPeerManager *peerMgr = manager->session->peer_mgr;
-
-        peer = ccnet_peer_manager_get_peer (peerMgr, id);
-        if (!peer) {
-            peer = ccnet_peer_from_string (info);
-            if (!peer) {
-                ccnet_debug ("[Conn] Multicast packet containing bad peer info\n");
-                return;
-            }
-            ccnet_peer_manager_add_peer (peerMgr, peer);
-        }
-
-        peer->last_mult_recv = time(NULL);
-
-        if (peer->is_self || peer->net_state == PEER_CONNECTED) {
-            g_object_unref (peer);
-            return;
-        }
-
-        if (!peer->in_local_network) {
-            notify_found_peer (manager->session, peer);
-            peer->in_local_network = 1;
-        }
-        ccnet_peer_update_address (peer, 
-                 sock_ntop((struct sockaddr *)&from, len), port);
-        g_object_unref (peer);
-    }
-}
-
-static
-void multicast_start (CcnetConnManager *manager)
-{
-    evutil_socket_t     sendfd, recvfd;
-    socklen_t           salen;
-    struct sockaddr     *sasend;
-
-    ccnet_message ("[Conn] Multicast start\n");
-
-    sendfd = udp_client (CCNET_MULTICAST_ADDR, CCNET_MULTICAST_PORT, 
-                         &sasend, &salen);
-
-    if (sendfd < 0) {
-        ccnet_debug ("Multicast failed to create udp client\n");
-        return;
-    }
-
-    recvfd = create_multicast_sock (sasend, salen);
-    if (recvfd < 0)
-        return;
-
-    event_set(&manager->mc_event, recvfd, EV_READ | EV_PERSIST, 
-              multicast_recv, manager);
-    event_add(&manager->mc_event, NULL);
-
-    manager->mcsnd_socket = sendfd;
-    manager->mcrcv_socket = recvfd;
-    manager->mc_salen = salen;
-    manager->mc_sasend = sasend;
-}
 #endif  /* ifndef CCNET_SERVER */
 
 
@@ -679,23 +504,13 @@ static void dns_lookup_cb(int result, char type, int count,
 
     peer = (CcnetPeer *)arg;
 
-    /* May peer get an IP addr during the lookup interval */
-    if (peer->addr_str != NULL ||
-        is_valid_ipaddr(peer->public_addr)) {
-        peer->dns_done = 1;
-        return;
-    }
-
     if (result != DNS_ERR_NONE) {
-        if (result != DNS_ERR_TIMEOUT)
-            peer->dns_done = 1;
         ccnet_warning("DNS look up failed: %s\n",
                       evdns_err_to_string(result));
         return;
     }
 
     if (count == 0) {
-        peer->dns_done = 1;
         return;
     }
 
@@ -722,14 +537,14 @@ static void dns_lookup_cb(int result, char type, int count,
     if (ptr == NULL) {
         ccnet_warning("Peer %s domain name %s lookup fail\n",
                       peer->name, peer->public_addr);
-        goto end;
+        free(addr_str);
+        return;
     }
 
-    ccnet_peer_update_address(peer, addr_str, 0);
+    g_free(peer->dns_addr);
+    peer->dns_addr = g_strdup (addr_str);
     peer->dns_done = 1;
     ccnet_conn_manager_connect_peer (peer->manager->session->connMgr, peer);
-
-end:
     free(addr_str);
 }
 
@@ -739,24 +554,27 @@ dns_lookup_peer (CcnetPeer* peer)
 {
     if (peer->dns_done)
         return;
-    
-    if (peer->public_addr == NULL)
-        return;
 
-    evdns_resolve_ipv4(peer->public_addr, DNS_OPTIONS_ALL, dns_lookup_cb, peer);
-#ifndef WIN32
-    evdns_resolve_ipv6(peer->public_addr, DNS_OPTIONS_ALL, dns_lookup_cb, peer);
-#endif
+    if (peer->redirected) {
+        if (peer->redirect_addr == NULL) {
+            ccnet_warning ("peer is redirected, but redirect address is not set\n");
+            return;
+        }
+        evdns_resolve_ipv4(peer->redirect_addr, DNS_OPTIONS_ALL, dns_lookup_cb, peer);
+    } else {
+        if (peer->public_addr == NULL)
+            return;
+        evdns_resolve_ipv4(peer->public_addr, DNS_OPTIONS_ALL, dns_lookup_cb, peer);
+    }
+/* #ifndef WIN32 */
+/*     evdns_resolve_ipv6(peer->public_addr, DNS_OPTIONS_ALL, dns_lookup_cb, peer); */
+/* #endif */
 }
 
 void
 ccnet_conn_manager_start (CcnetConnManager *manager)
 {
     ccnet_conn_listen_init (manager);
-#ifndef CCNET_SERVER
-    if (!manager->session->disable_multicast)
-        multicast_start (manager);
-#endif
     manager->reconnect_timer = ccnet_timer_new (reconnect_pulse, manager,
                                                 RECONNECT_PERIOD_MSEC);
 }
@@ -769,17 +587,6 @@ ccnet_conn_manager_stop (CcnetConnManager *manager)
 
     ccnet_timer_free (&manager->reconnect_timer);
     ccnet_timer_free (&manager->listen_timer);
-    ccnet_timer_free (&manager->dnslookup_timer);
-
-#ifndef CCNET_SERVER
-    if (!manager->session->disable_multicast) {
-        event_del (&manager->mc_event);
-        evutil_closesocket (manager->mcsnd_socket);
-        evutil_closesocket (manager->mcrcv_socket);
-        manager->mcsnd_socket = 0;
-        manager->mcrcv_socket = 0;
-    }
-#endif
 }
 
 void

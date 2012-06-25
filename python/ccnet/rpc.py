@@ -308,6 +308,54 @@ class CcnetRpcClient(RpcClientBase):
         pass
 
     @searpc_func("int", ["string", "string", "string"])
+    def create_org(self, org_name, url_prefix, creator):
+        pass
+
+    @searpc_func("int", ["int"])
+    def remove_org(self, org_id):
+        pass
+    
+    @searpc_func("objlist", ["int", "int"])
+    def get_all_orgs(self, start, limit):
+        pass
+
+    @searpc_func("object", ["string"])
+    def get_org_by_url_prefix(self, url_prefix):
+        pass
+
+    @searpc_func("int", ["int", "string", "int"])
+    def add_org_user(self, org_id, email, is_staff):
+        pass
+
+    @searpc_func("int", ["int", "string"])
+    def remove_org_user(self, org_id, email):
+        pass
+    
+    @searpc_func("object", ["string"])
+    def get_org_by_user(self, email):
+        pass
+    
+    @searpc_func("objlist", ["string", "int", "int"])
+    def get_org_emailusers(self, url_prefix, start, limit):
+        pass
+
+    @searpc_func("int", ["int", "int"])
+    def add_org_group(self, org_id, group_id):
+        pass
+
+    @searpc_func("int", ["int", "int"])
+    def remove_org_group(self, org_id, group_id):
+        pass
+
+    @searpc_func("objlist", ["int", "int", "int"])
+    def get_org_groups(self, org_id, start, limit):
+        pass
+    
+    @searpc_func("int", ["int", "string"])
+    def org_user_exists(self, org_id, email):
+        pass
+    
+    @searpc_func("int", ["string", "string", "string"])
     def login_relay(self, relay_id, email, passwd):
         pass
         

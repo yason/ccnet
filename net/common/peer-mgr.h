@@ -47,6 +47,9 @@ GType ccnet_peer_manager_get_type  (void);
 
 CcnetPeerManager* ccnet_peer_manager_new (CcnetSession *);
 
+int
+ccnet_peer_manager_prepare (CcnetPeerManager *manager);
+
 void ccnet_peer_manager_free (CcnetPeerManager *manager);
 
 void ccnet_peer_manager_start (CcnetPeerManager *manager);
@@ -77,8 +80,6 @@ void ccnet_peer_manager_add_local_peer (CcnetPeerManager *manager,
                                         CcnetPeer *peer);
 void ccnet_peer_manager_remove_local_peer (CcnetPeerManager *manager,
                                            CcnetPeer *peer);
-
-void ccnet_peer_manager_load_peerdb (CcnetPeerManager *manager);
 
 struct _CcnetMessage;
 void ccnet_peer_manager_receive_message (CcnetPeerManager *manager,
@@ -114,5 +115,9 @@ void
 ccnet_peer_manager_redirect_peer (CcnetPeerManager *manager,
                                   CcnetPeer *peer,
                                   CcnetPeer *to);
+
+void
+ccnet_peer_manager_send_ready_message (CcnetPeerManager *manager, CcnetPeer *peer);
+
 
 #endif

@@ -41,6 +41,9 @@ ccnet_job_cancel (CcnetJob *job);
 CcnetJobManager *
 ccnet_job_manager_new ();
 
+void
+ccnet_job_manager_free (CcnetJobManager *mgr);
+
 int
 ccnet_job_manager_schedule_job (CcnetJobManager *mgr,
                                 JobThreadFunc func,

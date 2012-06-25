@@ -41,6 +41,7 @@ ccnet_sendlogin_proc_class_init (CcnetSendloginProcClass *klass)
 {
     CcnetProcessorClass *proc_class = CCNET_PROCESSOR_CLASS (klass);
 
+    proc_class->name = "sendlogin-proc";
     proc_class->start = start;
     proc_class->handle_response = handle_response;
     proc_class->release_resource = release_resource;

@@ -145,7 +145,6 @@ static void handle_update (CcnetProcessor *processor,
     if (code[2] == '0') {
         /* SC_MSG */
         CcnetMessage *msg;
-
         msg = ccnet_message_from_string_local (content, clen);
 
         /* ccnet_debug ("[msg] send msg: %.10s\n", msg->body); */

@@ -31,7 +31,7 @@ release_resource(CcnetProcessor *processor)
 
 static void echo_shutdown (CcnetProcessor *processor)
 {
-    /* The processor is shutdown abnormally. */
+    /* The processor is shutdown. */
 
     /* the release_resource() will be called after calling shutdown(),
      * so only do things that release_resource() does not do. */

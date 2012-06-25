@@ -8,13 +8,12 @@
 #include "peer.h"
 #include "peer-mgr.h" 
 #include "user-mgr.h" 
+#include "server-session.h"
 
 G_DEFINE_TYPE (CcnetRecvlogoutProc, ccnet_recvlogout_proc, CCNET_TYPE_PROCESSOR)
 
 #define SC_NO_BINDING "301"
 #define SS_NO_BINDING "Not binded yet"
-
-extern CcnetSession *session;
 
 static int start (CcnetProcessor *processor, int argc, char **argv);
 static void handle_update (CcnetProcessor *processor,
@@ -48,7 +47,8 @@ ccnet_recvlogout_proc_init (CcnetRecvlogoutProc *processor)
 static int
 start (CcnetProcessor *processor, int argc, char **argv)
 {
-    ccnet_message ("[Recv Logout] start\n");
+    CcnetUserManager *user_mgr = 
+        ((CcnetServerSession *)processor->session)->user_mgr;
     
     if (argc != 0) {
         ccnet_processor_error (processor, SC_BAD_ARGS, SS_BAD_ARGS);
@@ -60,12 +60,12 @@ start (CcnetProcessor *processor, int argc, char **argv)
 
     /* ccnet_peer_manager_remove_role (session->peer_mgr, peer, "MyClient"); */
 
-    email = ccnet_user_manager_get_binding_email (session->user_mgr, peer->id);
+    email = ccnet_user_manager_get_binding_email (user_mgr, peer->id);
     if (!email) {
         ccnet_processor_send_response (processor, SC_NO_BINDING,
                                        SS_NO_BINDING, NULL, 0);
     } else {
-        ccnet_user_manager_remove_one_binding (session->user_mgr,
+        ccnet_user_manager_remove_one_binding (user_mgr,
                                                email, peer->id);
         ccnet_processor_send_response (processor, SC_OK, SS_OK, NULL, 0);
     }

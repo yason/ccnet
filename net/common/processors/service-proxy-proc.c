@@ -19,7 +19,6 @@
 
 typedef struct {
     CcnetServiceStubProc *stub_proc;
-    gboolean is_orphan;         /* If service-stub is dead, I become an orphan. */
     char *name;
 } ServiceProxyPriv;
 
@@ -52,20 +51,6 @@ release_resource(CcnetProcessor *processor)
     CCNET_PROCESSOR_CLASS(ccnet_service_proxy_proc_parent_class)->release_resource (processor);
 }
 
-static void service_proxy_shutdown (CcnetProcessor *processor)
-{
-    ServiceProxyPriv *priv = GET_PRIV(processor);
-    if (!priv->is_orphan) {
-        ccnet_debug ("[proc]Shutdown %s %d %s and set %d orphan because of %d\n",
-                     GET_PNAME(processor), PRINT_ID(processor->id),
-                     priv->name,
-                     PRINT_ID(CCNET_PROCESSOR(priv->stub_proc)->id),
-                     processor->failure);
-        ccnet_service_stub_become_orphan (priv->stub_proc);
-        CCNET_PROCESSOR(priv->stub_proc)->failure = processor->failure;
-    }
-}
-
 static void
 ccnet_service_proxy_proc_class_init (CcnetServiceProxyProcClass *klass)
 {
@@ -74,7 +59,6 @@ ccnet_service_proxy_proc_class_init (CcnetServiceProxyProcClass *klass)
 
     proc_class->name = "service-proxy-proc";
     proc_class->start = service_proxy_start;
-    proc_class->shutdown = service_proxy_shutdown;
     proc_class->handle_update = handle_update;
     proc_class->handle_response = handle_response;
     proc_class->release_resource = release_resource;
@@ -137,7 +121,12 @@ ccnet_service_proxy_invoke_remote (CcnetProcessor *processor,
     priv->stub_proc = stub_proc;
     ccnet_service_stub_proc_set_proxy_proc (stub_proc, processor);
 
-    ccnet_processor_start (CCNET_PROCESSOR(stub_proc), argc, argv);
+    /* Start can fail if the remote end is not connected. */
+    if (ccnet_processor_start (CCNET_PROCESSOR(stub_proc), argc, argv) < 0) {
+        ccnet_processor_send_response (processor, SC_PROC_DEAD, SS_PROC_DEAD,
+                                       NULL, 0);
+        ccnet_processor_done (processor, FALSE);
+    }
 }
 
 /* TODO: the same as above, can use one function instead */
@@ -168,40 +157,18 @@ ccnet_service_proxy_invoke_local (CcnetProcessor *processor,
     ccnet_processor_start (CCNET_PROCESSOR(stub_proc), argc, argv);
 }
 
-void
-ccnet_service_proxy_become_orphan (CcnetServiceProxyProc *proc)
-{
-    ServiceProxyPriv *priv = GET_PRIV(proc);
-
-    /* ccnet_debug ("[proc] %s %d %s become orphan\n", */
-    /*              GET_PNAME(proc), PRINT_ID(CCNET_PROCESSOR(proc)->id), */
-    /*              priv->name); */
-
-    priv->is_orphan = TRUE;
-}
-
-gboolean
-ccnet_service_proxy_is_orphan (CcnetServiceProxyProc *proc)
-{
-    ServiceProxyPriv *priv = GET_PRIV(proc);
-
-    return (priv->is_orphan);
-}
-
 static void handle_update (CcnetProcessor *processor,
                            char *code, char *code_msg,
                            char *content, int clen)
 {
     ServiceProxyPriv *priv = GET_PRIV (processor);
+    if(!priv->stub_proc || !((CcnetProcessor *)priv->stub_proc)->peer->is_local)
+        ccnet_debug ("[Svc Proxy] %s:%d [%s] handle update: %s %s\n",
+                     GET_PNAME(processor), PRINT_ID(processor->id),
+                     priv->name, code, code_msg);
 
-    ccnet_debug ("[Svc Proxy] %s:%d [%s] handle update: %s %s\n",
-                 GET_PNAME(processor), PRINT_ID(processor->id),
-                 priv->name, code, code_msg);
-
-    if (!priv->is_orphan) {
-        ccnet_processor_handle_update (
-            (CcnetProcessor *)priv->stub_proc, code, code_msg, content, clen);
-    }
+    ccnet_processor_handle_update ((CcnetProcessor *)priv->stub_proc,
+                                   code, code_msg, content, clen);
 }
 
 
@@ -210,9 +177,10 @@ static void handle_response (CcnetProcessor *processor,
                              char *content, int clen)
 {
     ServiceProxyPriv *priv = GET_PRIV (processor);
-    ccnet_debug ("[Svc Proxy] %s:%d [%s] handle response: %s %s\n",
-                 GET_PNAME(processor), PRINT_ID(processor->id),
-                 priv->name, code, code_msg);
+    if(!priv->stub_proc || !((CcnetProcessor *)priv->stub_proc)->peer->is_local)
+        ccnet_debug ("[Svc Proxy] %s:%d [%s] handle response: %s %s\n",
+                     GET_PNAME(processor), PRINT_ID(processor->id),
+                     priv->name, code, code_msg);
 
     /* relay this response */
     ccnet_processor_send_response (processor, code, code_msg, content, clen);

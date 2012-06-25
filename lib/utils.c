@@ -1488,9 +1488,9 @@ win32_spawn_process (char *cmdline_in, char *working_directory)
     CloseHandle(pi.hProcess);
     return 0;
 }
+#endif  /* ifdef WIN32 */
 
-#else  /* ifdef WIN32 */
-
+#ifdef __linux__
 /* read the link of /proc/123/exe and compare with `process_name' */
 static int
 find_process_in_dirent(struct dirent *dir, const char *process_name)
@@ -1543,6 +1543,14 @@ gboolean process_is_running (const char *process_name)
     }
 
     closedir(proc_dir);
+    return FALSE;
+}
+#endif
+
+#ifdef __APPLE__
+gboolean process_is_running (const char *process_name)
+{
+    //TODO
     return FALSE;
 }
 #endif

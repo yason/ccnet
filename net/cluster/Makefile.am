@@ -1,19 +1,24 @@
 
 AM_CPPFLAGS = @GLIB2_CFLAGS@ @GOBJECT_CFLAGS@ \
-	-DCCNET_DAEMON \
+	-DCCNET_SERVER \
+	-DCCNET_CLUSTER \
 	-I$(top_srcdir)/net/common \
 	-I$(top_srcdir)/include -I$(top_srcdir)/include/ccnet \
 	-I$(top_srcdir)/lib \
 	-I$(top_builddir)/include \
+	-I$(top_builddir)/net/server \
 	@SEARPC_CFLAGS@ \
+	@MYSQL_CFLAGS@ \
+	@ZDB_CFLAGS@ \
 	-Wall
 
-bin_PROGRAMS = ccnet
+bin_PROGRAMS = ccnet-cserver
 
-PROC_HEADER_FILES = $(addprefix ../common/processors/, \
+PROC_HEADER_FILES =  \
+	$(addprefix ../common/processors/, \
 	rcvmsg-proc.h \
-	sendmsg-proc.h \
 	rcvcmd-proc.h \
+	sendmsg-proc.h \
 	getpubinfo-proc.h putpubinfo-proc.h \
 	keepalive2-proc.h \
 	mqserver-proc.h \
@@ -21,22 +26,8 @@ PROC_HEADER_FILES = $(addprefix ../common/processors/, \
 	rpcserver-proc.h \
 	echo-proc.h )
 
-# sync-kvitem-proc.h sync-kvitem-slave-proc.h
-# 	getmsg-proc.h putmsg-proc.h \
-# rcvevent-proc.h \
-#	get-userpeer-proc.h \
-#	update-user-proc.h \
-#	update-pubinfo-proc.h \
-#	getgroupinfo-proc.h putgroupinfo-proc.h \
-#	sendgroupinfo-proc.h recvgroupinfo-proc.h \
-#	getaddrinfo-proc.h putaddrinfo-proc.h \
-#	sync-relay-proc.h sync-relay-slave-proc.h \
-#	sync-role-proc.h \
-#	kvserver-proc.h \
-#	sample-master-proc.h sample-slave-proc.h \
-#	send-profile-proc.h
-
-common_headers = ../common/algorithms.h \
+common_headers = 
+	../common/algorithms.h \
 	../common/proc-factory.h ../common/session.h \
 	../common/common.h ../common/handshake.h ../common/perm-mgr.h \
 	../common/peer.h ../common/connect-mgr.h \
@@ -47,19 +38,17 @@ common_headers = ../common/algorithms.h \
 	../common/processor.h \
 	../common/peermgr-message.h \
 	../common/list.h ../common/rpc-service.h \
-	 processors/sendlogin-proc.h processors/sendlogout-proc.h \
 	../common/ccnet-db.h
 
-# ../common/group.h
-# ../common/group-mgr.h \
-# ../common/groupmgr-message.h
-# ../common/info-syncher.h
 
 noinst_HEADERS = $(common_headers) \
-	daemon-session.h \
+	inner-session.h outer-session.h \
+	cluster-mgr.h \
 	$(PROC_HEADER_FILES)
 
-common_srcs = ../common/session.c ../common/peer-mgr.c ../common/packet-io.c \
+
+common_srcs = ../common/ccnet-db.c \
+	../common/session.c ../common/peer-mgr.c ../common/packet-io.c \
 	../common/message.c ../common/perm-mgr.c \
 	../common/log.c ../common/peer.c ../common/algorithms.c \
 	../common/handshake.c ../common/processor.c \
@@ -69,11 +58,10 @@ common_srcs = ../common/session.c ../common/peer-mgr.c ../common/packet-io.c \
 	../common/ccnet-config.c \
 	../common/rpc-service.c \
 	../common/peermgr-message.c \
-	processors/sendlogin-proc.c processors/sendlogout-proc.c \
 	../common/processors/sendmsg-proc.c ../common/processors/rcvmsg-proc.c \
 	../common/processors/rcvcmd-proc.c \
-	../common/processors/getpubinfo-proc.c \
 	../common/processors/putpubinfo-proc.c \
+	../common/processors/getpubinfo-proc.c \
 	../common/processors/keepalive2-proc.c \
 	../common/processors/mqserver-proc.c \
 	../common/processors/service-proxy-proc.c \
@@ -81,27 +69,16 @@ common_srcs = ../common/session.c ../common/peer-mgr.c ../common/packet-io.c \
 	../common/processors/rpcserver-proc.c \
 	../common/processors/echo-proc.c
 
-ccnet_SOURCES = ccnet-daemon.c \
-	daemon-session.c \
-	$(common_srcs)
+ccnet_cserver_SOURCES = server.c \
+	inner-session.c outer-session.c cluster-mgr.c \
+	../server/server-session.c \
+	../server/user-mgr.c ../server/group-mgr.c ../server/org-mgr.c \
+	../server/processors/recvlogin-proc.c ../server/processors/recvlogout-proc.c \
+    $(common_srcs)
 
-
-ccnet_LDADD = -levent $(top_builddir)/lib/libccnetd.la \
+ccnet_cserver_LDADD = -levent $(top_builddir)/lib/libccnetd.la \
            @GLIB2_LIBS@ @GOBJECT_LIBS@ -lssl @LIB_RT@ @LIB_UUID@ -lsqlite3 \
-           @LIB_WS32@ @LIB_INTL@ @LIB_IPHLPAPI@ @SEARPC_LIBS@
+           @LIB_WS32@ @LIB_INTL@ @LIB_IPHLPAPI@ @SEARPC_LIBS@ @ZDB_LIBS@
 
-
-ccnet_LDFLAGS = @STATIC_COMPILE@ @CONSOLE@ -no-undefined
-
-check_PROGRAMS = ccnet-test
-
-ccnet_test_SOURCES = ccnet-test.c $(common_srcs)
-
-ccnet_test_LDADD = -levent $(top_builddir)/lib/libccnetd.la \
-	@GLIB2_LIBS@ @GOBJECT_LIBS@  -lssl @LIB_RT@ @LIB_UUID@ -lsqlite3 \
-	@LIB_WS32@ @LIB_INTL@ @LIB_IPHLPAPI@ @SEARPC_LIBS@
-
-ccnet_test_LDFLAGS = @STATIC_COMPILE@ -no-undefined @CONSOLE@
-
-TESTS = ccnet-test
+ccnet_cserver_LDFLAGS = @STATIC_COMPILE@ @CONSOLE@ -no-undefined
 

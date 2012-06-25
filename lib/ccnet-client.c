@@ -55,7 +55,7 @@ G_DEFINE_TYPE (CcnetClient, ccnet_client, CCNET_TYPE_SESSION_BASE);
 
 static void handle_packet (ccnet_packet *packet, void *vclient);
 static void ccnet_client_free (GObject *object);
-
+static void free_rpc_pool (CcnetClient *client);
 
 
 static void
@@ -118,6 +118,18 @@ ccnet_client_free (GObject *object)
     if (client->io)
         ccnet_client_disconnect_daemon (client);
 
+    if (client->config_dir)
+        free (client->config_dir);
+    g_free (client->config_file);
+    if (client->proc_factory)
+        g_object_unref (client->proc_factory);
+    if (client->job_mgr)
+        ccnet_job_manager_free (client->job_mgr);
+    if (client->processors)
+        g_hash_table_destroy (client->processors);
+
+    free_rpc_pool (client);
+
     G_OBJECT_CLASS(ccnet_client_parent_class)->finalize (object);
 }
 
@@ -157,6 +169,7 @@ ccnet_client_load_confdir (CcnetClient *client, const char *config_dir_r)
          || (hex_to_sha1 (id, sha1) < 0) ) 
     {
         ccnet_error ("Wrong ID\n");
+        g_key_file_free (key_file);
         goto onerror;
     }
 
@@ -178,6 +191,7 @@ ccnet_client_load_confdir (CcnetClient *client, const char *config_dir_r)
     g_free (user_name);
     g_free (port_str);
     g_free (config_file);
+    g_key_file_free (key_file);
     return 0;
 
 onerror:
@@ -243,18 +257,123 @@ ccnet_client_run_synchronizer (CcnetClient *client)
 int
 ccnet_client_disconnect_daemon (CcnetClient *client)
 {
+    g_assert (client->io);
     ccnet_packet_io_free (client->io);
     client->io = NULL;
     client->connfd = -1;
     client->connected = 0;
+    free_rpc_pool (client);
 
     return 0;
 }
 
-int
+uint32_t
 ccnet_client_get_request_id (CcnetClient *client)
 {
     return (++client->req_id);
+}
+
+typedef struct RpcPoolItem {
+    uint32_t   req_id;
+    char      *peer_id;
+    char      *service;
+} RpcPoolItem;
+
+static void
+free_rpc_pool_item (RpcPoolItem *item)
+{
+    g_free (item->peer_id);
+    g_free (item->service);
+    g_free (item);
+}
+
+static void
+free_rpc_pool (CcnetClient *client)
+{
+    GList *ptr;
+    for (ptr = client->rpc_pool; ptr; ptr = ptr->next) {
+        RpcPoolItem *item = ptr->data;
+        free_rpc_pool_item (item);
+    }
+    g_list_free (client->rpc_pool);
+    client->rpc_pool = NULL;
+}
+
+static RpcPoolItem *
+get_pool_item (CcnetClient *client, const char *peer_id,
+               const char *service)
+{
+    GList *ptr;
+    for (ptr = client->rpc_pool; ptr; ptr = ptr->next) {
+        RpcPoolItem *item = ptr->data;
+        if (g_strcmp0(peer_id, item->peer_id) == 0 &&
+            g_strcmp0(service, item->service) == 0)
+            return item;
+    }
+    return NULL;
+}
+
+static uint32_t
+start_request (CcnetClient *client, const char *peer_id,
+               const char *service)
+{
+    uint32_t req_id = ccnet_client_get_request_id (client);
+    char buf[512];
+
+    if (!peer_id)
+        snprintf (buf, 512, "%s", service);
+    else
+        snprintf (buf, 512, "remote %s %s", peer_id, service);
+    ccnet_client_send_request (client, req_id, buf);
+
+    if (ccnet_client_read_response (client) < 0) {
+        g_warning ("[RPC] failed to read response.\n");
+        return 0;
+    }
+
+    if (memcmp (client->response.code, "200", 3) != 0) {
+        g_warning ("[RPC] failed to start rpc server.\n");
+        return 0;
+    }
+
+    return req_id;
+}
+
+uint32_t
+ccnet_client_get_rpc_request_id (CcnetClient *client, const char *peer_id,
+                                 const char *service)
+{
+    RpcPoolItem *item = get_pool_item (client, peer_id, service);
+    if (item)
+        return item->req_id;
+
+    uint32_t req_id = start_request (client, peer_id, service);
+    if (req_id == 0)
+        return 0;
+
+    item = g_new0 (RpcPoolItem, 1);
+    item->req_id = req_id;
+    item->peer_id = g_strdup (peer_id);
+    item->service = g_strdup (service);
+    client->rpc_pool = g_list_prepend (client->rpc_pool, item);
+    return req_id;
+}
+
+void
+ccnet_client_clean_rpc_request (CcnetClient *client, uint32_t req_id)
+{
+    GList *ptr;
+    RpcPoolItem *target = NULL;
+
+    for (ptr = client->rpc_pool; ptr; ptr = ptr->next) {
+        RpcPoolItem *item = ptr->data;
+        if (req_id == item->req_id)
+            target = item;
+    }
+    if (!target) return;
+
+    client->rpc_pool = g_list_remove (client->rpc_pool, target);
+    free_rpc_pool_item (target);
 }
 
 
@@ -285,6 +404,8 @@ ccnet_client_get_processor (CcnetClient *client, int id)
 int
 ccnet_client_read_input (CcnetClient *client)
 {
+    if (!client->io)
+        return -1;
     return ccnet_packet_io_read(client->io);
 }
 

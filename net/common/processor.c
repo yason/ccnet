@@ -72,8 +72,11 @@ int ccnet_processor_start (CcnetProcessor *processor, int argc, char **argv)
 
     processor->failure = PROC_NOTSET;
     if (processor->peer->net_state != PEER_CONNECTED) {
-        processor->failure = PROC_NETDOWN;
-        ccnet_processor_done (processor, FALSE);
+        if (IS_SLAVE(processor)) {
+            ccnet_processor_send_response (processor, SC_NETDOWN, SS_NETDOWN,
+                                           NULL, 0);
+        }
+        ccnet_processor_shutdown (processor, PROC_NETDOWN);
         return -1;
     }
 
@@ -133,7 +136,6 @@ ccnet_processor_release_resource(CcnetProcessor *processor)
     CCNET_PROCESSOR_GET_CLASS (processor)->release_resource(processor);
 }
 
-
 void
 ccnet_processor_shutdown (CcnetProcessor *processor, int reason)
 {
@@ -149,18 +151,6 @@ ccnet_processor_shutdown (CcnetProcessor *processor, int reason)
                  processor->peer->name);
     CCNET_PROCESSOR_GET_CLASS (processor)->shutdown (processor);
 
-    if (processor->peer && !processor->peer->in_shutdown)
-    {
-        /* ccnet_debug ("[Proc] Notify local peer %s for shutdown.\n", */
-        /*              processor->peer->name); */
-        if (IS_SLAVE (processor))
-            ccnet_processor_send_response (processor, SC_PROC_DEAD, SS_PROC_DEAD,
-                                           NULL, 0);
-        else
-            ccnet_processor_send_update (processor, SC_PROC_DEAD, SS_PROC_DEAD,
-                                         NULL, 0);
-    }
-
     if (reason == PROC_DONE)
         g_signal_emit (processor, signals[DONE_SIG], 0, TRUE);
     else
@@ -170,6 +160,7 @@ ccnet_processor_shutdown (CcnetProcessor *processor, int reason)
         ccnet_peer_remove_processor (processor->peer, processor);
     }
     ccnet_processor_release_resource (processor);
+
     ccnet_proc_factory_recycle (processor->session->proc_factory, processor);
 }
 
@@ -179,38 +170,19 @@ ccnet_processor_done (CcnetProcessor *processor, gboolean success)
     if (processor->state == STATE_IN_SHUTDOWN) {
         return;
     }
+
     processor->state = STATE_IN_SHUTDOWN;
     if (processor->failure == PROC_NOTSET)
         processor->failure = PROC_DONE;
-    ccnet_debug ("Processsor %s(%d) done %d\n", GET_PNAME(processor),
-                 PRINT_ID(processor->id), success);
+    if (!processor->peer->is_local)
+        ccnet_debug ("Processsor %s(%d) done %d\n", GET_PNAME(processor),
+                     PRINT_ID(processor->id), success);
 
-    if (processor->peer && processor->peer->is_local
-        && !processor->peer->in_shutdown)
+    if (processor->peer && !processor->peer->in_shutdown && success)
     {
-        /* In the case of ccnet-tool, when we send SC_PROC_DEAD
-         * here, the ccnet-tool is already closed, this will lead to
-         * a tcp RST. So we should redesign the mechanism.
-         *
-         * Solution Now: Since we don't known whether local peer need this
-         * notification, just do not send it. 
-         * */
-        /* ccnet_debug ("[Proc] Notify local peer %s for shutdown proc.\n", */
-        /*              processor->peer->name); */
-        /* if (IS_SLAVE (processor)) */
-        /*     ccnet_processor_send_response (processor, SC_PROC_DEAD, SS_PROC_DEAD, */
-        /*                                    NULL, 0); */
-        /* else */
-        /*     ccnet_processor_send_update (processor, SC_PROC_DEAD, SS_PROC_DEAD, */
-        /*                                  NULL, 0); */
-    }
-
-    if (processor->peer && !processor->peer->in_shutdown)
-    {
-        /* Notify */
         if (!IS_SLAVE (processor)) {
-             ccnet_processor_send_update (processor, SC_PROC_DONE, SS_PROC_DONE,
-                                          NULL, 0); 
+            ccnet_processor_send_update (processor, SC_PROC_DONE, SS_PROC_DONE,
+                                         NULL, 0);
         }
     }
 
@@ -219,9 +191,13 @@ ccnet_processor_done (CcnetProcessor *processor, gboolean success)
      * peers processor list, otherwise this processor will be freed
      * twice. */
     g_signal_emit (processor, signals[DONE_SIG], 0, success);
-    ccnet_peer_remove_processor (processor->peer, processor);
+
+    if (!processor->peer->in_shutdown) {
+        ccnet_peer_remove_processor (processor->peer, processor);
+    }
 
     ccnet_processor_release_resource (processor);
+
     ccnet_proc_factory_recycle (processor->session->proc_factory, processor);
 }
 
@@ -242,29 +218,33 @@ void ccnet_processor_handle_update (CcnetProcessor *processor,
                                     char *code, char *code_msg,
                                     char *content, int clen)
 {
-    if ((code[0] == '5' || code[0] == '4') &&
-        !CCNET_IS_SERVICE_PROXY_PROC(processor) &&
-        !CCNET_IS_SERVICE_STUB_PROC(processor)) {
+    if (code[0] == '5' || code[0] == '4') {
         ccnet_warning ("[Proc] Shutdown processor %s(%d) for bad update: %s %s\n",
                        GET_PNAME(processor), PRINT_ID(processor->id),
                        code, code_msg);
+
+        /* Proxy proc should relay the message before it shuts down. */
+        if (CCNET_IS_SERVICE_PROXY_PROC(processor) ||
+            CCNET_IS_SERVICE_STUB_PROC(processor)) {
+            CCNET_PROCESSOR_GET_CLASS (processor)->handle_update (
+                processor, code, code_msg, content, clen);
+        }
 
         if (memcmp(code, SC_UNKNOWN_SERVICE, 3) == 0)
             ccnet_processor_shutdown (processor, PROC_NO_SERVICE);
         else if (memcmp(code, SC_PERM_ERR, 3) == 0)
             ccnet_processor_shutdown (processor, PROC_PERM_ERR);
+        else if (memcmp(code, SC_CON_TIMEOUT, 3) == 0)
+            ccnet_processor_shutdown (processor, PROC_CON_TIMEOUT);
+        else if (memcmp(code, SC_KEEPALIVE_TIMEOUT, 3) == 0)
+            ccnet_processor_shutdown (processor, PROC_TIMEOUT);
+        else if (memcmp(code, SC_NETDOWN, 3) == 0)
+            ccnet_processor_shutdown (processor, PROC_NETDOWN);
         else
             ccnet_processor_shutdown (processor, PROC_BAD_RESP);
         return;
     }
 
-    /* we must hold a reference to this processor to avoid it is freed
-       in sub-functions, since `processor->is_active = FALSE;`
-       requires processor object be valid.
-     */
-    /* g_object_ref (processor); */
-
-    /* processor->is_active = TRUE; */
     processor->t_packet_recv = time(NULL);
 
     if (memcmp (code, SC_PROC_KEEPALIVE, 3) == 0) {
@@ -277,22 +257,29 @@ void ccnet_processor_handle_update (CcnetProcessor *processor,
     } else if (memcmp (code, SC_PROC_DEAD, 3) == 0) {
         ccnet_debug ("[Proc] Shutdown processor %s(%d) when remote processor dies\n",
                      GET_PNAME(processor), PRINT_ID(processor->id));
-        ccnet_processor_shutdown (processor, PROC_REMOTE_DEAD);
-    } else if (memcmp (code, SC_PROC_DONE, 3) == 0) {
-        /* shutdown the processor when remote master is done */
-        /* ccnet_debug ("[Proc] Shutdown processor %s(%d) when remote master done\n", */
-        /*              GET_PNAME(processor), PRINT_ID(processor->id)); */
-        if (CCNET_IS_SERVICE_PROXY_PROC(processor)) {
+
+        if (CCNET_IS_SERVICE_PROXY_PROC(processor) ||
+            CCNET_IS_SERVICE_STUB_PROC(processor)) {
             CCNET_PROCESSOR_GET_CLASS (processor)->handle_update (
                 processor, code, code_msg, content, clen);
         }
+
+        ccnet_processor_shutdown (processor, PROC_REMOTE_DEAD);
+    } else if (memcmp (code, SC_PROC_DONE, 3) == 0) {
+        ccnet_debug ("[Proc] Shutdown processor %s(%d) when master done\n",
+                     GET_PNAME(processor), PRINT_ID(processor->id));
+
+        if (CCNET_IS_SERVICE_PROXY_PROC(processor) ||
+            CCNET_IS_SERVICE_STUB_PROC(processor)) {
+            CCNET_PROCESSOR_GET_CLASS (processor)->handle_update (
+                processor, code, code_msg, content, clen);
+        }
+
         ccnet_processor_done (processor, TRUE);
     } else
         CCNET_PROCESSOR_GET_CLASS (processor)->handle_update (processor, 
                                                               code, code_msg, 
                                                               content, clen);
-    /* processor->is_active = FALSE; */
-    /* g_object_unref (processor); */
 }
 
 void ccnet_processor_handle_response (CcnetProcessor *processor, 
@@ -300,29 +287,34 @@ void ccnet_processor_handle_response (CcnetProcessor *processor,
                                       char *content, int clen)
 {
     if ((code[0] == '5' || code[0] == '4') &&
-        !CCNET_IS_KEEPALIVE2_PROC(processor) &&
-        !CCNET_IS_SERVICE_PROXY_PROC(processor) &&
-        !CCNET_IS_SERVICE_STUB_PROC(processor))
+        !CCNET_IS_KEEPALIVE2_PROC(processor))
     {
         ccnet_warning ("[Proc] Shutdown processor %s(%d) for bad response: %s %s\n",
                        GET_PNAME(processor), PRINT_ID(processor->id),
                        code, code_msg);
 
+        /* Stub proc should relay the message before it shuts down. */
+        if (CCNET_IS_SERVICE_PROXY_PROC(processor) ||
+            CCNET_IS_SERVICE_STUB_PROC(processor)) {
+            CCNET_PROCESSOR_GET_CLASS (processor)->handle_response (
+                processor, code, code_msg, content, clen);
+        }
+
         if (memcmp(code, SC_UNKNOWN_SERVICE, 3) == 0)
             ccnet_processor_shutdown (processor, PROC_NO_SERVICE);
         else if (memcmp(code, SC_PERM_ERR, 3) == 0)
             ccnet_processor_shutdown (processor, PROC_PERM_ERR);
+        else if (memcmp(code, SC_CON_TIMEOUT, 3) == 0)
+            ccnet_processor_shutdown (processor, PROC_CON_TIMEOUT);
+        else if (memcmp(code, SC_KEEPALIVE_TIMEOUT, 3) == 0)
+            ccnet_processor_shutdown (processor, PROC_TIMEOUT);
+        else if (memcmp(code, SC_NETDOWN, 3) == 0)
+            ccnet_processor_shutdown (processor, PROC_NETDOWN);
         else
             ccnet_processor_shutdown (processor, PROC_BAD_RESP);
         return;
     }
 
-    /* we must hold a reference to this processor to avoid it is freed
-       in sub-functions, since `processor->is_active = FALSE;`
-       requires processor object be valid.
-     */
-    /* g_object_ref (processor); */
-    /* processor->is_active = TRUE; */
     processor->t_packet_recv = time(NULL);
 
     if (memcmp (code, SC_PROC_KEEPALIVE, 3) == 0) {
@@ -332,12 +324,18 @@ void ccnet_processor_handle_response (CcnetProcessor *processor,
     } else if (memcmp (code, SC_PROC_DEAD, 3) == 0) {
         ccnet_debug ("[Proc] Shutdown processor %s(%d) when remote processor dies\n",
                      GET_PNAME(processor), PRINT_ID(processor->id));
+
+        if (CCNET_IS_SERVICE_PROXY_PROC(processor) ||
+            CCNET_IS_SERVICE_STUB_PROC(processor)) {
+            CCNET_PROCESSOR_GET_CLASS (processor)->handle_response (
+                processor, code, code_msg, content, clen);
+        }
+
         ccnet_processor_shutdown (processor, PROC_REMOTE_DEAD);
     } else
         CCNET_PROCESSOR_GET_CLASS (processor)->handle_response (processor,
                                                                 code, code_msg, 
                                                                 content, clen);
-    /* g_object_unref (processor); */
 }
 
 void ccnet_processor_handle_sigchld (CcnetProcessor *processor, int status)

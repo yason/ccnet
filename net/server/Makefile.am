@@ -58,14 +58,9 @@ common_headers =
 	../common/list.h ../common/rpc-service.h \
 	../common/ccnet-db.h
 
-# relay-mgr.h
-# ../common/group-mgr.h \
-# ../common/group.h
-# ../common/info-syncher.h \
-# ../common/groupmgr-message.h
 
 noinst_HEADERS = $(common_headers) \
-	user-mgr.h group-mgr.h cluster-mgr.h \
+	server-session.h user-mgr.h group-mgr.h org-mgr.h \
 	$(PROC_HEADER_FILES)
 
 
@@ -92,40 +87,9 @@ common_srcs = ../common/ccnet-db.c \
 	../common/processors/echo-proc.c
 
 ccnet_server_SOURCES = ccnet-server.c \
-	user-mgr.c group-mgr.c cluster-mgr.c \
+	server-session.c user-mgr.c group-mgr.c org-mgr.c \
 	processors/recvlogin-proc.c processors/recvlogout-proc.c \
 	$(common_srcs)
-
-# relay-mgr.c
-# kvitem-manager.c
-# processors/kvserver-proc.c
-# processors/sync-kvitem-proc.c processors/sync-kvitem-slave-proc.c
-# processors/sync-transitem-slave-proc.c 
-# processors/tunnel-proc.c processors/tunnel-slave-proc.c
-# processors/put-transinfo-proc.c
-# transfer-mgr.c transfer-item.c
-# ../common/group.c
-# ../common/group-mgr.c \
-# ../common/groupmgr-message.c \
-# ../common/info-syncher.c \
-# processors/sync-relay-proc.c processors/sync-relay-slave-proc.c
-# processors/sync-role-slave-proc.c
-# 	processors/put-userpeer-proc.c \
-#	processors/update-user-slave-proc.c \
-#	processors/update-pubinfo-slave-proc.c \
-# 	../common/processors/getmsg-proc.c ../common/processors/putmsg-proc.c \
-# ../common/processors/rcvevent-proc.c \
-#	../common/processors/get-userpeer-proc.c \
-#	../common/processors/update-user-proc.c \
-#	../common/processors/update-pubinfo-proc.c \
-#	../common/processors/getgroupinfo-proc.c \
-#	../common/processors/putgroupinfo-proc.c \
-#	../common/processors/sendgroupinfo-proc.c \
-#	../common/processors/recvgroupinfo-proc.c \
-#	../common/processors/putaddrinfo-proc.c \
-#	../common/processors/getaddrinfo-proc.c \
-# 	../common/processors/sync-role-proc.c \
-# 	processors/receive-profile-proc.c
 
 ccnet_server_LDADD = -levent $(top_builddir)/lib/libccnetd.la \
            @GLIB2_LIBS@ @GOBJECT_LIBS@ -lssl @LIB_RT@ @LIB_UUID@ -lsqlite3 \
@@ -133,4 +97,3 @@ ccnet_server_LDADD = -levent $(top_builddir)/lib/libccnetd.la \
 
 
 ccnet_server_LDFLAGS = @STATIC_COMPILE@ @CONSOLE@ -no-undefined
-

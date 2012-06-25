@@ -11,6 +11,8 @@ AM_CPPFLAGS = @GLIB2_CFLAGS@ -I$(top_srcdir)/include \
 	@MSVC_CFLAGS@ \
 	-Wall
 
+BUILT_SOURCES = gensource
+
 lib_LTLIBRARIES = libccnet.la
 
 noinst_HEADERS = db.h buffer.h packet.h string-array.h packet-io.h  \
@@ -31,14 +33,13 @@ libccnet_la_SOURCES = ccnet-client.c packet-io.c utils.c db.c \
 	string-array.c \
 	marshal.c  rsa.c \
 	bloom-filter.c \
-	buildin-types.c \
 	mainloop.c net.c cevent.c timer.c ccnet-session-base.c job-mgr.c \
 	rpcserver-proc.c ccnetrpc-transport.c threaded-rpcserver-proc.c \
 	ccnetobj.c \
 	async-rpc-proc.c ccnet-rpc-wrapper.c \
 	config-db.c
 
-EXTRA_DIST = buildin-types.c.template ccnetobj.vala
+EXTRA_DIST = ccnetobj.vala rpc_table.py
 
 libccnet_la_LDFLAGS = -no-undefined
 libccnet_la_LIBADD = @GLIB2_LIBS@  @GOBJECT_LIBS@ -lssl -lcrypto @LIB_GDI32@ \
@@ -57,14 +58,6 @@ libccnetd_la_LIBADD = @GLIB2_LIBS@  @GOBJECT_LIBS@ -lssl -lcrypto @LIB_GDI32@ \
 	                  -lsqlite3 -levent @LIB_WS32@ @LIB_UUID@ \
 					  @LIB_SHELL32@ @LIB_PSAPI@ @SEARPC_LIBS@
 
-buildin_type_headers = ../include/ccnet/ccnet-client.h
-
-buildin-types.c:  $(buildin_type_headers) buildin-types.c.template
-	rm -f $@
-	glib-mkenums --template $(srcdir)/buildin-types.c.template \
-		$(buildin_type_headers) >> xgen-gtbc \
-	&& cp xgen-gtbc buildin-types.c \
-	&& rm -f xgen-gtbc
 
 ccnet_object_define = ccnetobj.vala
 
@@ -78,4 +71,16 @@ ccnetobj.c: ${ccnet_object_define}
 	rm -f $@
 	valac -C --pkg posix ${ccnet_object_define}
 
-DISTCLEANFILES = buildin-types.c ccnetobj.c ccnet-object.h
+searpc_gen = searpc-signature.h searpc-marshal.h
+
+gensource: ${searpc_gen}
+
+${searpc_gen}: rpc_table.py
+	@echo "[libsearpc]: generating rpc header files"
+	searpc-codegen.py rpc_table.py
+	@echo "[libsearpc]: done"
+
+clean-local:
+	-rm ${searpc_gen} 
+
+DISTCLEANFILES = ccnetobj.c ccnet-object.h

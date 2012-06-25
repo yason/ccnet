@@ -63,6 +63,7 @@ struct CcnetResponse {
 
 typedef struct CcnetClientPriv CcnetClientPriv;
 
+
 /**
  * CcnetClient:
  * @id: The ccnet ID in plain text, including the ending '\0'
@@ -79,8 +80,8 @@ struct _CcnetClient
 
     int                         mode;
 
-    const char                 *config_dir;
-    const char                 *config_file;
+    char                        *config_dir;
+    char                        *config_file;
 
     int                         daemon_port;
 
@@ -96,11 +97,12 @@ struct _CcnetClient
 
     /*< private >*/
     evutil_socket_t             connfd;
-    int                         req_id; /* the current request id */
+    uint32_t                    req_id; /* the current request id */
 
     struct CcnetPacketIO       *io;
 
     GHashTable                 *processors;
+    GList                      *rpc_pool;
 
     CcnetClientPriv            *priv;
 };
@@ -125,7 +127,7 @@ int ccnet_client_connect_daemon (CcnetClient *client, CcnetClientMode mode);
 int ccnet_client_disconnect_daemon (CcnetClient *client);
 
 
-int ccnet_client_get_request_id (CcnetClient *client);
+uint32_t ccnet_client_get_request_id (CcnetClient *client);
 
 /* async mode */
 void ccnet_client_run_synchronizer (CcnetClient *client);
@@ -164,6 +166,11 @@ int ccnet_client_send_message (CcnetClient *client,
 CcnetMessage *ccnet_client_receive_message (CcnetClient *client,
                                             const char *app);
 
+uint32_t
+ccnet_client_get_rpc_request_id (CcnetClient *client, const char *peer_id,
+                                 const char *service);
+void
+ccnet_client_clean_rpc_request (CcnetClient *client, uint32_t req_id);
 
 /* void ccnet_client_send_event (CcnetClient *client, GObject *event); */
 

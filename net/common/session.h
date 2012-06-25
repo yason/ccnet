@@ -16,8 +16,6 @@
 
 #define SESSION_CONFIG_FILENAME   "ccnet.conf"
 #define SESSION_PEERDB_NAME       "peer-db"
-#define SESSION_RELAYDB_NAME      "relay-db"
-#define SESSION_OBJECTDB_NAME     "object-db"
 #define SESSION_ID_LENGTH         40
 
 
@@ -33,10 +31,6 @@ typedef struct CcnetSession CcnetSession;
 typedef struct _CcnetSessionClass CcnetSessionClass;
 
 struct _CcnetPeer;
-
-
-typedef struct _CcnetPreferences CcnetPreferences;
-
 
 typedef struct _CcnetService {
     char  *svc_name;
@@ -69,17 +63,8 @@ struct CcnetSession
 
     struct _CcnetPermManager   *perm_mgr;
 
-#ifndef WIN32
-    struct event                sigint;
-    struct event                sigterm;
-    struct event                sigusr1;
-#endif
-
     GHashTable                 *service_hash;
 
-#ifndef CCNET_SERVER
-    unsigned int                disable_multicast : 1;
-#endif
     unsigned int                saving : 1;
     unsigned int                saving_pub : 1;
 
@@ -89,44 +74,32 @@ struct CcnetSession
     int                         start_failure;  /* how many times failed 
                                                    to start the network */
 
-    const char                 *objectdb_path;
-
-
-
-#ifdef CCNET_SERVER
-    struct _CcnetUserManager   *user_mgr;
-    struct _CcnetGroupManager  *group_mgr;
-    struct _CcnetRelayManager  *relay_mgr; /* used only in relay */
-    struct _CcnetClusterManager *cluster_mgr;
-    CcnetDB                    *db;
-
-    unsigned int                redirect : 1;
-#else
-    struct _CcnetPeer          *default_relay;
-    /* CcnetDB                    *event_db; */
-#endif
-
     sqlite3                    *config_db;
+
+    CcnetDB                    *db;
 };
 
 struct _CcnetSessionClass
 {
     CcnetSessionBaseClass  parent_class;
+
+    int (*prepare) (CcnetSession *session);
+    void (*start) (CcnetSession *session);
+
+    void (*on_peer_auth_done) (CcnetSession *session, struct _CcnetPeer *peer);
 };
 
+GType ccnet_session_get_type ();
 
-CcnetSession *ccnet_session_new (const char *config_dir);
+CcnetSession *ccnet_session_new ();
 
 void ccnet_session_start (CcnetSession *session);
 void ccnet_session_on_exit (CcnetSession *session);
 void ccnet_session_save (CcnetSession *session);
 
-int ccnet_session_prepare (CcnetSession *session);
+int ccnet_session_prepare (CcnetSession *session, const char *config_dir_r);
 
 void ccnet_session_save_config (CcnetSession *session);
-void ccnet_session_set_relay (CcnetSession *session, struct _CcnetPeer *peer);
-void ccnet_session_unset_relay (CcnetSession *session);
-
 
 void ccnet_session_start_network (CcnetSession *session);
 void ccnet_session_shutdown_network (CcnetSession *session);

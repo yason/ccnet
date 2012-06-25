@@ -52,6 +52,11 @@
 #define SS_UNKNOWN_SERVICE "Unknown service"
 #define SC_PEER_UNREACHABLE "512"
 #define SS_PEER_UNREACHABLE "Peer Unreachable"
-
+#define SC_CON_TIMEOUT "513"
+#define SS_CON_TIMEOUT "connection timeout"
+#define SC_KEEPALIVE_TIMEOUT "514"
+#define SS_KEEPALIVE_TIMEOUT "keepalive timeout"
+#define SC_NETDOWN "515"
+#define SS_NETDOWN "peer down"
 
 #endif

@@ -9,6 +9,7 @@
 #include "peer-mgr.h" 
 #include "user-mgr.h" 
 #include "recvlogin-proc.h"
+#include "server-session.h"
 
 #define SC_ERR_WRONG_PASSWD "301"
 #define SS_ERR_WRONG_PASSWD "wrong password"
@@ -16,7 +17,6 @@
 #define SC_INTERNAL_ERROR "302"
 #define SS_INTERNAL_ERROR "relay internal error"
 
-extern CcnetSession *session;
 
 G_DEFINE_TYPE (CcnetRecvloginProc, ccnet_recvlogin_proc, CCNET_TYPE_PROCESSOR)
 
@@ -54,13 +54,16 @@ check_emailuser (CcnetProcessor *processor,
                  const char *email, const char *passwd)
 {
     char *prev_email;
-    prev_email = ccnet_user_manager_get_binding_email (session->user_mgr,
+    CcnetUserManager *user_mgr = 
+        ((CcnetServerSession *)processor->session)->user_mgr;
+
+    prev_email = ccnet_user_manager_get_binding_email (user_mgr,
                                                        processor->peer->id);
     if (prev_email) {
         /* This peer id has already been binded to some email address. */
         ccnet_processor_send_response (processor, SC_OK, SS_OK, NULL, 0);
         
-    } else if (!ccnet_user_manager_validate_emailuser (session->user_mgr,
+    } else if (!ccnet_user_manager_validate_emailuser (user_mgr,
                                                email, passwd)) {
         
         ccnet_processor_send_response (processor, SC_ERR_WRONG_PASSWD,
@@ -70,7 +73,7 @@ check_emailuser (CcnetProcessor *processor,
         CcnetPeer *peer = processor->peer;
         /* ccnet_peer_manager_add_role (session->peer_mgr, peer, "MyClient"); */
         /* ccnet_debug ("add role 'MyClient' for peer %.10s\n", peer->id); */
-        if (ccnet_user_manager_add_binding (session->user_mgr, email, 
+        if (ccnet_user_manager_add_binding (user_mgr, email, 
                                             peer->id) < 0) {
             ccnet_warning ("Failed to add binding for email(%s), user(%.10s)\n",
                            email, peer->id);

@@ -57,11 +57,14 @@ struct _CcnetPeer
     char         *login_error;
     gboolean      logout_started;
 
-    gint64        timestamp;    /* timestamp of public info */
-
     /* fields not from pubinfo */
-    char         *addr_str;     /* hold dynamic ip */
+    char         *addr_str;     /* hold the ip actually used in connection */
     uint16_t      port;
+
+    char         *redirect_addr;
+    uint16_t      redirect_port;
+
+    char         *dns_addr;     /* address solved by dns */
 
     int           net_state;
 
@@ -79,7 +82,6 @@ struct _CcnetPeer
     unsigned int  is_ready : 1;
     unsigned int  dns_done : 1;
     unsigned int  need_saving : 1;
-    unsigned int  temp_flag : 1;
 
     unsigned int  want_tobe_relay : 1; /* is the peer used as relay */
     unsigned int  want_tobe_default_relay : 1; /* is the peer used as our default relay */
@@ -93,7 +95,11 @@ struct _CcnetPeer
                                    * we only have its IP address now.
                                    */
 
+    unsigned int  redirected : 1;
+
     unsigned int  cluster_member : 1;
+
+    unsigned int  in_processor_call : 1;
 
     struct CcnetPacketIO  *io;
 
@@ -102,7 +108,6 @@ struct _CcnetPeer
 
     /* for connection management */
     time_t   last_down;         /* for peer gc in relay */
-    time_t   last_try_time;     /* last time try to connect it */
     int      num_fails;
 
     int      reqID;
@@ -112,17 +117,14 @@ struct _CcnetPeer
     struct evbuffer      *packet;
     
     GHashTable *processors;
+    struct list_head procs_list; /* for keep-alive */
 
     GList      *write_cbs;
-    GList      *pending_requests;
 
     gint8       bind_status;
+    char       *bind_email;
 
     int         last_mult_recv;
-    int         next_check;        /* for info syncher */
-
-    CcnetPeer    *redirect_to;
-    CcnetPeer    *redirect_from;
 };
 
 struct _CcnetPeerClass
@@ -211,12 +213,10 @@ void        ccnet_peer_send_update (const CcnetPeer *peer, int req_id,
 
 void        ccnet_peer_set_io (CcnetPeer *peer, struct CcnetPacketIO *io);
 
-
 void
-ccnet_peer_redirect_to (CcnetPeer *peer, CcnetPeer *to);
+ccnet_peer_set_redirect (CcnetPeer *peer, const char *addr, uint16_t port);
 
 void
 ccnet_peer_unset_redirect (CcnetPeer *peer);
-
 
 #endif

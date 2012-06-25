@@ -65,7 +65,7 @@ struct _CcnetPeer
     GList        *myrole_list; /* my role on this user */
 
     gint8         bind_status;
-
+    char         *bind_email;
 };
 
 struct _CcnetPeerClass

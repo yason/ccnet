@@ -19,6 +19,9 @@ struct _CcnetGroupManager
 
 CcnetGroupManager* ccnet_group_manager_new (CcnetSession *session);
 
+int
+ccnet_group_manager_prepare (CcnetGroupManager *manager);
+
 void ccnet_group_manager_start (CcnetGroupManager *manager);
 
 int ccnet_group_manager_create_group (CcnetGroupManager *mgr,

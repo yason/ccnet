@@ -5,13 +5,41 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <getopt.h>
+#include <evdns.h>
 
-#include "session.h"
+#include "server-session.h"
+#include "rpc-service.h"
 #include "log.h"
 
 char *pidfile = NULL;
 CcnetSession  *session;
 
+
+struct event                sigint;
+struct event                sigterm;
+struct event                sigusr1;
+
+static void sigintHandler (int fd, short event, void *user_data)
+{
+    ccnet_session_on_exit (session);
+    exit (1);
+}
+
+static void setSigHandlers ()
+{
+    signal (SIGPIPE, SIG_IGN);
+
+    event_set(&sigint, SIGINT, EV_SIGNAL, sigintHandler, NULL);
+	event_add(&sigint, NULL);
+
+    /* same as sigint */
+    event_set(&sigterm, SIGTERM, EV_SIGNAL, sigintHandler, NULL);
+	event_add(&sigterm, NULL);
+
+    /* same as sigint */
+    event_set(&sigusr1, SIGUSR1, EV_SIGNAL, sigintHandler, NULL);
+	event_add(&sigusr1, NULL);
+}
 
 static void
 remove_pidfile (const char *pidfile)
@@ -57,7 +85,7 @@ on_ccnet_exit(void)
 }
 
 
-static const char *short_options = "hvdc:D:f:P:r";
+static const char *short_options = "hvdc:D:f:P:";
 static struct option long_options[] = {
     { "help", no_argument, NULL, 'h', }, 
     { "version", no_argument, NULL, 'v', }, 
@@ -66,7 +94,6 @@ static struct option long_options[] = {
     { "debug", required_argument, NULL, 'D' },
     { "daemon", no_argument, NULL, 'd' },
     { "pidfile", required_argument, NULL, 'P' },
-    { "redirect", no_argument, NULL, 'r' },
     { NULL, 0, NULL, 0, },
 };
 
@@ -82,17 +109,15 @@ static void usage()
 "        Run ccnet as a daemon\n"
 "    -D FLAGS\n"
 "        Specify debug flags for logging, for example\n"
-"             Peer,Group,Processor\n"
+"             Peer,Processor\n"
 "        supported flags are\n"
-"             Peer,Group,Processor,Requirement,Routing,Netio,\n"
-"             Message,Connection,File,Other\n"
+"             Peer,Processor,Netio,\n"
+"             Message,Connection,Other\n"
 "        or ALL to enable all debug flags\n"
 "    -f LOG_FILE\n"
 "        Log file path\n"
 "    -P PIDFILE\n"
-"        Specify the file to store pid\n"
-"    --redirect\n"
-"        Enable redirect\n",
+"        Specify the file to store pid\n",
         stdout);
 }
 
@@ -104,7 +129,6 @@ main (int argc, char **argv)
     char *log_file = 0;
     const char *debug_str = 0;
     int daemon_mode = 0;
-    int redirect = 0;
     const char *log_level_str = "debug";
 
     config_dir = DEFAULT_CONFIG_DIR;
@@ -134,9 +158,6 @@ main (int argc, char **argv)
             break;
         case 'P':
             pidfile = optarg;
-            break;
-        case 'r':
-            redirect = 1;
             break;
         default:
             fprintf (stderr, "unknown option \"-%c\"\n", (char)c);
@@ -180,16 +201,16 @@ main (int argc, char **argv)
 
     srand (time(NULL));
 
-    session = ccnet_session_new (config_dir);
+    session = (CcnetSession *)ccnet_server_session_new ();
     if (!session) {
         fputs ("Error: failed to start ccnet session, "
                "see log file for the detail.\n", stderr);
         return -1;
     }
-    if (redirect)
-        session->redirect = 1;
-        
-    if (ccnet_session_prepare(session) < 0) {
+
+    event_init ();
+    evdns_init ();
+    if (ccnet_session_prepare(session, config_dir) < 0) {
         fputs ("Error: failed to start ccnet session, "
                "see log file for the detail.\n", stderr);
         return -1;
@@ -206,7 +227,13 @@ main (int argc, char **argv)
     }
     atexit (on_ccnet_exit);
 
+    setSigHandlers();
+
     ccnet_session_start (session);
+    ccnet_start_rpc(session);
+
+    /* actually enter the event loop */
+    event_dispatch ();
 
     return 0;
 }
