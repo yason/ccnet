@@ -317,6 +317,8 @@ AC_CONFIG_FILES(
     include/ccnet/Makefile
     python/Makefile
     python/ccnet/Makefile
+    tests/Makefile
+    tests/common-conf.sh
 )
 
 AC_OUTPUT
