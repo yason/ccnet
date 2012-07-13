@@ -19,9 +19,12 @@ struct CcnetServerSession
 {
     CcnetSession                common_session;
 
+    /* For processor threads. */
+    struct _CcnetJobManager    *job_mgr;
+
     struct _CcnetUserManager   *user_mgr;
     struct _CcnetGroupManager  *group_mgr;
-    struct _CcnetOrgManager  *org_mgr;
+    struct _CcnetOrgManager    *org_mgr;
 };
 
 struct _CcnetServerSessionClass

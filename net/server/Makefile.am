@@ -23,6 +23,7 @@ PROC_HEADER_FILES =  $(addprefix processors/, \
 	mqserver-proc.h \
 	service-proxy-proc.h service-stub-proc.h \
 	rpcserver-proc.h \
+	threaded-rpcserver-proc.h \
 	echo-proc.h )
 
 # sync-kvitem-proc.h sync-kvitem-slave-proc.h 
@@ -84,6 +85,7 @@ common_srcs = ../common/ccnet-db.c \
 	../common/processors/service-proxy-proc.c \
 	../common/processors/service-stub-proc.c \
 	../common/processors/rpcserver-proc.c \
+	../common/processors/threaded-rpcserver-proc.c \
 	../common/processors/echo-proc.c
 
 ccnet_server_SOURCES = ccnet-server.c \
@@ -96,4 +98,4 @@ ccnet_server_LDADD = -levent $(top_builddir)/lib/libccnetd.la \
            @LIB_WS32@ @LIB_INTL@ @LIB_IPHLPAPI@ @SEARPC_LIBS@ @ZDB_LIBS@
 
 
-ccnet_server_LDFLAGS = @STATIC_COMPILE@ @CONSOLE@ -no-undefined
+ccnet_server_LDFLAGS = @STATIC_COMPILE@ @CONSOLE@ @SERVER_PKG_RPATH@ -no-undefined

@@ -729,6 +729,9 @@ ccnet_key_file_get_string (GKeyFile *keyf,
 {
     gchar *v;
 
+    if (!g_key_file_has_key (keyf, category, key, NULL))
+        return NULL;
+
     v = g_key_file_get_string (keyf, category, key, NULL);
     if (v != NULL && v[0] == '\0') {
         g_free(v);

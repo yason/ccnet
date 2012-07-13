@@ -574,7 +574,9 @@ dns_lookup_peer (CcnetPeer* peer)
 void
 ccnet_conn_manager_start (CcnetConnManager *manager)
 {
+#ifdef CCNET_SERVER
     ccnet_conn_listen_init (manager);
+#endif
     manager->reconnect_timer = ccnet_timer_new (reconnect_pulse, manager,
                                                 RECONNECT_PERIOD_MSEC);
 }

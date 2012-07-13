@@ -43,6 +43,7 @@ RSA *peer_privkey, *peer_pubkey;
 char *user_name;
 char *peer_name;
 char *peer_id;
+char *host_str;
 char *port_str;
 
 /* argv0 */
@@ -73,6 +74,7 @@ static const struct option long_opts[] = {
     { "help", no_argument, NULL, 'h' },
     { "config-dir", required_argument, NULL, 'c' },
     { "name", required_argument, NULL, 'n' },
+    { "host", required_argument, NULL, 'H' },
     { "port", required_argument, NULL, 'P' },
     { 0, 0, 0, 0 },
 };
@@ -92,6 +94,9 @@ void usage (int exit_status)
            , stdout);
     fputs (""
 "  -n, --name=NAME           your public name\n"
+           , stdout);
+    fputs (""
+"  -H, --host=<ip or domain> Public addr. Only useful for server.\n"
            , stdout);
     fputs (""
 "  -P, --port=port           Public port. Only useful for server.\n"
@@ -137,6 +142,9 @@ main(int argc, char **argv)
             break;
         case 'n':
             name = strdup (optarg);
+            break;
+        case 'H':
+            host_str = strdup (optarg);
             break;
         case 'P':
             port_str = strdup (optarg);
@@ -209,6 +217,8 @@ make_configure_file (const char *config_file)
     fprintf (fp, "USER_NAME = %s\n", user_name);
     fprintf (fp, "ID = %s\n", peer_id);
     fprintf (fp, "NAME = %s\n", peer_name);
+    if (host_str)
+        fprintf (fp, "SERVICE_URL = http://%s:8000\n", host_str);
     
     fprintf (fp, "\n");
     fprintf (fp, "[Network]\n");

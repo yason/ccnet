@@ -191,6 +191,21 @@ class CcnetRpcClient(RpcClientBase):
     def set_config(self, key, value):
         pass        
 
+    @searpc_func("int", ["string", "string", "string"])
+    def login_relay(self, relay_id, email, passwd):
+        pass
+        
+    @searpc_func("int", ["string"])
+    def logout_relay(self, relay_id):
+        pass
+
+
+class CcnetThreadedRpcClient(RpcClientBase):
+
+    def __init__(self, ccnet_client_pool, retry_num=1, *args, **kwargs):
+        RpcClientBase.__init__(self, ccnet_client_pool, "ccnet-threaded-rpcserver",
+                               *args, **kwargs)
+
     @searpc_func("int", ["string", "string", "int", "int"])
     def add_emailuser(self, email, passwd, is_staff, is_active):
         pass
@@ -353,13 +368,5 @@ class CcnetRpcClient(RpcClientBase):
     
     @searpc_func("int", ["int", "string"])
     def org_user_exists(self, org_id, email):
-        pass
-    
-    @searpc_func("int", ["string", "string", "string"])
-    def login_relay(self, relay_id, email, passwd):
-        pass
-        
-    @searpc_func("int", ["string"])
-    def logout_relay(self, relay_id):
         pass
     

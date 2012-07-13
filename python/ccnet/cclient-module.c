@@ -209,7 +209,7 @@ static PyMethodDef PyCClient_Methods[] = {
 
 static PyMemberDef PyCClient_Members[] = {
     {"response", T_OBJECT_EX,
-     offsetof(PyCClientObject, response), 0, 'response from daemon'},
+     offsetof(PyCClientObject, response), 0, "response from daemon" },
     {NULL}
 };
 

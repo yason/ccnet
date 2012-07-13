@@ -19,7 +19,7 @@ ccnet_servtool_SOURCES = ccnet-servtool.c
 ccnet_servtool_LDADD = $(top_builddir)/lib/libccnet.la   \
 	 @GLIB2_LIBS@  @GOBJECT_LIBS@ 
 
-ccnet_servtool_LDFLAGS = @STATIC_COMPILE@ @CONSOLE@ 
+ccnet_servtool_LDFLAGS = @STATIC_COMPILE@ @CONSOLE@ @SERVER_PKG_RPATH@
 
 
 ccnet_tool_SOURCES = ccnet-tool.c
@@ -27,4 +27,4 @@ ccnet_tool_SOURCES = ccnet-tool.c
 ccnet_tool_LDADD = $(top_builddir)/lib/libccnet.la   \
 	 @GLIB2_LIBS@  @GOBJECT_LIBS@
 
-ccnet_tool_LDFLAGS = @STATIC_COMPILE@ @CONSOLE@
+ccnet_tool_LDFLAGS = @STATIC_COMPILE@ @CONSOLE@ @SERVER_PKG_RPATH@

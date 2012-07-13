@@ -92,6 +92,13 @@ main (int argc, char **argv)
     const char *log_level_str = "debug";
 
     config_dir = DEFAULT_CONFIG_DIR;
+
+#ifdef WIN32
+    int i;
+    for (i = 1; i < argc; i++) {
+        argv[i] = ccnet_locale_to_utf8(argv[i]);
+    }
+#endif
     
     while ((c = getopt_long (argc, argv, short_options, 
                              long_options, NULL)) != EOF) {
@@ -134,8 +141,10 @@ main (int argc, char **argv)
     }
 
 #ifndef WIN32
+#ifndef __APPLE__
     if (daemon_mode)
         daemon (1, 0);
+#endif
 #else
     WSADATA     wsadata;
     WSAStartup(0x0101, &wsadata);

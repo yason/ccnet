@@ -2,8 +2,7 @@
 
 #include "include.h"
 
-#include <ccnet/ccnet-client.h>
-#include <ccnet/processor.h>
+#include "server-session.h"
 #include "threaded-rpcserver-proc.h"
 #include "searpc-server.h"
 #include "rpc-common.h"
@@ -112,11 +111,12 @@ handle_update (CcnetProcessor *processor,
                char *content, int clen)
 {
     CcnetThreadedRpcserverProcPriv *priv = GET_PRIV (processor);
+    CcnetServerSession *session = CCNET_SERVER_SESSION (processor->session);
 
     if (memcmp (code, SC_CLIENT_CALL, 3) == 0) {
         priv->call_buf = g_memdup (content, clen);
         priv->call_len = (gsize)clen;
-        ccnet_job_manager_schedule_job (processor->session->job_mgr,
+        ccnet_job_manager_schedule_job (session->job_mgr,
                                         call_function_job,
                                         call_function_done,
                                         processor);

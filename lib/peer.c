@@ -64,6 +64,7 @@ ccnet_peer_free (GObject *object)
     g_free (peer->service_url);
     g_free (peer->public_addr);
     g_free (peer->login_error);
+    g_free (peer->bind_email);
     for (ptr = peer->role_list; ptr; ptr = ptr->next)
         g_free (ptr->data);
     g_list_free (peer->role_list);

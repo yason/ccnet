@@ -91,7 +91,7 @@ ccnet_LDADD = -levent $(top_builddir)/lib/libccnetd.la \
            @LIB_WS32@ @LIB_INTL@ @LIB_IPHLPAPI@ @SEARPC_LIBS@
 
 
-ccnet_LDFLAGS = @STATIC_COMPILE@ @CONSOLE@ -no-undefined
+ccnet_LDFLAGS = @STATIC_COMPILE@ @CONSOLE@ @SERVER_PKG_RPATH@ -no-undefined
 
 check_PROGRAMS = ccnet-test
 

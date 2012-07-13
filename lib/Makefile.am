@@ -1,6 +1,4 @@
 
-# SUBDIRS = miniupnpc
-
 AM_CPPFLAGS = @GLIB2_CFLAGS@ -I$(top_srcdir)/include \
 	-I$(top_srcdir)/include/ccnet \
 	-I$(top_srcdir)/lib \
@@ -49,7 +47,7 @@ libccnet_la_LIBADD = @GLIB2_LIBS@  @GOBJECT_LIBS@ -lssl -lcrypto @LIB_GDI32@ \
 
 noinst_LTLIBRARIES = libccnetd.la
 
-libccnetd_la_SOURCES = utils.c db.c \
+libccnetd_la_SOURCES = utils.c db.c job-mgr.c \
 	rsa.c bloom-filter.c marshal.c net.c timer.c ccnet-session-base.c \
 	ccnetobj.c
 
@@ -83,4 +81,4 @@ ${searpc_gen}: rpc_table.py
 clean-local:
 	-rm ${searpc_gen} 
 
-DISTCLEANFILES = ccnetobj.c ccnet-object.h
+CLEANFILES = ccnetobj.c ccnet-object.h ${searpc_gen}

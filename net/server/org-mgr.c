@@ -92,16 +92,16 @@ static void check_db_table (CcnetDB *db)
         sql = "CREATE TABLE IF NOT EXISTS Organization (org_id INTEGER"
             " PRIMARY KEY AUTO_INCREMENT, org_name VARCHAR(255),"
             " url_prefix VARCHAR(255), creator VARCHAR(255), ctime BIGINT,"
-            " UNIQUE INDEX (url_prefix)";
+            " UNIQUE INDEX (url_prefix))";
         ccnet_db_query (db, sql);
         
         sql = "CREATE TABLE IF NOT EXISTS OrgUser (org_id INTEGER, "
             "email VARCHAR(255), is_staff BOOL NOT NULL, "
-            "UNIQUE INDEX (email, org_id))";
+            "UNIQUE INDEX (email), INDEX (org_id))";
         ccnet_db_query (db, sql);
 
         sql = "CREATE TABLE IF NOT EXISTS OrgGroup (org_id INTEGER, "
-            "group_id INTEGER UNIQUE INDEX (org_id, group_id))";
+            "group_id INTEGER, UNIQUE INDEX (org_id, group_id))";
         ccnet_db_query (db, sql);
         
     } else if (db_type == CCNET_DB_TYPE_SQLITE) {
@@ -116,8 +116,11 @@ static void check_db_table (CcnetDB *db)
         sql = "CREATE TABLE IF NOT EXISTS OrgUser (org_id INTEGER, "
             "email TEXT, is_staff bool NOT NULL)";
         ccnet_db_query (db, sql);
-        sql = "CREATE UNIQUE INDEX IF NOT EXISTS org_email_indx on "
-            "OrgUser (org_id, email)";
+        sql = "CREATE UNIQUE INDEX IF NOT EXISTS email_indx on "
+            "OrgUser (email)";
+        ccnet_db_query (db, sql);
+        sql = "CREATE INDEX IF NOT EXISTS org_id_indx on "
+            "OrgUser (org_id)";
         ccnet_db_query (db, sql);
 
         sql = "CREATE TABLE IF NOT EXISTS OrgGroup (org_id INTEGER, "

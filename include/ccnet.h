@@ -67,6 +67,7 @@ GList *ccnet_get_peers_by_role (SearpcClient *client, const char *role);
 
 char *ccnet_get_binding_email (SearpcClient *client, const char *peer_id);
 GList *ccnet_get_groups_by_user (SearpcClient *client, const char *user);
+GObject *ccnet_get_org_by_user (SearpcClient *client, const char *user);
 
 int
 ccnet_get_binding_email_async (SearpcClient *client, const char *peer_id,

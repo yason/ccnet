@@ -141,6 +141,10 @@ AC_ARG_ENABLE(python,
               [compile_python=yes])
 
 
+AC_ARG_ENABLE(server-pkg, AC_HELP_STRING([--enable-server-pkg], [enable static compile]),
+    [server_pkg=$enableval],[server_pkg="no"])
+
+
 AC_ARG_ENABLE(static-build, AC_HELP_STRING([--enable-static-build], [enable static compile]),
     [static_comp=$enableval],[static_comp="no"])
 
@@ -149,6 +153,17 @@ if test x${static_comp} = xyes; then
 fi
 AC_SUBST(STATIC_COMPILE)
 
+# If we're building server release package, set the run-time path
+# for the executables. So that the loader will lookup shared libs
+# in 'lib' dir of the release package.
+# Read "man ld.so" for description of $ORIGIN.
+# Refer to http://blog.linuxgamepublishing.com/2009/02/08/our-new-way-to-meet-the-lgpl/
+if test x${server_pkg} = xyes; then
+  SERVER_PKG_RPATH=-Wl,-R,\'\$\$ORIGIN/../lib\'
+  SERVER_PKG_PY_RPATH=-Wl,-R,\'\$\$ORIGIN/../../..\'
+fi
+AC_SUBST(SERVER_PKG_RPATH)
+AC_SUBST(SERVER_PKG_PY_RPATH)
 
 AM_CONDITIONAL([COMPILE_CLI], [test "${compile_cli}" = "yes"])
 AM_CONDITIONAL([COMPILE_TOOLS], [test "${compile_tools}" = "yes"])

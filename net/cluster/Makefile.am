@@ -24,6 +24,7 @@ PROC_HEADER_FILES =  \
 	mqserver-proc.h \
 	service-proxy-proc.h service-stub-proc.h \
 	rpcserver-proc.h \
+	threaded-rpcserver-proc.h \
 	echo-proc.h )
 
 common_headers = 
@@ -67,6 +68,7 @@ common_srcs = ../common/ccnet-db.c \
 	../common/processors/service-proxy-proc.c \
 	../common/processors/service-stub-proc.c \
 	../common/processors/rpcserver-proc.c \
+	../common/processors/threaded-rpcserver-proc.c \
 	../common/processors/echo-proc.c
 
 ccnet_cserver_SOURCES = server.c \
@@ -80,5 +82,5 @@ ccnet_cserver_LDADD = -levent $(top_builddir)/lib/libccnetd.la \
            @GLIB2_LIBS@ @GOBJECT_LIBS@ -lssl @LIB_RT@ @LIB_UUID@ -lsqlite3 \
            @LIB_WS32@ @LIB_INTL@ @LIB_IPHLPAPI@ @SEARPC_LIBS@ @ZDB_LIBS@
 
-ccnet_cserver_LDFLAGS = @STATIC_COMPILE@ @CONSOLE@ -no-undefined
+ccnet_cserver_LDFLAGS = @STATIC_COMPILE@ @CONSOLE@ @SERVER_PKG_RPATH@ -no-undefined
 

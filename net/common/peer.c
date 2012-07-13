@@ -420,37 +420,10 @@ static void remove_write_callbacks (CcnetPeer *peer)
     g_list_free (peer->write_cbs);
 }
 
-
-int
-shutdown_peer (CcnetPeer *peer)
-{
-    ccnet_peer_shutdown (peer);
-    g_object_unref (peer);
-    return FALSE;
-}
-
 static void
-schedule_shutdown (CcnetPeer *peer)
+_peer_shutdown (CcnetPeer *peer)
 {
-    g_object_ref (peer);
-    ccnet_timer_new ((TimerCB)shutdown_peer, peer, 1);
-}
-
-void
-ccnet_peer_shutdown (CcnetPeer *peer)
-{
-    /* if (peer->net_state == PEER_DOWN) */
-    /*     return; */
-
-    if (peer->in_shutdown)
-        return;
-
-    if (peer->in_processor_call) {
-        ccnet_debug ("shutdown %s(%.8s) is scheduled\n", peer->name, peer->id);
-        schedule_shutdown (peer);
-        return;
-    }
-
+    g_assert (!peer->in_processor_call);
     peer->in_shutdown = 1;
 
     if (peer->net_state == PEER_CONNECTED) {
@@ -473,6 +446,33 @@ ccnet_peer_shutdown (CcnetPeer *peer)
     g_signal_emit (peer, signals[DOWN_SIG], 0);
 
     peer->in_shutdown = 0;
+}
+
+int
+shutdown_peer (CcnetPeer *peer)
+{
+    _peer_shutdown (peer);
+    peer->shutdown_scheduled = 0;
+    g_object_unref (peer);
+    return FALSE;
+}
+
+
+static void
+schedule_shutdown (CcnetPeer *peer)
+{
+    if (peer->shutdown_scheduled)
+        return;
+
+    g_object_ref (peer);
+    ccnet_timer_new ((TimerCB)shutdown_peer, peer, 1);
+    peer->shutdown_scheduled = 1;
+}
+
+void
+ccnet_peer_shutdown (CcnetPeer *peer)
+{
+    schedule_shutdown (peer);
 }
 
 
