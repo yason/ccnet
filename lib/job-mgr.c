@@ -133,7 +133,7 @@ ccnet_job_manager_new ()
                                           MAX_THREADS,
                                           FALSE,
                                           NULL);
-    g_thread_pool_set_max_unused_threads (MAX_IDLE_THREADS);
+    /* g_thread_pool_set_max_unused_threads (MAX_IDLE_THREADS); */
 #endif
 
     return mgr;

@@ -95,7 +95,7 @@ ccnet_LDFLAGS = @STATIC_COMPILE@ @CONSOLE@ @SERVER_PKG_RPATH@ -no-undefined
 
 check_PROGRAMS = ccnet-test
 
-ccnet_test_SOURCES = ccnet-test.c $(common_srcs)
+ccnet_test_SOURCES = ccnet-test.c daemon-session.c $(common_srcs)
 
 ccnet_test_LDADD = -levent $(top_builddir)/lib/libccnetd.la \
 	@GLIB2_LIBS@ @GOBJECT_LIBS@  -lssl @LIB_RT@ @LIB_UUID@ -lsqlite3 \

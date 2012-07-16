@@ -8,18 +8,14 @@
 
 #include "session.h"
 #include "peer.h"
-#include "group.h"
 #include "peer-mgr.h"
-#include "group-mgr.h"
-#include "kvitem.h"
-#include "kvitem-manager.h"
 #include "perm-mgr.h"
 
 #include "log.h"
 
 CcnetSession  *session;
 CcnetGroup *group;
-const char *rendezvous = "376cf9b6ef33a6839cf1fc096131893b5ecc673f";
+const char *rendezvous = "eed994152b231c673eeb5f586c06cd20cf9d10e8";
 
 #if 0
 static void test_kv_mgr()
@@ -117,7 +113,7 @@ main (int argc, char **argv)
 
     g_setenv ("G_SLICE", "always-malloc", 0);
 
-    config_dir = "../tests/peer-add/conf1";
+    config_dir = "../../tests/basic/conf1";
     g_type_init ();
 
     /* log */
@@ -134,8 +130,16 @@ main (int argc, char **argv)
     }
 
     srand (time(NULL));
-    session = ccnet_session_new (config_dir, relay_mode);
-    if (ccnet_session_prepare(session) < 0) {
+    session = (CcnetSession *)ccnet_daemon_session_new ();
+    if (!session) {
+        fputs ("Error: failed to start ccnet session, "
+               "see log file for the detail.\n", stderr);
+        return -1;
+    }
+
+    event_init ();
+    evdns_init ();
+    if (ccnet_session_prepare(session, config_dir) < 0) {
         fprintf (stderr, "session prepare error\n");
         return -1;
     }

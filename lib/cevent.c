@@ -62,11 +62,21 @@ int cevent_manager_start (CEventManager *manager)
 uint32_t cevent_manager_register (CEventManager *manager,
                                   cevent_handler handler, void *handler_data)
 {
-    Handler *h = g_new0(Handler, 1);
+    uint32_t id;
+    Handler *h;
+
+    h = g_new0(Handler, 1);
     h->handler = handler;
     h->handler_data = handler_data;
 
-    uint32_t id = manager->next_id++;
+    /* Since we're using 32-bit int for id, it may wrap around to 0.
+     * If some caller persistently use one id, it's handler may be
+     * overwritten by others.
+     */
+    do {
+        id = manager->next_id++;
+    } while (g_hash_table_lookup (manager->handler_table, (gpointer)(long)id));
+
     g_hash_table_insert (manager->handler_table, (gpointer)(long)id, h);
 
     return id;

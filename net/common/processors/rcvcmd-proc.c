@@ -52,7 +52,7 @@
     g_option_context_add_main_entries (context, cmd_entries, NULL); \
     if (!g_option_context_parse (context, &argc, &argv, &error)) {  \
         g_print ("option parsing failed: %s\n", error->message);    \
-        exit (1);                                                   \
+        return -1;                                                  \
     }                                                               \
     } while (0)
 
