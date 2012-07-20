@@ -321,6 +321,7 @@ ac_configure_args="$ac_configure_args -q"
 
 AC_CONFIG_FILES(
 	Makefile
+    libccnet.pc
     net/Makefile
     net/daemon/Makefile
     net/server/Makefile
