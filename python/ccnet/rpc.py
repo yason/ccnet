@@ -381,4 +381,3 @@ class CcnetThreadedRpcClient(RpcClientBase):
     @searpc_func("int", ["int", "string"])
     def org_user_exists(self, org_id, email):
         pass
-    
