@@ -45,6 +45,11 @@ ccnet_org_manager_get_org_by_url_prefix (CcnetOrgManager *mgr,
                                          const char *url_prefix,
                                          GError **error);
 
+CcnetOrganization *
+ccnet_org_manager_get_org_by_id (CcnetOrgManager *mgr,
+                                 int org_id,
+                                 GError **error);
+
 int
 ccnet_org_manager_add_org_user (CcnetOrgManager *mgr,
                                 int org_id,
@@ -58,8 +63,8 @@ ccnet_org_manager_remove_org_user (CcnetOrgManager *mgr,
                                    const char *email,
                                    GError **error);
 
-CcnetOrganization *
-ccnet_org_manager_get_org_by_user (CcnetOrgManager *mgr,
+GList *
+ccnet_org_manager_get_orgs_by_user (CcnetOrgManager *mgr,
                                    const char *email,
                                    GError **error);
 
@@ -78,6 +83,11 @@ ccnet_org_manager_remove_org_group (CcnetOrgManager *mgr,
                                     int org_id,
                                     int group_id,
                                     GError **error);
+
+int
+ccnet_org_manager_is_org_group (CcnetOrgManager *mgr,
+                                int group_id,
+                                GError **error);
 
 GList *
 ccnet_org_manager_get_org_groups (CcnetOrgManager *mgr,

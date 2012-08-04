@@ -87,6 +87,8 @@ typedef struct  {
     int count;
 } CcnetKeepalive2ProcPriv;
 
+extern CcnetSession *session;
+
 #define GET_PRIV(o)  \
    (G_TYPE_INSTANCE_GET_PRIVATE ((o), CCNET_TYPE_KEEPALIVE2_PROC, CcnetKeepalive2ProcPriv))
 
@@ -384,6 +386,31 @@ static void recv_keepalive_rsp(CcnetProcessor *processor,
     processor->state = FULL;
 }
 
+static void
+send_session_key (CcnetPeer *peer)
+{
+    CcnetProcessor *processor;
+    CcnetProcFactory *factory = peer->manager->session->proc_factory;
+
+    if (peer->session_key) {
+        ccnet_warning ("peer %s already has session key\n", peer->id); 
+        return;
+    }
+    
+    processor = ccnet_proc_factory_create_master_processor (
+        factory, "send-session-key", peer);
+
+    if (!processor) {
+        ccnet_warning ("create send session key processor failed\n");
+        return;
+    }
+
+    if (ccnet_processor_startl (processor, NULL) < 0) {
+        ccnet_warning ("start send session key processor failed\n");
+        return;
+    }
+}
+
 static void verify_challenge(CcnetProcessor *processor, 
                              char *code, char *code_msg,
                              char *content, int clen)
@@ -404,6 +431,9 @@ static void verify_challenge(CcnetProcessor *processor,
 
     g_signal_emit_by_name (processor->session->peer_mgr,
                            "peer-auth-done", processor->peer);
+
+    if (strcmp(session->base.id, processor->peer->id) < 0)
+        send_session_key (processor->peer);
         
     send_keepalive (processor);
     reset_timeout (processor);

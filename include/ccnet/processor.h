@@ -16,9 +16,6 @@
 #define ccnet_pipe_t int
 #endif
 
-typedef void* (*CcnetThreadFunc)(void *);
-typedef void  (*CcnetThreadCleanup)(void *);
-
 struct _CcnetClient;
 
 #define CCNET_TYPE_PROCESSOR                  (ccnet_processor_get_type ())
@@ -53,8 +50,13 @@ struct _CcnetProcessor {
     gboolean               is_active;
 
     gboolean               thread_running;
-    pthread_t              tid;
-    ccnet_pipe_t           pipefd[2];
+
+    /* If proc is shut down when a thread is running, delay it until
+     * the thread is done. The thread done callback should check
+     * this attribute and if this is TRUE, the callback should
+     * call processor_done().
+     */
+    gboolean               delay_shutdown;
 };
 
 enum {
@@ -101,10 +103,6 @@ struct _CcnetProcessorClass {
 
     void      (*handle_sigchld)  (CcnetProcessor *processor,
                                   int status);
-
-    void      (*handle_thread_done) (CcnetProcessor *processor,
-                                     int status,
-                                     char *message);
 
     void      (*shutdown)        (CcnetProcessor *processor);
 
@@ -154,14 +152,19 @@ void ccnet_processor_send_response(CcnetProcessor *processor,
                                    const char *code_msg,
                                    const char *content, int clen);
 
-/* thread related */
-int ccnet_processor_thread_create (CcnetProcessor *processor, 
-                                   CcnetThreadFunc thread_func,
-                                   CcnetThreadCleanup thread_cleanup);
+/*
+  The thread func should return the result back by
+     return (void *)result;
+  The result will be passed to ProcThreadDoneFunc.
+  In the done func, the caller should check whether processor->delay_shutdown
+  is TRUE. If it is, you should call processor_done().
+ */
+typedef void* (*ProcThreadFunc)(void *data);
+typedef void (*ProcThreadDoneFunc)(void *result);
 
-void ccnet_processor_thread_done (CcnetProcessor *processor,
-                                  int status, char *message);
-
-int ccnet_processor_thread_cancel (CcnetProcessor *processor);
+int ccnet_processor_thread_create (CcnetProcessor *processor,
+                                   ProcThreadFunc func,
+                                   ProcThreadDoneFunc done_func,
+                                   void *data);
 
 #endif

@@ -297,6 +297,10 @@ class CcnetThreadedRpcClient(RpcClientBase):
     @searpc_func("int", ["int", "string"])
     def check_group_staff(self, group_id, username):
         pass
+
+    @searpc_func("int", ["string"])
+    def remove_group_user(self, username):
+        pass
     
     @searpc_func("int", ["int", "string", "string"])
     def group_share_repo(self, group_id, user_name, repo_id):
@@ -338,6 +342,10 @@ class CcnetThreadedRpcClient(RpcClientBase):
     def get_org_by_url_prefix(self, url_prefix):
         pass
 
+    @searpc_func("object", ["string"])
+    def get_org_by_id(self, org_id):
+        pass
+    
     @searpc_func("int", ["int", "string", "int"])
     def add_org_user(self, org_id, email, is_staff):
         pass
@@ -346,8 +354,8 @@ class CcnetThreadedRpcClient(RpcClientBase):
     def remove_org_user(self, org_id, email):
         pass
     
-    @searpc_func("object", ["string"])
-    def get_org_by_user(self, email):
+    @searpc_func("objlist", ["string"])
+    def get_orgs_by_user(self, email):
         pass
     
     @searpc_func("objlist", ["string", "int", "int"])
@@ -362,6 +370,10 @@ class CcnetThreadedRpcClient(RpcClientBase):
     def remove_org_group(self, org_id, group_id):
         pass
 
+    @searpc_func("int", ["int"])
+    def is_org_group(self, group_id):
+        pass
+    
     @searpc_func("objlist", ["int", "int", "int"])
     def get_org_groups(self, org_id, start, limit):
         pass

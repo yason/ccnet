@@ -168,15 +168,11 @@ ccnet_get_groups_by_user (SearpcClient *client, const char *user)
         1, "string", user);
 }
 
-GObject *
-ccnet_get_org_by_user (SearpcClient *client, const char *user)
+int
+ccnet_org_user_exists (SearpcClient *client, int org_id, const char *user)
 {
-    if (!user)
-        return NULL;
-
-    return searpc_client_call__object (client, "get_org_by_user",
-                                       CCNET_TYPE_ORGANIZATION, NULL,
-                                       1, "string", user);
+    return searpc_client_call__int (client, "org_user_exists", NULL,
+                                    2, "int", org_id, "string", user);
 }
 
 #if 0

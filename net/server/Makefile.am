@@ -24,7 +24,9 @@ PROC_HEADER_FILES =  $(addprefix processors/, \
 	service-proxy-proc.h service-stub-proc.h \
 	rpcserver-proc.h \
 	threaded-rpcserver-proc.h \
-	echo-proc.h )
+	echo-proc.h \
+	sendsessionkey-proc.h \
+	recvsessionkey-proc.h )
 
 # sync-kvitem-proc.h sync-kvitem-slave-proc.h 
 #	update-user-slave-proc.h \
@@ -86,7 +88,9 @@ common_srcs = ../common/ccnet-db.c \
 	../common/processors/service-stub-proc.c \
 	../common/processors/rpcserver-proc.c \
 	../common/processors/threaded-rpcserver-proc.c \
-	../common/processors/echo-proc.c
+	../common/processors/echo-proc.c \
+	../common/processors/sendsessionkey-proc.c \
+	../common/processors/recvsessionkey-proc.c
 
 ccnet_server_SOURCES = ccnet-server.c \
 	server-session.c user-mgr.c group-mgr.c org-mgr.c \

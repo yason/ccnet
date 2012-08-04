@@ -15,6 +15,9 @@
 #include "processors/rcvcmd-proc.h"
 #include "processors/service-proxy-proc.h"
 #include "processors/service-stub-proc.h"
+#include "processors/sendsessionkey-proc.h"
+#include "processors/recvsessionkey-proc.h"
+
 
 #ifdef CCNET_SERVER
 #include "processors/recvlogin-proc.h"
@@ -139,6 +142,12 @@ ccnet_proc_factory_new (CcnetSession *session)
     
     ccnet_proc_factory_register_processor (factory, "keepalive2",
                                            ccnet_keepalive2_proc_get_type ());
+
+    ccnet_proc_factory_register_processor (factory, "send-session-key",
+                                           ccnet_sendsessionkey_proc_get_type());
+
+    ccnet_proc_factory_register_processor (factory, "receive-session-key",
+                                           ccnet_recvsessionkey_proc_get_type ());
 
     ccnet_proc_factory_register_processor (factory, "mq-server",
                                            ccnet_mqserver_proc_get_type ());

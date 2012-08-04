@@ -25,6 +25,7 @@ enum {
     P_MY_ROLE_LIST,
     P_BIND_STATUS,
     P_BIND_EMAIL,
+    P_SESSION_KEY,
 };
 
 static void
@@ -109,6 +110,9 @@ get_property (GObject *object, guint property_id,
         break;
     case P_BIND_EMAIL:
         g_value_set_string (v, peer->bind_email);
+        break;
+    case P_SESSION_KEY:
+        g_value_set_string (v, peer->session_key);
         break;
     default:
         G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
@@ -216,6 +220,10 @@ set_property_common (GObject *object, guint property_id,
         g_free (peer->bind_email);
         peer->bind_email = g_value_dup_string (v);
         break;
+    case P_SESSION_KEY:
+        g_free (peer->session_key);
+        peer->session_key = g_value_dup_string (v);
+        break;
     default:
         G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
         return;
@@ -304,6 +312,10 @@ define_properties (GObjectClass *gobject_class)
 
     g_object_class_install_property (gobject_class, P_BIND_EMAIL,
         g_param_spec_string ("bind-email", NULL, "bind email",
+                              NULL, G_PARAM_READWRITE));
+
+    g_object_class_install_property (gobject_class, P_SESSION_KEY,
+        g_param_spec_string ("session-key", NULL, "session key",
                               NULL, G_PARAM_READWRITE));
 }
 

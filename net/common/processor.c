@@ -289,8 +289,8 @@ void ccnet_processor_handle_response (CcnetProcessor *processor,
     if ((code[0] == '5' || code[0] == '4') &&
         !CCNET_IS_KEEPALIVE2_PROC(processor))
     {
-        ccnet_warning ("[Proc] Shutdown processor %s(%d) for bad response: %s %s\n",
-                       GET_PNAME(processor), PRINT_ID(processor->id),
+        ccnet_warning ("[Proc] peer %.10s, Shutdown processor %s(%d) for bad response: %s %s\n",
+                       processor->peer->id, GET_PNAME(processor), PRINT_ID(processor->id),
                        code, code_msg);
 
         /* Stub proc should relay the message before it shuts down. */

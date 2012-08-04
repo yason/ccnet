@@ -13,6 +13,7 @@
 #include "timer.h"
 #include "peer.h"
 #include "utils.h"
+#include "job-mgr.h"
 
 G_DEFINE_TYPE (CcnetProcessor, ccnet_processor, G_TYPE_OBJECT);
 
@@ -116,6 +117,11 @@ ccnet_processor_release_resource(CcnetProcessor *processor)
 void
 ccnet_processor_shutdown (CcnetProcessor *processor, int reason)
 {
+    if (processor->thread_running) {
+        processor->delay_shutdown = TRUE;
+        return;
+    }
+
     if (processor->state == STATE_IN_SHUTDOWN) {
         return;
     }
@@ -140,6 +146,11 @@ void
 ccnet_processor_done (CcnetProcessor *processor,
                       gboolean success)
 {
+    if (processor->thread_running) {
+        processor->delay_shutdown = TRUE;
+        return;
+    }
+
     if (processor->state == STATE_IN_SHUTDOWN) {
         return;
     }
@@ -303,187 +314,51 @@ ccnet_processor_send_response(CcnetProcessor *processor,
                                 code, code_msg, content, clen);
 }
 
-
-/* ------------ thread related functions -------- */
-
-void
-ccnet_processor_handle_thread_done (CcnetProcessor *processor,
-                                    int status, char *message)
-{    
-    if (CCNET_PROCESSOR_GET_CLASS (processor)->handle_thread_done) {
-        CCNET_PROCESSOR_GET_CLASS (processor)->handle_thread_done(
-            processor, status, message
-            );
-    }
-}
+typedef struct ProcThreadData {
+    CcnetProcessor *proc;
+    ProcThreadFunc func;
+    void *data;
+    ProcThreadDoneFunc done_func;
+    void *result;
+} ProcThreadData;
 
 static void
-notification_cb (int fd, short event, void *arg)
+processor_thread_done (void *vdata)
 {
-    char buf[1024];
-    int n;
-    CcnetProcessor *processor = CCNET_PROCESSOR(arg);
-    char *space, *msg;
-    int status;
+    ProcThreadData *tdata = vdata;
 
-    n = piperead (processor->pipefd[0], buf, 1024);
-    g_assert(n > 0);
-    space = strchr (buf, ' ');
-    g_assert (space != NULL);
-    *(space++) = '\0';
-    msg = space;
-    status = atoi (buf);
+    tdata->proc->thread_running = FALSE;
+    tdata->done_func (tdata->result);
 
-    pipeclose (processor->pipefd[0]);
-    pipeclose (processor->pipefd[1]);
-    processor->thread_running = FALSE;
-
-    ccnet_processor_handle_thread_done (processor, status, msg);
+    g_free (tdata);
 }
 
-typedef struct {
-    CcnetProcessor      *processor;
-    CcnetThreadFunc     thread_func;
-    CcnetThreadCleanup  thread_cleanup;
-} ThreadData;
-
-static void*
-ccnet_thread_wrapper (void *vdata)
+static void *
+processor_thread_func_wrapper (void *vdata)
 {
-    ThreadData *data = vdata;
-    CcnetProcessor *processor;
-    CcnetThreadFunc thread_func;
-    CcnetThreadCleanup thread_cleanup;
-    void *ret;
-
-    /* To avoid memory leak when this thread is canceled, 
-     * we free data before calling the thread func.
-     */
-    processor = data->processor;
-    thread_func = data->thread_func;
-    thread_cleanup = data->thread_cleanup;
-    g_free (data);
-
-    if (thread_cleanup) {
-        pthread_cleanup_push (thread_cleanup, processor);
-        ret = thread_func (processor);
-        /* The cleanup func will always be called when this thread exits. */
-        pthread_cleanup_pop (1);
-    } else {
-        ret = thread_func (processor);
-    }
-
-    return ret;
+    ProcThreadData *tdata = vdata;
+    tdata->result = tdata->func (tdata->data);
+    return vdata;
 }
 
 int
-ccnet_processor_thread_create (CcnetProcessor *processor, 
-                               CcnetThreadFunc thread_func,
-                               CcnetThreadCleanup cleanup_func)
+ccnet_processor_thread_create (CcnetProcessor *processor,
+                               ProcThreadFunc func,
+                               ProcThreadDoneFunc done_func,
+                               void *data)
 {
-    ThreadData *data;
+    ProcThreadData *tdata;
 
-    if (ccnet_pipe (processor->pipefd) < 0) {
-        g_warning ("[proc] pipe error: %s\n", strerror(errno));
-        return -1;
-    }
+    tdata = g_new(ProcThreadData, 1);
+    tdata->proc = processor;
+    tdata->func = func;
+    tdata->done_func = done_func;
+    tdata->data = data;
 
-    data = g_new (ThreadData, 1);
-    data->processor = processor;
-    data->thread_func = thread_func;
-    data->thread_cleanup = cleanup_func;
-
-    if (pthread_create (&processor->tid, NULL, ccnet_thread_wrapper, data) != 0) {
-        g_warning ("[proc] thread creation error: %s\n",
-                   strerror(errno));
-        return -1;
-    }
+    ccnet_job_manager_schedule_job (processor->session->job_mgr,
+                                    processor_thread_func_wrapper,
+                                    processor_thread_done,
+                                    tdata);
     processor->thread_running = TRUE;
-
-    event_once (processor->pipefd[0], EV_READ, notification_cb, processor, NULL);
-
-    pthread_detach (processor->tid);
-
     return 0;
 }
-
-int
-ccnet_processor_thread_cancel (CcnetProcessor *processor)
-{
-    if (processor->thread_running)
-        return pthread_cancel (processor->tid);
-    else
-        return 0;
-}
-
-void
-ccnet_processor_thread_done (CcnetProcessor *processor, int status, char *message)
-{
-    GString *buf = g_string_new (NULL);
-
-    if (message)
-        g_string_append_printf (buf, "%d %s", status, message);
-    else
-        g_string_append_printf (buf, "%d ", status);
-
-    pipewrite (processor->pipefd[1], buf->str, buf->len+1);
-
-    g_string_free (buf, TRUE);
-}
-
-#if 0
-static void
-thread_pool_func (gpointer data, gpointer vprocessor)
-{
-    CcnetThreadFunc user_thread_func = data;
-
-    user_thread_func (vprocessor);
-}
-
-int
-ccnet_processor_thread_pool_new (CcnetProcessor *processor,
-                                 int max_threads)
-{
-    GThreadPool *thread_pool;
-    GError      *error;
-
-    thread_pool = g_thread_pool_new (thread_pool_func,
-                                     processor,
-                                     max_threads,
-                                     TRUE,
-                                     &error);
-    if (error) {
-        g_warning ("Failed to create thread pool.\n");
-        return -1;
-    }
-
-    processor->thread_pool = thread_pool;
-    return 0;
-}
-
-int
-ccnet_processor_thread_pool_run (CcnetProcessor *processor,
-                                 CcnetThreadFunc thread_func)
-{
-    GError *error;
-
-    if (!processor->thread_pool) {
-        g_warning ("[proc] Thread pool is not initiated for this processor.\n");
-        return -1;
-    }
-
-    g_thread_pool_push (processor->thread, thread_func, &error);
-    if (error) {
-        g_warning ("[proc] Failed to run thread.\n");
-        return -1;
-    }
-
-    return 0;
-}
-
-void
-ccnet_processor_thread_pool_free (CcnetProcessor *processor)
-{
-    g_thread_pool_free (processor->thread_pool, TRUE, FALSE);
-}
-#endif

@@ -66,6 +66,7 @@ struct _CcnetPeer
 
     gint8         bind_status;
     char         *bind_email;
+    char         *session_key;
 };
 
 struct _CcnetPeerClass

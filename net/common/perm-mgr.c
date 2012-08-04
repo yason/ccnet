@@ -33,6 +33,7 @@ struct ServiceGroup service_groups[] = {
     { "put-pubinfo",                    "basic" },
     { "put-user",                       "basic" },
     { "keepalive2",                     "basic" },
+    { "receive-session-key",            "basic" },
     { "receive-msg",                    "basic" },
     { "echo",                           "basic" },
     { "ccnet-rpcserver",                "rpc-inner" },

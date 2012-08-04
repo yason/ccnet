@@ -48,6 +48,7 @@ struct _CcnetPeer
     char          id[41];
 
     RSA          *pubkey;
+    char         *session_key;
 
     char         *name;         /* hostname */
     char         *public_addr;

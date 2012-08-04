@@ -97,11 +97,12 @@ static void check_db_table (CcnetDB *db)
         
         sql = "CREATE TABLE IF NOT EXISTS OrgUser (org_id INTEGER, "
             "email VARCHAR(255), is_staff BOOL NOT NULL, "
-            "UNIQUE INDEX (email), INDEX (org_id))";
+            "INDEX (email), UNIQUE INDEX (org_id, email))";
         ccnet_db_query (db, sql);
 
         sql = "CREATE TABLE IF NOT EXISTS OrgGroup (org_id INTEGER, "
-            "group_id INTEGER, UNIQUE INDEX (org_id, group_id))";
+            "group_id INTEGER, INDEX (group_id), "
+            "UNIQUE INDEX (org_id, group_id))";
         ccnet_db_query (db, sql);
         
     } else if (db_type == CCNET_DB_TYPE_SQLITE) {
@@ -116,16 +117,18 @@ static void check_db_table (CcnetDB *db)
         sql = "CREATE TABLE IF NOT EXISTS OrgUser (org_id INTEGER, "
             "email TEXT, is_staff bool NOT NULL)";
         ccnet_db_query (db, sql);
-        sql = "CREATE UNIQUE INDEX IF NOT EXISTS email_indx on "
+        sql = "CREATE INDEX IF NOT EXISTS email_indx on "
             "OrgUser (email)";
         ccnet_db_query (db, sql);
-        sql = "CREATE INDEX IF NOT EXISTS org_id_indx on "
-            "OrgUser (org_id)";
+        sql = "CREATE UNIQUE INDEX IF NOT EXISTS orgid_email_indx on "
+            "OrgUser (org_id, email)";
         ccnet_db_query (db, sql);
 
         sql = "CREATE TABLE IF NOT EXISTS OrgGroup (org_id INTEGER, "
             "group_id INTEGER)";
         ccnet_db_query (db, sql);
+        sql = "CREATE INDEX IF NOT EXISTS groupid_indx on OrgGroup (group_id)";
+        ccnet_db_query (db, sql);        
         sql = "CREATE UNIQUE INDEX IF NOT EXISTS org_group_indx on "
             "OrgGroup (org_id, group_id)";
         ccnet_db_query (db, sql);        
@@ -254,7 +257,7 @@ get_org_cb (CcnetDBRow *row, void *data)
     const char *creator;
     gint64 ctime;
 
-    org_id = ccnet_db_row_get_column_int (row, 0);
+    org_id = ccnet_db_row_get_column_int (row, 0);    
     org_name = ccnet_db_row_get_column_text (row, 1);
     url_prefix = ccnet_db_row_get_column_text (row, 2);
     creator = ccnet_db_row_get_column_text (row, 3);
@@ -280,7 +283,27 @@ ccnet_org_manager_get_org_by_url_prefix (CcnetOrgManager *mgr,
     CcnetOrganization *org = NULL;
 
     snprintf (sql, sizeof(sql), "SELECT org_id, org_name, url_prefix, creator,"
-              " ctime FROM Organization WHERE url_prefix = '%s'", url_prefix);
+              " ctime FROM Organization WHERE url_prefix = '%s'", url_prefix);    
+
+    if (ccnet_db_foreach_selected_row (db, sql, get_org_cb, &org) < 0) {
+        return NULL;
+    }
+
+    return org;
+}
+
+CcnetOrganization *
+ccnet_org_manager_get_org_by_id (CcnetOrgManager *mgr,
+                                 int org_id,
+                                 GError **error)
+{
+    CcnetDB *db = mgr->priv->db;
+    char sql[256];
+    CcnetOrganization *org = NULL;
+
+    snprintf (sql, sizeof(sql), "SELECT org_id, org_name, url_prefix, creator,"
+              " ctime FROM Organization WHERE org_id = '%d'", org_id);    
+
     if (ccnet_db_foreach_selected_row (db, sql, get_org_cb, &org) < 0) {
         return NULL;
     }
@@ -320,9 +343,10 @@ ccnet_org_manager_remove_org_user (CcnetOrgManager *mgr,
 }
 
 static gboolean
-get_org_by_user_cb (CcnetDBRow *row, void *data)
+get_orgs_by_user_cb (CcnetDBRow *row, void *data)
 {
-    CcnetOrganization **p_org = (CcnetOrganization **)data;
+    GList **p_list = (GList **)data;
+    CcnetOrganization *org = NULL;
     int org_id;
     const char *email;
     int is_staff;
@@ -339,38 +363,40 @@ get_org_by_user_cb (CcnetDBRow *row, void *data)
     creator = (char *) ccnet_db_row_get_column_text (row, 5);
     ctime = ccnet_db_row_get_column_int64 (row, 6);
     
-    *p_org = g_object_new (CCNET_TYPE_ORGANIZATION,
-                           "org_id", org_id,
-                           "email", email,
-                           "is_staff", is_staff,
-                           "org_name", org_name,
-                           "url_prefix", url_prefix,
-                           "creator", creator,
-                           "ctime", ctime,
-                           NULL);
-
-    return FALSE;
+    org = g_object_new (CCNET_TYPE_ORGANIZATION,
+                        "org_id", org_id,
+                        "email", email,
+                        "is_staff", is_staff,
+                        "org_name", org_name,
+                        "url_prefix", url_prefix,
+                        "creator", creator,
+                        "ctime", ctime,
+                        NULL);
+    *p_list = g_list_prepend (*p_list, org);
+        
+    return TRUE;
 }
 
-CcnetOrganization *
-ccnet_org_manager_get_org_by_user (CcnetOrgManager *mgr,
+GList *
+ccnet_org_manager_get_orgs_by_user (CcnetOrgManager *mgr,
                                    const char *email,
                                    GError **error)
 {
     CcnetDB *db = mgr->priv->db;
     char sql[512];
-    CcnetOrganization *org = NULL;
+    GList *ret = NULL;
 
     snprintf (sql, sizeof(sql), "SELECT t1.org_id, email, is_staff, org_name,"
               " url_prefix, creator, ctime FROM OrgUser t1, Organization t2"
               " WHERE t1.org_id = t2.org_id AND email = '%s'", email);
 
-    if (ccnet_db_foreach_selected_row (db, sql, get_org_by_user_cb,
-                                       &org) < 0) {
+    if (ccnet_db_foreach_selected_row (db, sql, get_orgs_by_user_cb,
+                                       &ret) < 0) {
+        g_list_free (ret);
         return NULL;
     }
 
-    return org;
+    return g_list_reverse (ret);
 }
 
 static gboolean
@@ -429,6 +455,20 @@ ccnet_org_manager_remove_org_group (CcnetOrgManager *mgr,
               " AND group_id=%d", org_id, group_id);
     
     return ccnet_db_query (db, sql);
+}
+
+int
+ccnet_org_manager_is_org_group (CcnetOrgManager *mgr,
+                                int group_id,
+                                GError **error)
+{
+    CcnetDB *db = mgr->priv->db;
+    char sql[256];
+
+    snprintf (sql, sizeof(sql), "SELECT group_id FROM OrgGroup "
+              "WHERE group_id = %d", group_id);
+    
+    return ccnet_db_check_for_existence (db, sql);
 }
 
 static gboolean

@@ -69,6 +69,10 @@ ccnet_group_manager_check_group_staff (CcnetGroupManager *mgr,
                                        int group_id,
                                        const char *user_name);
 
+int
+ccnet_group_manager_remove_group_user (CcnetGroupManager *mgr,
+                                       const char *user);
+
 GList*
 ccnet_group_manager_get_all_groups (CcnetGroupManager *mgr,
                                     int start, int limit, GError **error);

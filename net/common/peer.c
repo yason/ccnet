@@ -75,6 +75,7 @@ ccnet_peer_finalize (GObject *object)
     g_free (peer->service_url);
     g_free (peer->login_error);
     g_hash_table_unref (peer->processors);
+    g_free (peer->session_key);
     evbuffer_free (peer->packet);
 
     if (peer->pubkey)
@@ -436,6 +437,10 @@ _peer_shutdown (CcnetPeer *peer)
     g_free (peer->dns_addr);
     peer->dns_addr = NULL;
     peer->dns_done = 0;
+
+    /* clear session key when peer down  */
+    g_free (peer->session_key);
+    peer->session_key = NULL;
 
     ccnet_debug ("Shutdown all processors for peer %s\n", peer->name);
     shutdown_processors (peer);

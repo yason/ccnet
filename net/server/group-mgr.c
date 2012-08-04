@@ -96,7 +96,7 @@ static void check_db_table (CcnetDB *db)
 
         sql = "CREATE TABLE IF NOT EXISTS `GroupUser` (`group_id` INTEGER,"
             " `user_name` VARCHAR(255), `is_staff` tinyint, UNIQUE INDEX"
-            " (`group_id`, `user_name`))";
+            " (`group_id`, `user_name`), INDEX (`user_name`))";
         ccnet_db_query (db, sql);
     } else if (db_type == CCNET_DB_TYPE_SQLITE) {
         sql = "CREATE TABLE IF NOT EXISTS `Group` (`group_id` INTEGER"
@@ -109,6 +109,9 @@ static void check_db_table (CcnetDB *db)
         ccnet_db_query (db, sql);
         sql = "CREATE UNIQUE INDEX IF NOT EXISTS groupid_username_indx on "
             "`GroupUser` (`group_id`, `user_name`)";
+        ccnet_db_query (db, sql);
+        sql = "CREATE INDEX IF NOT EXISTS username_indx on "
+            "`GroupUser` (`user_name`)";
         ccnet_db_query (db, sql);
     }
 
@@ -426,25 +429,24 @@ ccnet_group_manager_get_group_members (CcnetGroupManager *mgr, int group_id,
     return g_list_reverse (group_users);
 }
 
-#if 0
-static gboolean
-check_group_has_user (CcnetDB *db, int group_id, const char *user_name)
-{
-    char sql[512];
-    
-    snprintf (sql, sizeof(sql), "SELECT `group_id` FROM `GroupUser` WHERE "
-              "`group_id`=%d and `user_name`='%s'", group_id, user_name);
-    
-    return ccnet_db_check_for_existence (db, sql);
-}
-#endif
-
 int
 ccnet_group_manager_check_group_staff (CcnetGroupManager *mgr,
                                        int group_id,
                                        const char *user_name)
 {
     return check_group_staff (mgr->priv->db, group_id, user_name);
+}
+
+int
+ccnet_group_manager_remove_group_user (CcnetGroupManager *mgr,
+                                       const char *user)
+{
+    CcnetDB *db = mgr->priv->db;
+    char sql[256];
+
+    snprintf (sql, sizeof(sql), "DELETE FROM `GroupUser` "
+              "WHERE `user_name` = '%s'", user);
+    return ccnet_db_query (db, sql);
 }
 
 static gboolean

@@ -162,6 +162,9 @@ ccnet_rpc_check_group_staff (int group_id, const char *user_name,
                              GError **error);
 
 int
+ccnet_rpc_remove_group_user (const char *user, GError **error);
+
+int
 ccnet_rpc_create_org (const char *org_name, const char *url_prefix,
                       const char *creator, GError **error);
 
@@ -174,6 +177,9 @@ ccnet_rpc_get_all_orgs (int start, int limit, GError **error);
 GObject *
 ccnet_rpc_get_org_by_url_prefix (const char *url_prefix, GError **error);
 
+GObject *
+ccnet_rpc_get_org_by_id (int org_id, GError **error);
+
 int
 ccnet_rpc_add_org_user (int org_id, const char *email, int is_staff,
                         GError **error);
@@ -181,8 +187,8 @@ ccnet_rpc_add_org_user (int org_id, const char *email, int is_staff,
 int
 ccnet_rpc_remove_org_user (int org_id, const char *email, GError **error);
 
-GObject *
-ccnet_rpc_get_org_by_user (const char *email, GError **error);
+GList *
+ccnet_rpc_get_orgs_by_user (const char *email, GError **error);
 
 GList *
 ccnet_rpc_get_org_emailusers (const char *url_prefix, int start , int limit,
@@ -193,6 +199,9 @@ ccnet_rpc_add_org_group (int org_id, int group_id, GError **error);
 
 int
 ccnet_rpc_remove_org_group (int org_id, int group_id, GError **error);
+
+int
+ccnet_rpc_is_org_group (int group_id, GError **error);
 
 GList *
 ccnet_rpc_get_org_groups (int org_id, int start, int limit, GError **error);
