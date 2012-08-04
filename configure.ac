@@ -144,6 +144,8 @@ AC_ARG_ENABLE(python,
 AC_ARG_ENABLE(server-pkg, AC_HELP_STRING([--enable-server-pkg], [enable static compile]),
     [server_pkg=$enableval],[server_pkg="no"])
 
+AM_CONDITIONAL([SERVER_ONLY], [test "${server_pkg}" = "yes"])
+
 
 AC_ARG_ENABLE(static-build, AC_HELP_STRING([--enable-static-build], [enable static compile]),
     [static_comp=$enableval],[static_comp="no"])
@@ -153,12 +155,19 @@ if test x${static_comp} = xyes; then
 fi
 AC_SUBST(STATIC_COMPILE)
 
+
 # If we're building server release package, set the run-time path
 # for the executables. So that the loader will lookup shared libs
 # in 'lib' dir of the release package.
 # Read "man ld.so" for description of $ORIGIN.
 # Refer to http://blog.linuxgamepublishing.com/2009/02/08/our-new-way-to-meet-the-lgpl/
 if test x${server_pkg} = xyes; then
+#  compile_gui=no
+#  compile_client=no
+#  compile_cli=yes
+#  compile_tools=yes
+  compile_server=yes
+#  compile_httpserver=yes
   SERVER_PKG_RPATH=-Wl,-R,\'\$\$ORIGIN/../lib\'
   SERVER_PKG_PY_RPATH=-Wl,-R,\'\$\$ORIGIN/../../..\'
 fi
@@ -272,6 +281,7 @@ GTK_REQUIRED=2.16.0
 SEARPC_REQUIRED=1.0
 ZDB_REQUIRED=2.10
 LIBNAUTILUS_EXTENSION_REQUIRED=2.30.1
+CURL_REQUIRED=7.17
 
 PKG_CHECK_MODULES(GLIB2, [glib-2.0 >= $GLIB_REQUIRED])
 AC_SUBST(GLIB2_CFLAGS)

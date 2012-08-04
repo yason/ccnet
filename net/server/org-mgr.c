@@ -467,8 +467,21 @@ ccnet_org_manager_is_org_group (CcnetOrgManager *mgr,
 
     snprintf (sql, sizeof(sql), "SELECT group_id FROM OrgGroup "
               "WHERE group_id = %d", group_id);
-    
-    return ccnet_db_check_for_existence (db, sql);
+
+    return ccnet_db_check_for_existence (db, sql);    
+}
+
+int
+ccnet_org_manager_get_org_id_by_group (CcnetOrgManager *mgr,
+                                       int group_id,
+                                       GError **error)
+{
+    CcnetDB *db = mgr->priv->db;
+    char sql[256];
+
+    snprintf (sql, sizeof(sql), "SELECT org_id FROM OrgGroup "
+              "WHERE group_id = %d", group_id);
+    return ccnet_db_get_int (db, sql);
 }
 
 static gboolean

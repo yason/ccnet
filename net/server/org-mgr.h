@@ -89,6 +89,11 @@ ccnet_org_manager_is_org_group (CcnetOrgManager *mgr,
                                 int group_id,
                                 GError **error);
 
+int
+ccnet_org_manager_get_org_id_by_group (CcnetOrgManager *mgr,
+                                       int group_id,
+                                       GError **error);
+
 GList *
 ccnet_org_manager_get_org_groups (CcnetOrgManager *mgr,
                                   int org_id,

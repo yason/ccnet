@@ -302,6 +302,10 @@ ccnet_start_rpc(CcnetSession *session)
                                      "is_org_group",
                                      searpc_signature_int__int());
     searpc_server_register_function ("ccnet-threaded-rpcserver",
+                                     ccnet_rpc_get_org_id_by_group,
+                                     "get_org_id_by_group",
+                                     searpc_signature_int__int());
+    searpc_server_register_function ("ccnet-threaded-rpcserver",
                                      ccnet_rpc_get_org_groups,
                                      "get_org_groups",
                                      searpc_signature_objlist__int_int_int());
@@ -1284,6 +1288,19 @@ ccnet_rpc_is_org_group (int group_id, GError **error)
     }
 
     return ccnet_org_manager_is_org_group (org_mgr, group_id, error);
+}
+
+int
+ccnet_rpc_get_org_id_by_group (int group_id, GError **error)
+{
+    CcnetOrgManager *org_mgr = ((CcnetServerSession *)session)->org_mgr;
+    
+    if (group_id <= 0) {
+        g_set_error (error, CCNET_DOMAIN, CCNET_ERR_INTERNAL, "Bad arguments");
+        return -1;
+    }
+
+    return ccnet_org_manager_get_org_id_by_group (org_mgr, group_id, error);
 }
 
 GList *

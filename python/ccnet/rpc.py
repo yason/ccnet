@@ -373,6 +373,10 @@ class CcnetThreadedRpcClient(RpcClientBase):
     @searpc_func("int", ["int"])
     def is_org_group(self, group_id):
         pass
+
+    @searpc_func("int", ["int"])
+    def get_org_id_by_group(self, group_id):
+        pass
     
     @searpc_func("objlist", ["int", "int", "int"])
     def get_org_groups(self, org_id, start, limit):
