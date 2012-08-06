@@ -81,3 +81,4 @@ lib/searpc-marshal.h
 lib/searpc-signature.h
 net/cluster/ccnet-cserver
 tests/common-conf.sh
+libccnet.pc
