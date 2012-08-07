@@ -147,6 +147,7 @@ static int redirect_peer (CcnetProcessor *, int, char **);
 
 #ifdef CCNET_DAEMON
 static int set_relay (CcnetProcessor *, int, char **);
+static int add_relay (CcnetProcessor *, int, char **);
 #endif
 
 
@@ -164,6 +165,7 @@ static struct cmd cmdtab[] =  {
     { "set-addr", set_addr },
 #ifdef CCNET_DAEMON
     { "set-relay", set_relay },
+    { "add-relay", add_relay },
 #endif
 #ifdef CCNET_CLUSTER
     { "add-member",  add_member },
@@ -538,6 +540,123 @@ set_relay (CcnetProcessor *processor, int argc, char **argv)
     g_object_unref (peer);
     return 0;
 }
+
+/* add-relay [--id <peer-id>] [--addr <peer-addr:port>]
+ */
+static int
+add_relay (CcnetProcessor *processor, int argc, char **argv)
+{
+    CcnetPeerManager *mgr = processor->session->peer_mgr;
+    CcnetPeer *peer = NULL;
+    char *peer_id = NULL;
+    char *addr_port = NULL;
+    char *role = NULL;
+    char *addr;
+    uint16_t port;
+    int ret;
+
+    GOptionContext *context;
+    GError *error = NULL;
+    GOptionEntry cmd_entries[] = {
+        { .long_name            = "id",
+          .short_name           = 0,
+          .flags                = 0,
+          .arg                  = G_OPTION_ARG_STRING,
+          .arg_data             = &peer_id, 
+          .description          = "the peer id",
+          .arg_description      = NULL },
+        { .long_name            = "addr",
+          .short_name           = 0,
+          .flags                = 0,
+          .arg                  = G_OPTION_ARG_STRING,
+          .arg_data             = &addr_port,
+          .description          = "the address and port of the peer",
+          .arg_description      = NULL },
+        { NULL },
+    };
+
+    PARSE_OPTIONS;
+
+    /* check addr_port and peer id */
+    if (addr_port) {
+        addr = addr_port;
+        char *p;
+        if ( (p = strchr(addr_port, ':')) == NULL) {
+            port = DEFAULT_PORT;
+        } else {
+            *p = '\0';
+            port = atoi(p+1);
+            if (port == 0) {
+                 ccnet_processor_send_response (
+                     processor, "400", "Invalid Address", NULL, 0);
+                 ret = -1;
+                 goto out;
+            }
+        }
+    }
+
+    if (peer_id) {
+        if (!peer_id_valid(peer_id)) {
+            ccnet_processor_send_response (
+                processor, "400", "Invalid Peer ID", NULL, 0);
+            ret = -1;
+            goto out;
+        }
+    }
+
+    if (addr_port && peer_id) {
+        peer = ccnet_peer_manager_get_peer (mgr, peer_id);
+        if (!peer) {
+            peer = ccnet_peer_new (peer_id);
+            g_assert (peer);
+            ccnet_peer_manager_add_peer (mgr, peer);
+            peer->want_tobe_relay = 1;
+            ccnet_peer_manager_set_peer_public_addr (mgr, peer, addr, port);
+            ccnet_conn_manager_connect_peer (processor->session->connMgr, peer);
+        }
+
+        ccnet_processor_send_response (processor, SC_OK, SS_OK, NULL, 0);
+        ret = 0;
+        goto out;
+    }
+
+    /* only addr */
+    if (addr_port) {
+        peer = ccnet_peer_manager_add_resolve_peer (
+            processor->session->peer_mgr, addr, port);
+        peer->want_tobe_relay = 1;
+        ccnet_processor_send_response (processor, SC_OK, SS_OK, NULL, 0);
+        ret = 0;
+        goto out;
+    }
+
+    /* only id */
+    if (peer_id) {
+        peer = ccnet_peer_manager_get_peer (mgr, peer_id);
+        if (!peer) {
+            peer = ccnet_peer_new (peer_id);
+            g_assert (peer);
+            ccnet_peer_manager_add_peer (mgr, peer);
+        }
+
+        ccnet_peer_manager_add_role (mgr, peer, "MyRelay");
+        ccnet_processor_send_response (processor, SC_OK, SS_OK, NULL, 0);
+        ret = 0;
+        goto out;
+    }
+
+    ccnet_processor_send_response (processor, SC_BAD_CMD_FMT,
+                                   SS_BAD_CMD_FMT, NULL, 0);
+    ret = -1;
+
+out:
+    g_free (addr);
+    g_free (role);
+    g_free (peer_id);
+    if (peer) g_object_unref (peer);
+    return ret;
+}
+
 
 #endif
 
