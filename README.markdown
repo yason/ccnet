@@ -35,3 +35,7 @@ To compile the client components, just
 To also compile the server components, use
 
     ./configure --enable-server
+
+In Mac OS, use
+
+    LDFLAGS="-L/opt/local/lib -L/usr/local/mysql/lib -Xlinker -headerpad_max_install_names" ./configure --enable-server

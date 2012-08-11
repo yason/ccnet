@@ -5,7 +5,11 @@
 : ${AUTOHEADER=autoheader}
 : ${AUTOMAKE=automake}
 : ${ACLOCAL=aclocal}
-: ${LIBTOOLIZE=libtoolize}
+if test "${TERM_PROGRAM}" != "Apple_Terminal" ; then
+    : ${LIBTOOLIZE=libtoolize}
+else
+    : ${LIBTOOLIZE=glibtoolize}
+fi
 : ${LIBTOOL=libtool}
 
 srcdir=`dirname $0`
@@ -36,7 +40,7 @@ DIE=0
 	DIE=1
 }
 
-if [[ "${TERM_PROGRAM}" =~ ^Apple ]]; then
+if [[ ! "${TERM_PROGRAM}" =~ ^Apple ]]; then
 (grep "^AC_PROG_LIBTOOL" $CONFIGURE >/dev/null) && {
   ($LIBTOOL --version) < /dev/null > /dev/null 2>&1 || {
     echo
@@ -68,10 +72,9 @@ test -r $dr/aclocal.m4 || touch $dr/aclocal.m4
 echo "Making $dr/aclocal.m4 writable ..."
 test -r $dr/aclocal.m4 && chmod u+w $dr/aclocal.m4
 
-if test "${TERM_PROGRAM}" != "Apple_Terminal" ; then
-  echo "Running $LIBTOOLIZE..."
-  $LIBTOOLIZE --force --copy
-fi
+
+echo "Running $LIBTOOLIZE..."
+$LIBTOOLIZE --force --copy
 
 echo "Running $ACLOCAL $aclocalinclude ..."
 $ACLOCAL $aclocalinclude
