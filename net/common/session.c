@@ -94,6 +94,9 @@ ccnet_session_load_config (CcnetSession *session, const char *config_dir_r)
     char *config_file, *config_dir;
     char *id = 0, *name = 0, *port_str = 0, *lport_str,
         *user_name = 0;
+#ifdef CCNET_SERVER
+    char *service_url;
+#endif
     int port, local_port = 0;
     unsigned char sha1[20];
     GKeyFile *key_file;
@@ -119,6 +122,9 @@ ccnet_session_load_config (CcnetSession *session, const char *config_dir_r)
     id = ccnet_key_file_get_string (key_file, "General", "ID");
     user_name = ccnet_key_file_get_string (key_file, "General", "USER_NAME");
     name = ccnet_key_file_get_string (key_file, "General", "NAME");
+#ifdef CCNET_SERVER
+    service_url = ccnet_key_file_get_string (key_file, "General", "SERVICE_URL");
+#endif
     port_str = ccnet_key_file_get_string (key_file, "Network", "PORT");
     lport_str = ccnet_key_file_get_string (key_file, "Client", "PORT");
     
@@ -142,6 +148,9 @@ ccnet_session_load_config (CcnetSession *session, const char *config_dir_r)
     session->base.name = g_strdup(name);
     session->base.user_name = g_strdup(user_name);
     session->base.public_port = port;
+#ifdef CCNET_SERVER
+    session->base.service_url = g_strdup(service_url);
+#endif
     session->config_file = config_file;
     session->config_dir = config_dir;
     session->local_port = local_port;
@@ -156,6 +165,9 @@ onerror:
     g_free (name);
     g_free (user_name);
     g_free (port_str);
+#ifdef CCNET_SERVER
+    g_free (service_url);
+#endif
     return ret;
 }
 

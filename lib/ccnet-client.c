@@ -138,7 +138,7 @@ ccnet_client_load_confdir (CcnetClient *client, const char *config_dir_r)
 {
     char *config_file, *config_dir;
     char *id = NULL, *name = NULL, *port_str = NULL, 
-        *user_name = NULL;
+        *user_name = NULL, *service_url = NULL;
     unsigned char sha1[20];
     GKeyFile *key_file;
     CcnetSessionBase *base = CCNET_SESSION_BASE(client);
@@ -163,6 +163,7 @@ ccnet_client_load_confdir (CcnetClient *client, const char *config_dir_r)
     id = g_key_file_get_string (key_file, "General", "ID", NULL);
     user_name = g_key_file_get_string (key_file, "General", "USER_NAME", NULL);
     name = g_key_file_get_string (key_file, "General", "NAME", NULL);
+    service_url = g_key_file_get_string (key_file, "General", "SERVICE_URL", NULL);
     port_str = g_key_file_get_string (key_file, "Client", "PORT", NULL);
 
     if ( (id == NULL) || (strlen (id) != SESSION_ID_LENGTH) 
@@ -179,6 +180,8 @@ ccnet_client_load_confdir (CcnetClient *client, const char *config_dir_r)
     base->user_name = g_strdup(user_name);
     base->name = g_strdup(name);
     memcpy (base->id_sha1, sha1, 20);
+    if (service_url)
+        base->service_url = g_strdup(service_url);
 
     client->config_file = g_strdup(config_file);
     client->config_dir = config_dir;
@@ -191,6 +194,7 @@ ccnet_client_load_confdir (CcnetClient *client, const char *config_dir_r)
     g_free (user_name);
     g_free (port_str);
     g_free (config_file);
+    g_free (service_url);
     g_key_file_free (key_file);
     return 0;
 
@@ -200,6 +204,7 @@ onerror:
     g_free (user_name);
     g_free (port_str);
     g_free (config_file);
+    g_free (service_url);
     return -1;
 }
 
