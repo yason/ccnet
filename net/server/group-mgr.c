@@ -449,6 +449,19 @@ ccnet_group_manager_remove_group_user (CcnetGroupManager *mgr,
     return ccnet_db_query (db, sql);
 }
 
+int
+ccnet_group_manager_is_group_user (CcnetGroupManager *mgr,
+                                   int group_id,
+                                   const char *user)
+{
+    CcnetDB *db = mgr->priv->db;
+    char sql[512];
+
+    snprintf (sql, sizeof(sql), "SELECT group_id FROM `GroupUser` "
+              "WHERE `group_id`=%d AND `user_name`='%s'", group_id, user);
+    return ccnet_db_check_for_existence (db, sql);
+}
+
 static gboolean
 get_all_ccnetgroups_cb (CcnetDBRow *row, void *data)
 {

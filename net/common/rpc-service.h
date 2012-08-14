@@ -165,6 +165,9 @@ int
 ccnet_rpc_remove_group_user (const char *user, GError **error);
 
 int
+ccnet_rpc_is_group_user (int group_id, const char *user, GError **error);
+
+int
 ccnet_rpc_create_org (const char *org_name, const char *url_prefix,
                       const char *creator, GError **error);
 

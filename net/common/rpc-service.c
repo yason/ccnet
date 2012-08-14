@@ -252,6 +252,10 @@ ccnet_start_rpc(CcnetSession *session)
                                      ccnet_rpc_remove_group_user,
                                      "remove_group_user",
                                      searpc_signature_int__string());
+    searpc_server_register_function ("ccnet-threaded-rpcserver",
+                                     ccnet_rpc_is_group_user,
+                                     "is_group_user",
+                                     searpc_signature_int__int_string());
 
     searpc_server_register_function ("ccnet-threaded-rpcserver",
                                      ccnet_rpc_create_org,
@@ -1068,6 +1072,18 @@ ccnet_rpc_remove_group_user (const char *user, GError **error)
     }
 
     return ccnet_group_manager_remove_group_user (group_mgr, user);
+}
+
+int
+ccnet_rpc_is_group_user (int group_id, const char *user, GError **error)
+{
+    CcnetGroupManager *group_mgr = ((CcnetServerSession *)session)->group_mgr;
+    if (!user || group_id < 0) {
+        g_set_error (error, CCNET_DOMAIN, CCNET_ERR_INTERNAL, "Bad arguments");
+        return 0;
+    }
+
+    return ccnet_group_manager_is_group_user (group_mgr, group_id, user);
 }
 
 int
