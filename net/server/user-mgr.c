@@ -175,32 +175,26 @@ open_db (CcnetUserManager *manager)
 /* -------- EmailUser Management -------- */
 
 int
-ccnet_user_manager_add_emailuser (CcnetUserManager *manager, const char *email,
-                                  const char *passwd, int is_staff, int is_active)
+ccnet_user_manager_add_emailuser (CcnetUserManager *manager,
+                                  const char *email,
+                                  const char *encry_passwd,
+                                  int is_staff, int is_active)
 {
     CcnetDB *db = manager->priv->db;
     gint64 now = get_current_time();
     char sql[512];
-    unsigned char sha1[20];
-    SHA_CTX s;
-    char encry_passwd[41];
-
-    SHA1_Init (&s);
-    SHA1_Update (&s, passwd, strlen(passwd));
-    SHA1_Final (sha1, &s);
-
-    rawdata_to_hex (sha1, encry_passwd, 20);
     
-    snprintf (sql, 512, "INSERT INTO EmailUser(email, passwd, is_staff, is_active, "
-              "ctime) VALUES ('%s', '%s', '%d', '%d', "
-              "%"G_GINT64_FORMAT")", email, encry_passwd, is_staff, is_active,
-              now);
-    
+    snprintf (sql, 512, "INSERT INTO EmailUser(email, passwd, is_staff, "
+              "is_active, ctime) VALUES ('%s', '%s', '%d', '%d', "
+              "%"G_GINT64_FORMAT")", email, encry_passwd, is_staff,
+              is_active, now);
+
     return ccnet_db_query (db, sql);
 }
 
 int
-ccnet_user_manager_remove_emailuser (CcnetUserManager *manager, const char *email)
+ccnet_user_manager_remove_emailuser (CcnetUserManager *manager,
+                                     const char *email)
 {
     CcnetDB *db = manager->priv->db;
     char sql[512];
@@ -211,7 +205,8 @@ ccnet_user_manager_remove_emailuser (CcnetUserManager *manager, const char *emai
 }
 
 int
-ccnet_user_manager_validate_emailuser (CcnetUserManager *manager, const char *email,
+ccnet_user_manager_validate_emailuser (CcnetUserManager *manager,
+                                       const char *email,
                                        const char *passwd)
 {
     CcnetDB *db = manager->priv->db;
@@ -337,14 +332,16 @@ ccnet_user_manager_get_emailusers (CcnetUserManager *manager, int start, int lim
 }
 
 int
-ccnet_user_manager_update_emailuser (CcnetUserManager *manager, int id,
-                                     const char* passwd, int is_staff, int is_active)
+ccnet_user_manager_update_emailuser (CcnetUserManager *manager,
+                                     int id, const char* encry_passwd,
+                                     int is_staff, int is_active)
 {
     CcnetDB* db = manager->priv->db;
     char sql[512];
 
     snprintf (sql, 512, "UPDATE EmailUser SET passwd='%s', is_staff='%d', "
-              "is_active='%d' WHERE id='%d'", passwd, is_staff, is_active, id);
+              "is_active='%d' WHERE id='%d'", encry_passwd, is_staff,
+              is_active, id);
 
     return ccnet_db_query (db, sql);
 }
