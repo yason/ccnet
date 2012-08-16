@@ -47,14 +47,18 @@ void ccnet_user_manager_free (CcnetUserManager *manager);
 void ccnet_user_manager_start (CcnetUserManager *manager);
 
 int
-ccnet_user_manager_add_emailuser (CcnetUserManager *manager, const char *email,
-                                  const char *passwd, int is_staff, int is_active);
+ccnet_user_manager_add_emailuser (CcnetUserManager *manager,
+                                  const char *email,
+                                  const char *encry_passwd,
+                                  int is_staff, int is_active);
 
 int
-ccnet_user_manager_remove_emailuser (CcnetUserManager *manager, const char *email);
+ccnet_user_manager_remove_emailuser (CcnetUserManager *manager,
+                                     const char *email);
 
 int
-ccnet_user_manager_validate_emailuser (CcnetUserManager *manager, const char *email,
+ccnet_user_manager_validate_emailuser (CcnetUserManager *manager,
+                                       const char *email,
                                        const char *passwd);
 
 CcnetEmailUser*
@@ -67,8 +71,9 @@ GList*
 ccnet_user_manager_get_emailusers (CcnetUserManager *manager, int start, int limit);
 
 int
-ccnet_user_manager_update_emailuser (CcnetUserManager *manager, int id,
-                                     const char* passwd, int is_staff, int is_active);
+ccnet_user_manager_update_emailuser (CcnetUserManager *manager,
+                                     int id, const char* encry_passwd,
+                                     int is_staff, int is_active);
                                      
 int
 ccnet_user_manager_add_binding (CcnetUserManager *manager, const char *email,
