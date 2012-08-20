@@ -85,7 +85,6 @@ struct _CcnetPeer
     unsigned int  need_saving : 1;
 
     unsigned int  want_tobe_relay : 1; /* is the peer used as relay */
-    unsigned int  want_tobe_default_relay : 1; /* is the peer used as our default relay */
 
     unsigned int  in_shutdown : 1;
     unsigned int  shutdown_scheduled : 1;

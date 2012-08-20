@@ -287,10 +287,6 @@ ccnet_session_save_config (CcnetSession *session)
     g_key_file_set_string (session->keyf, "General", "SERVICE_URL",
                            session->base.service_url?session->base.service_url:"");
 #endif
-#ifdef CCNET_DAEMON
-    g_key_file_set_string (session->keyf, "Network", "DEFAULT_RELAY",
-                session->base.relay_id ? session->base.relay_id : "");
-#endif
     g_key_file_set_integer (session->keyf, "Network", "PORT",
                             session->base.public_port);
 

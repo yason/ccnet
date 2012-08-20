@@ -146,7 +146,6 @@ static int redirect_peer (CcnetProcessor *, int, char **);
 #endif
 
 #ifdef CCNET_DAEMON
-static int set_relay (CcnetProcessor *, int, char **);
 static int add_relay (CcnetProcessor *, int, char **);
 #endif
 
@@ -164,7 +163,6 @@ static struct cmd cmdtab[] =  {
     { "del-role", delete_role },
     { "set-addr", set_addr },
 #ifdef CCNET_DAEMON
-    { "set-relay", set_relay },
     { "add-relay", add_relay },
 #endif
 #ifdef CCNET_CLUSTER
@@ -452,95 +450,6 @@ set_addr (CcnetProcessor *processor, int argc, char **argv)
 
 #ifdef CCNET_DAEMON
 
-/* set-relay [--default] [<peer-id>] [--addr <peer-addr:port>]
- */
-static int
-set_relay (CcnetProcessor *processor, int argc, char **argv)
-{
-    CcnetPeerManager *mgr = processor->session->peer_mgr;
-    CcnetPeer *peer;
-    char *peer_id;
-    gboolean is_default = FALSE;
-    char *addr_port = NULL;
-
-    GOptionContext *context;
-    GError *error = NULL;
-    GOptionEntry cmd_entries[] = {
-        { .long_name            = "default",
-          .short_name           = 0,
-          .flags                = 0,
-          .arg                  = G_OPTION_ARG_NONE,
-          .arg_data             = &is_default, 
-          .description          = "set default relay",
-          .arg_description      = NULL },
-        { .long_name            = "addr",
-          .short_name           = 0,
-          .flags                = 0,
-          .arg                  = G_OPTION_ARG_STRING,
-          .arg_data             = &addr_port,
-          .description          = "the address and port of the relay",
-          .arg_description      = NULL },
-        { NULL },
-    };
-
-    PARSE_OPTIONS;
-
-    if (addr_port) {
-        char *addr = addr_port, *p;
-        uint16_t port;
-        if ( (p = strchr(addr_port, ':')) == NULL) {
-            port = DEFAULT_PORT;
-        } else {
-            *p = '\0';
-            port = atoi(p+1);
-            if (port == 0) {
-                 ccnet_processor_send_response (
-                     processor, "400", "Invalid Address", NULL, 0);
-                 return -1;
-            }
-        }
-        
-        peer = ccnet_peer_manager_add_resolve_peer (
-            processor->session->peer_mgr, addr, port);
-        g_assert (peer);
-        peer->want_tobe_relay = 1;
-        if (is_default)
-            peer->want_tobe_default_relay = 1;
-        ccnet_processor_send_response (processor, SC_OK, SS_OK, NULL, 0);
-        g_object_unref (peer);
-        return 0;
-    }
-
-    /* relay is set by specifying using peer_id */
-    argc--;
-    argv++;
-
-    if (argc != 1) {
-        ccnet_processor_send_response (processor, SC_BAD_CMD_FMT,
-                                       SS_BAD_CMD_FMT, NULL, 0);
-        return -1;
-    }
-
-    if (strlen(argv[0]) != 40) {
-        ccnet_processor_send_response (
-            processor, "400", "Peer id must be of length 40", NULL, 0);
-        return -1;
-    }
-    
-    peer_id = argv[0];
-    peer = ccnet_peer_manager_get_peer (mgr, peer_id);
-    if (!peer) {
-        ccnet_processor_send_response (
-            processor, "400", "Can not find peer", NULL, 0);
-        return -1;
-    }
-    ccnet_daemon_session_set_relay ((CcnetDaemonSession *)processor->session, peer);
-    ccnet_conn_manager_connect_peer (processor->session->connMgr, peer);
-    ccnet_processor_send_response (processor, SC_OK, SS_OK, NULL, 0);
-    g_object_unref (peer);
-    return 0;
-}
-
 /* add-relay [--id <peer-id>] [--addr <peer-addr:port>]
  */
 static int
@@ -610,8 +519,8 @@ add_relay (CcnetProcessor *processor, int argc, char **argv)
             peer = ccnet_peer_new (peer_id);
             g_assert (peer);
             ccnet_peer_manager_add_peer (mgr, peer);
-            peer->want_tobe_relay = 1;
             ccnet_peer_manager_set_peer_public_addr (mgr, peer, addr, port);
+            ccnet_peer_manager_add_role (mgr, peer, "MyRelay");
             ccnet_conn_manager_connect_peer (processor->session->connMgr, peer);
         }
 

@@ -137,7 +137,6 @@ ccnet_peer_manager_prepare (CcnetPeerManager *manager)
     g_hash_table_insert (manager->peer_hash, peer->id, peer);
     session->myself = peer;
 
-    ccnet_peer_manager_load_peerdb (manager);
     return 0;
 }
 
@@ -220,13 +219,6 @@ ccnet_peer_manager_remove_peer (CcnetPeerManager *manager,
                                 CcnetPeer *peer)
 {
     ccnet_peer_shutdown (peer);
-#ifdef CCNET_DAEMON
-    #include "daemon-session.h"
-
-    CcnetDaemonSession *daemon_session = (CcnetDaemonSession *)manager->session;
-    if (daemon_session->default_relay == peer)
-        ccnet_daemon_session_unset_relay (daemon_session);
-#endif
     delete_peer(manager, peer);
 }
 
@@ -315,13 +307,7 @@ ccnet_peer_manager_on_peer_resolved (CcnetPeerManager *manager,
         g_free (peer->intend_role);
     }
 
-    if (peer->want_tobe_default_relay) {
-#ifdef CCNET_DAEMON
-            /* the peer wanted to be the default relay */
-        CcnetDaemonSession *daemon_session = (CcnetDaemonSession *)manager->session;
-        ccnet_daemon_session_set_relay (daemon_session, peer);
-#endif
-    } else if (peer->want_tobe_relay) {
+    if (peer->want_tobe_relay) {
         ccnet_peer_manager_add_role (manager, peer, "MyRelay");
     }
     return TRUE;
@@ -426,6 +412,7 @@ load_peer_addr(CcnetPeerManager *manager, CcnetPeer *peer)
 static void
 save_peer_addr(CcnetPeerManager *manager, CcnetPeer *peer)
 {
+    /*
     char sql[256];
 
     if (!peer || !peer->id)
@@ -439,6 +426,7 @@ save_peer_addr(CcnetPeerManager *manager, CcnetPeer *peer)
                   peer->id);
     }
     ccnet_db_query (manager->priv->db, sql);
+    */
 }
 
 static gboolean load_peer_role_cb (CcnetDBRow *row, void *data)
@@ -524,6 +512,7 @@ ccnet_peer_manager_set_peer_public_addr (CcnetPeerManager *manager,
 static void
 remove_peer_roles(CcnetPeerManager *manager, char *peer_id)
 {
+    /*
     char sql[256];
 
     if (!peer_id)
@@ -531,12 +520,14 @@ remove_peer_roles(CcnetPeerManager *manager, char *peer_id)
 
     snprintf (sql, 256, "DELETE FROM PeerRole WHERE peer_id = '%s'", peer_id);
     ccnet_db_query (manager->priv->db, sql);
+    */
 }
 
 
 static void
 save_peer_roles (CcnetPeerManager *manager, CcnetPeer *peer)
 {
+    /*
     char sql[512];
     CcnetDB *db = manager->priv->db;
 
@@ -548,6 +539,7 @@ save_peer_roles (CcnetPeerManager *manager, CcnetPeer *peer)
               peer->id, buf->str, get_current_time());
     ccnet_db_query (db, sql);
     g_string_free (buf, TRUE);
+    */
 }
 
 void
@@ -696,6 +688,7 @@ ccnet_peer_manager_remove_local_peer (CcnetPeerManager *manager,
 
 static void save_peer (CcnetPeerManager *manager, CcnetPeer *peer)
 {
+    /*
     char *path = NULL;
     FILE *fp;
 
@@ -714,6 +707,7 @@ static void save_peer (CcnetPeerManager *manager, CcnetPeer *peer)
 err:
     g_string_free (str, TRUE);
     g_free (path);
+    */
 }
 
 static int save_pulse (void * vmanager)
@@ -859,7 +853,7 @@ handle_bind_status_message (CcnetPeerManager *manager,
     /* body is end with "\n", so use memcmp */
     if (memcmp(body, "not-bind", 8) == 0) {
         if (peer->bind_status == BIND_UNKNOWN
-            && !(peer->want_tobe_relay || peer->want_tobe_default_relay)) {
+            && !(peer->want_tobe_relay)) {
             publish_bind_no_message (manager->session, peer);
         }
         peer->bind_status = BIND_NO;
