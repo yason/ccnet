@@ -39,7 +39,8 @@ libccnet_la_SOURCES = ccnet-client.c packet-io.c utils.c db.c \
 	rpcserver-proc.c ccnetrpc-transport.c threaded-rpcserver-proc.c \
 	ccnetobj.c \
 	async-rpc-proc.c ccnet-rpc-wrapper.c \
-	config-db.c
+	config-db.c \
+	client-pool.c
 
 EXTRA_DIST = ccnetobj.vala rpc_table.py
 

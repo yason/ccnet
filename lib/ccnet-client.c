@@ -337,7 +337,8 @@ start_request (CcnetClient *client, const char *peer_id,
     }
 
     if (memcmp (client->response.code, "200", 3) != 0) {
-        g_warning ("[RPC] failed to start rpc server.\n");
+        g_warning ("[RPC] failed to start rpc server: %s %s.\n",
+                   client->response.code, client->response.code_msg);
         return 0;
     }
 

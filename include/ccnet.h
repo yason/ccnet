@@ -23,6 +23,7 @@
 
 #include <ccnet/timer.h>
 
+#include <searpc-client.h>
 
 /* mainloop */
 
@@ -42,10 +43,30 @@ void ccnet_add_peer (CcnetClient *client, const char *id, const char *addr);
 void ccnet_connect_peer (CcnetClient *client, const char *id);
 void ccnet_disconnect_peer (CcnetClient *client, const char *id);
 
+/* client pool */
+
+struct CcnetClientPool;
+typedef struct CcnetClientPool CcnetClientPool;
+
+struct CcnetClientPool *
+ccnet_client_pool_new (const char *conf_dir);
+
+CcnetClient *
+ccnet_client_pool_get_client (struct CcnetClientPool *cpool);
+
+void
+ccnet_client_pool_return_client (struct CcnetClientPool *cpool,
+                                 CcnetClient *client);
+
+SearpcClient *
+ccnet_client_pool_create_rpc_client (struct CcnetClientPool *cpool,
+                                     const char *service);
+
+void
+ccnet_client_pool_free_rpc_client (struct CcnetClientPool *cpool,
+                                   SearpcClient *rpc_client);
 
 /* rpc wrapper */
-
-#include <searpc-client.h>
 
 SearpcClient *
 ccnet_create_rpc_client (CcnetClient *cclient, const char *peer_id,
