@@ -4,7 +4,7 @@
 
 #include <ccnet/ccnet-client.h>
 #include <ccnet/processor.h>
-#include "threaded-rpcserver-proc.h"
+#include <ccnet/threaded-rpcserver-proc.h>
 #include "searpc-server.h"
 #include "rpc-common.h"
 #include "job-mgr.h"

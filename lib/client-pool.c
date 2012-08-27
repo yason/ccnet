@@ -1,7 +1,7 @@
 #include "include.h"
 
 #include <ccnet.h>
-#include "ccnetrpc-transport.h"
+#include <ccnet/ccnetrpc-transport.h>
 
 #include <glib.h>
 #include <pthread.h>

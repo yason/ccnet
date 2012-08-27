@@ -3,7 +3,7 @@
 #include "include.h"
 
 #include <ccnet/processor.h>
-#include "rpcserver-proc.h"
+#include <ccnet/rpcserver-proc.h>
 #include "searpc-server.h"
 #include "rpc-common.h"
 

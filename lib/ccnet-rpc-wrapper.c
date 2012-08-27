@@ -5,7 +5,7 @@
 #include <ccnet.h>
 #include <ccnet-object.h>
 #include <searpc-client.h>
-#include "ccnetrpc-transport.h"
+#include <ccnet/ccnetrpc-transport.h>
 
 
 SearpcClient *

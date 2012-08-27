@@ -18,11 +18,10 @@ noinst_HEADERS = buffer.h string-array.h packet-io.h  \
 	net.h \
 	peer-common.h \
 	string-util.h \
-	async-rpc-proc.h \
 	config-db.h \
-	rpcserver-proc.h utils.h ccnet-object.h \
-        bloom-filter.h ccnetrpc-transport.h \
-	threaded-rpcserver-proc.h db.h rsa.h
+	utils.h ccnet-object.h \
+        bloom-filter.h \
+	db.h rsa.h
 
 ccnetincludedir = $(includedir)/ccnet
 ccnetinclude_DATA = ccnet-object.h

@@ -5,7 +5,7 @@
 #include <ccnet.h>
 #include <searpc-client.h>
 #include "rpc-common.h"
-#include "async-rpc-proc.h"
+#include <ccnet/async-rpc-proc.h>
 
 #define MAX_RET_LEN 5242880     /* 5M */
 

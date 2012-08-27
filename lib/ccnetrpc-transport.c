@@ -3,9 +3,9 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "ccnetrpc-transport.h"
+#include <ccnet/ccnetrpc-transport.h>
 #include "rpc-common.h"
-#include "async-rpc-proc.h"
+#include <ccnet/async-rpc-proc.h>
 
 
 char *
