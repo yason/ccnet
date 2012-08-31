@@ -110,4 +110,10 @@ char *
 ccnet_org_manager_get_url_prefix_by_org_id (CcnetOrgManager *mgr,
                                             int org_id,
                                             GError **error);
+
+int
+ccnet_org_manager_is_org_staff (CcnetOrgManager *mgr,
+                                int org_id,
+                                const char *email,
+                                GError **error);
 #endif /* _ORG_MGR_H_ */

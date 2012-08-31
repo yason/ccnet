@@ -215,6 +215,9 @@ ccnet_rpc_get_org_groups (int org_id, int start, int limit, GError **error);
 int
 ccnet_rpc_org_user_exists (int org_id, const char *email, GError **error);
 
+int
+ccnet_rpc_is_org_staff (int org_id, const char *email, GError **error);
+
 #endif /* CCNET_SERVER */
 
 /**

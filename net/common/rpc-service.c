@@ -317,6 +317,10 @@ ccnet_start_rpc(CcnetSession *session)
                                      ccnet_rpc_org_user_exists,
                                      "org_user_exists",
                                      searpc_signature_int__int_string());
+    searpc_server_register_function ("ccnet-threaded-rpcserver",
+                                     ccnet_rpc_is_org_staff,
+                                     "is_org_staff",
+                                     searpc_signature_int__int_string());
     
     
 #else
@@ -1355,6 +1359,20 @@ ccnet_rpc_org_user_exists (int org_id, const char *email, GError **error)
 
     return ccnet_org_manager_org_user_exists (org_mgr, org_id, email, error);
 }
+
+int
+ccnet_rpc_is_org_staff (int org_id, const char *email, GError **error)
+{
+    CcnetOrgManager *org_mgr = ((CcnetServerSession *)session)->org_mgr;
+    
+    if (org_id < 0 || !email) {
+        g_set_error (error, CCNET_DOMAIN, CCNET_ERR_INTERNAL, "Bad arguments");
+        return -1;
+    }
+
+    return ccnet_org_manager_is_org_staff (org_mgr, org_id, email, error);
+}
+
 
 #endif  /* CCNET_SERVER */
 

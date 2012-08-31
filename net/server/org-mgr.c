@@ -545,3 +545,18 @@ ccnet_org_manager_get_url_prefix_by_org_id (CcnetOrgManager *mgr,
 
     return ccnet_db_get_string (db, sql);
 }
+
+int
+ccnet_org_manager_is_org_staff (CcnetOrgManager *mgr,
+                                int org_id,
+                                const char *email,
+                                GError **error)
+{
+    CcnetDB *db = mgr->priv->db;
+    char sql[256];
+
+    snprintf (sql, sizeof(sql), "SELECT is_staff FROM OrgUser "
+              "WHERE org_id=%d AND email='%s'", org_id, email);
+
+    return ccnet_db_get_int (db, sql);    
+}

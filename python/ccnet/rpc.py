@@ -389,3 +389,9 @@ class CcnetThreadedRpcClient(RpcClientBase):
     @searpc_func("int", ["int", "string"])
     def org_user_exists(self, org_id, email):
         pass
+
+    @searpc_func("int", ["int", "string"])
+    def is_org_staff(self, org_id, user):
+        pass
+    
+    
