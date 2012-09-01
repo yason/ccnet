@@ -8,8 +8,12 @@ pkgconfigdir = $(libdir)/pkgconfig
 MAKE_CLI = cli
 MAKE_TOOLS = tools
 
+if COMPILE_DEMO
+  MAKE_DEMO = demo
+endif
+
 SUBDIRS = include lib net $(MAKE_CLI) $(MAKE_TOOLS) \
-	python
+	python $(MAKE_DEMO)
 
 EXTRA_DIST = config.rpath install-sh
 EXTRA_DIST += libccnet.pc.in
