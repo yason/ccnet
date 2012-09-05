@@ -2,8 +2,11 @@
 
 #include "common.h"
 
+#include "server-session.h"
+
 #include "ccnet-db.h"
 #include "group-mgr.h"
+#include "org-mgr.h"
 
 #include "utils.h"
 #include "log.h"
@@ -117,23 +120,15 @@ static void check_db_table (CcnetDB *db)
 
 }
 
-int ccnet_group_manager_create_group (CcnetGroupManager *mgr,
-                                      const char *group_name,
-                                      const char *user_name,
-                                      GError **error)
+static int
+create_group_common (CcnetGroupManager *mgr,
+                     const char *group_name,
+                     const char *user_name,
+                     GError **error)
 {
     CcnetDB *db = mgr->priv->db;
     gint64 now = get_current_time();
     char sql[512];
-
-    /* one user can not create groups have same name */
-    snprintf (sql, sizeof(sql), "SELECT `group_name` FROM `Group` "
-              "WHERE `group_name` = '%s' AND `creator_name` = '%s'",
-              group_name, user_name);
-    if (ccnet_db_check_for_existence (db, sql)) {
-        g_set_error (error, CCNET_DOMAIN, 0, "The group has already created");
-        return -1;
-    }
     
     snprintf (sql, sizeof(sql), "INSERT INTO `Group`(`group_name`, "
               "`creator_name`, `timestamp`) VALUES('%s', '%s', "
@@ -163,6 +158,117 @@ int ccnet_group_manager_create_group (CcnetGroupManager *mgr,
         return -1;
     }
     
+    return group_id;
+}
+
+static gboolean
+duplicate_group_name (CcnetGroupManager *mgr,
+                      const char *group_name,
+                      const char *user_name)
+{
+    GList *group_ids = NULL, *ptr;
+    CcnetOrgManager *org_mgr = NULL;
+    
+    group_ids = ccnet_group_manager_get_groupids_by_user (mgr, user_name, NULL);
+    if (!group_ids) {
+        return FALSE;
+    }
+
+    for (ptr = group_ids; ptr; ptr = ptr->next) {
+        int group_id = (int)(long)ptr->data;
+        org_mgr = ((CcnetServerSession *)(mgr->session))->org_mgr;
+        if (ccnet_org_manager_is_org_group(org_mgr, group_id, NULL)) {
+            /* Skip org groups. */            
+            continue;
+        }
+
+        CcnetGroup *group = ccnet_group_manager_get_group (mgr, group_id, NULL);
+        if (!group)
+            continue;
+
+        if (g_strcmp0 (group_name, ccnet_group_get_group_name(group)) == 0) {
+            g_list_free (group_ids);
+            g_object_unref (group);
+            return TRUE;
+        }
+    }
+
+    g_list_free (group_ids);
+    return FALSE;
+}
+
+int ccnet_group_manager_create_group (CcnetGroupManager *mgr,
+                                      const char *group_name,
+                                      const char *user_name,
+                                      GError **error)
+{
+
+    if (duplicate_group_name (mgr, group_name, user_name)) {
+        g_set_error (error, CCNET_DOMAIN, 0, "The group has already created");
+        return -1;
+    }
+
+    return create_group_common (mgr, group_name, user_name, error);
+}
+
+static gboolean
+duplicate_org_group_name (CcnetGroupManager *mgr,
+                          int org_id,
+                          const char *group_name)
+{
+    GList *org_groups = NULL, *ptr;
+    CcnetOrgManager *org_mgr = ((CcnetServerSession *)(mgr->session))->org_mgr;
+    
+    org_groups = ccnet_org_manager_get_org_groups (org_mgr, org_id, -1, -1);
+    if (!org_groups)
+        return FALSE;
+
+    for (ptr = org_groups; ptr; ptr = ptr->next) {
+        int group_id = (int)(long)ptr->data;
+        CcnetGroup *group = ccnet_group_manager_get_group (mgr, group_id,
+                                                           NULL);
+        if (!group)
+            continue;
+
+        if (g_strcmp0 (group_name, ccnet_group_get_group_name(group)) == 0) {
+            g_list_free (org_groups);
+            g_object_unref (group);
+            return TRUE;
+        } else {
+            g_object_unref (group);
+        }
+    }
+
+    g_list_free (org_groups);
+    return FALSE;
+}
+
+int ccnet_group_manager_create_org_group (CcnetGroupManager *mgr,
+                                          int org_id,
+                                          const char *group_name,
+                                          const char *user_name,
+                                          GError **error)
+{
+    CcnetOrgManager *org_mgr = ((CcnetServerSession *)(mgr->session))->org_mgr;
+    
+    if (duplicate_org_group_name (mgr, org_id, group_name)) {
+        g_set_error (error, CCNET_DOMAIN, 0,
+                     "The group has already created in this org.");
+        return -1;
+    }
+
+    int group_id = create_group_common (mgr, group_name, user_name, error);
+    if (group_id < 0) {
+        g_set_error (error, CCNET_DOMAIN, 0, "Failed to create org group.");
+        return -1;
+    }
+
+    if (ccnet_org_manager_add_org_group (org_mgr, org_id, group_id,
+                                         error) < 0) {
+        g_set_error (error, CCNET_DOMAIN, 0, "Failed to create org group.");
+        return -1;
+    }
+
     return group_id;
 }
 

@@ -213,6 +213,10 @@ ccnet_start_rpc(CcnetSession *session)
                                      "create_group",
                                      searpc_signature_int__string_string());
     searpc_server_register_function ("ccnet-threaded-rpcserver",
+                                     ccnet_rpc_create_org_group,
+                                     "create_org_group",
+                                 searpc_signature_int__int_string_string());
+    searpc_server_register_function ("ccnet-threaded-rpcserver",
                                      ccnet_rpc_remove_group,
                                      "remove_group",
                                      searpc_signature_int__int_string());
@@ -887,6 +891,25 @@ ccnet_rpc_create_group (const char *group_name, const char *user_name,
 }
 
 int
+ccnet_rpc_create_org_group (int org_id, const char *group_name,
+                            const char *user_name, GError **error)
+{
+    CcnetGroupManager *group_mgr = 
+        ((CcnetServerSession *)session)->group_mgr;
+    int ret;
+
+    if (org_id < 0 || !group_name || !user_name) {
+        g_set_error (error, CCNET_DOMAIN, CCNET_ERR_INTERNAL, "Bad args");
+        return -1;
+    }
+
+    ret = ccnet_group_manager_create_org_group (group_mgr, org_id,
+                                                group_name, user_name, error);
+
+    return ret;
+}
+
+int
 ccnet_rpc_remove_group (int group_id, const char *user_name, GError **error)
 {
     CcnetGroupManager *group_mgr = 
@@ -1331,11 +1354,16 @@ ccnet_rpc_get_org_groups (int org_id, int start, int limit, GError **error)
     GList *group_ids = NULL;
     GList *ret = NULL;
     
-    if (org_id < 0 || start < 0 || limit < 0) {
+    if (org_id < 0) {
         g_set_error (error, CCNET_DOMAIN, CCNET_ERR_INTERNAL, "Bad arguments");
         return NULL;
     }
 
+    /* correct parameter */
+    if (start < 0 ) {
+        start = 0;
+    }
+    
     group_ids = ccnet_org_manager_get_org_groups (org_mgr, org_id, start,
                                                   limit);
     if (group_ids == NULL)

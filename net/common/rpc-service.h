@@ -132,6 +132,11 @@ ccnet_rpc_verify_message (const char *message,
 int
 ccnet_rpc_create_group (const char *group_name, const char *user_name,
                         GError **error);
+
+int
+ccnet_rpc_create_org_group (int org_id, const char *group_name,
+                            const char *user_name, GError **error);
+
 int
 ccnet_rpc_remove_group (int group_id, const char *user_name, GError **error);
 

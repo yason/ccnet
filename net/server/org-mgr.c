@@ -506,9 +506,14 @@ ccnet_org_manager_get_org_groups (CcnetOrgManager *mgr,
     char sql[512];
     GList *ret = NULL;
 
-    snprintf (sql, sizeof(sql), "SELECT group_id FROM OrgGroup WHERE "
-              "org_id = %d LIMIT %d, %d", org_id, start, limit);
-
+    if (limit == -1) {
+        snprintf (sql, sizeof(sql), "SELECT group_id FROM OrgGroup WHERE "
+                  "org_id = %d", org_id);
+    } else {
+        snprintf (sql, sizeof(sql), "SELECT group_id FROM OrgGroup WHERE "
+                  "org_id = %d LIMIT %d, %d", org_id, start, limit);
+    }
+    
     if (ccnet_db_foreach_selected_row (db, sql, get_org_groups, &ret) < 0) {
         g_list_free (ret);
         return NULL;

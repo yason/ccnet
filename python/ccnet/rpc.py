@@ -262,6 +262,10 @@ class CcnetThreadedRpcClient(RpcClientBase):
     def create_group(self, group_name, user_name):
         pass
 
+    @searpc_func("int", ["int", "string", "string"])
+    def create_org_group(self, org_id, group_name, user_name):
+        pass
+    
     @searpc_func("int", ["int", "string"])
     def remove_group(self, group_id, user_name):
         pass
