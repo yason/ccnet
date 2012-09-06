@@ -21,6 +21,7 @@ enum {
     P_LOGIN_ERROR,
     P_LOGOUT_STARTED,
     P_IN_CONNECTION,
+    P_IS_READY,
     P_ROLE_LIST,
     P_MY_ROLE_LIST,
     P_BIND_STATUS,
@@ -92,6 +93,9 @@ get_property (GObject *object, guint property_id,
         break;
     case P_IN_CONNECTION:
         g_value_set_boolean (v, peer->in_connection);
+        break;
+    case P_IS_READY:
+        g_value_set_boolean (v, peer->is_ready);
         break;
     case P_ROLE_LIST:
         buf = g_string_new (NULL);
@@ -207,6 +211,9 @@ set_property_common (GObject *object, guint property_id,
     case P_IN_CONNECTION:
         peer->in_connection = g_value_get_boolean (v);
         break;
+    case P_IS_READY:
+        peer->is_ready = g_value_get_boolean (v);
+        break;
     case P_ROLE_LIST:
         set_roles (peer, g_value_get_string(v));
         break;
@@ -296,6 +303,10 @@ define_properties (GObjectClass *gobject_class)
 
     g_object_class_install_property (gobject_class, P_IN_CONNECTION,
         g_param_spec_boolean ("in-connection", NULL, "in connection",
+                              0, G_PARAM_READWRITE));
+
+    g_object_class_install_property (gobject_class, P_IS_READY,
+        g_param_spec_boolean ("is_ready", NULL, "service ready",
                               0, G_PARAM_READWRITE));
 
     g_object_class_install_property (gobject_class, P_ROLE_LIST,

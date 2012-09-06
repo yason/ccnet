@@ -4,6 +4,7 @@
 #include "common.h"
 #include "processor.h"
 #include "peer.h"
+#include  "peer-mgr.h"
 #include "log.h"
 #include "rsa.h"
 
@@ -134,6 +135,10 @@ handle_update (CcnetProcessor *processor,
             ccnet_processor_send_response (processor,
                                            SC_OK, SS_OK,
                                            NULL, 0);
+
+            ccnet_peer_manager_on_peer_session_key_received (processor->peer->manager,
+                                                             processor->peer);
+
             ccnet_processor_done (processor, TRUE);
         } else {
             ccnet_processor_send_response (processor,

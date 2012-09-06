@@ -47,9 +47,12 @@ struct _CcnetPeer
     unsigned int  can_connect : 1;
     unsigned int  in_local_network : 1;
     unsigned int  in_connection : 1;
+    unsigned int  is_ready : 1;
+
     gboolean      login_started;
     char          *login_error;
     gboolean      logout_started;
+
 
     char         *public_addr;
     uint16_t      public_port;

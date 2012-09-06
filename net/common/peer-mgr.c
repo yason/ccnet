@@ -1106,3 +1106,17 @@ ccnet_peer_manager_redirect_peer (CcnetPeerManager *manager,
     return;
 }
 
+void
+ccnet_peer_manager_on_peer_session_key_sent (CcnetPeerManager *manager,
+                                             CcnetPeer *peer)
+{
+    g_signal_emit_by_name (manager, "peer-auth-done", peer);
+}
+
+void
+ccnet_peer_manager_on_peer_session_key_received (CcnetPeerManager *manager,
+                                                 CcnetPeer *peer)
+{
+    g_signal_emit_by_name (manager, "peer-auth-done", peer);
+}
+

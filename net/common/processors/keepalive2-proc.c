@@ -429,9 +429,6 @@ static void verify_challenge(CcnetProcessor *processor,
     /* ccnet_peer_manager_notify_peer_role (processor->peer->manager,  */
     /*                                      processor->peer); */
 
-    g_signal_emit_by_name (processor->session->peer_mgr,
-                           "peer-auth-done", processor->peer);
-
     if (strcmp(session->base.id, processor->peer->id) < 0)
         send_session_key (processor->peer);
         

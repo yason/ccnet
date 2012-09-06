@@ -249,3 +249,16 @@ ccnet_login_to_relay (SearpcClient *client, const char *relay_id,
                              3, "string", relay_id,
                              "string", username, "string", passwd);
 }
+
+gboolean
+ccnet_peer_is_ready (SearpcClient *client, const char *peer_id)
+{
+    CcnetPeer *peer;
+    gboolean ret;
+    peer = ccnet_get_peer (client, peer_id);
+    if (!peer)
+        return FALSE;
+    ret = peer->is_ready;
+    g_object_unref (peer);
+    return ret;
+}

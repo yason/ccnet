@@ -22,8 +22,10 @@
 #include <openssl/sha.h>
 #include <openssl/rand.h>
 
+#include "session.h"
 #include "common.h"
 #include "processor.h"
+#include "peer-mgr.h"
 #include "peer.h"
 #include "log.h"
 #include "rsa.h"
@@ -168,6 +170,10 @@ handle_response (CcnetProcessor *processor,
 
     } else if (strcmp(code, SC_OK) == 0 && priv->state == SESSION_KEY_SENT) {
         processor->peer->session_key = g_strndup(priv->key, 40);
+
+        ccnet_peer_manager_on_peer_session_key_sent (processor->peer->manager,
+                                                     processor->peer);
+
         ccnet_processor_done (processor, TRUE);
         
     } else if (strcmp(code, SC_ALREADY_HAS_KEY) == 0) {

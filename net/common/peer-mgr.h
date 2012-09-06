@@ -119,5 +119,11 @@ ccnet_peer_manager_redirect_peer (CcnetPeerManager *manager,
 void
 ccnet_peer_manager_send_ready_message (CcnetPeerManager *manager, CcnetPeer *peer);
 
+void
+ccnet_peer_manager_on_peer_session_key_sent (CcnetPeerManager *manager,
+                                             CcnetPeer *peer);
+void
+ccnet_peer_manager_on_peer_session_key_received (CcnetPeerManager *manager,
+                                                 CcnetPeer *peer);
 
 #endif
