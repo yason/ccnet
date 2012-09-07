@@ -103,7 +103,7 @@ static void check_db_table (CcnetDB *db)
         ccnet_db_query (db, sql);
     } else if (db_type == CCNET_DB_TYPE_SQLITE) {
         sql = "CREATE TABLE IF NOT EXISTS `Group` (`group_id` INTEGER"
-            " PRIMARY KEY, `group_name` VARCHAR(255),"
+            " PRIMARY KEY AUTOINCREMENT, `group_name` VARCHAR(255),"
             " `creator_name` VARCHAR(255), `timestamp` BIGINT)";
         ccnet_db_query (db, sql);
 

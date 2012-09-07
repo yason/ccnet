@@ -107,7 +107,8 @@ static void check_db_table (CcnetDB *db)
         
     } else if (db_type == CCNET_DB_TYPE_SQLITE) {
         sql = "CREATE TABLE IF NOT EXISTS Organization (org_id INTEGER"
-            " PRIMARY KEY, org_name VARCHAR(255), url_prefix VARCHAR(255), "
+            " PRIMARY KEY AUTOINCREMENT, org_name VARCHAR(255),"
+            " url_prefix VARCHAR(255), "
             " creator VARCHAR(255), ctime BIGINT)";
         ccnet_db_query (db, sql);
         sql = "CREATE UNIQUE INDEX IF NOT EXISTS url_prefix_indx on "
