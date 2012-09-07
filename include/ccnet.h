@@ -58,19 +58,18 @@ void
 ccnet_client_pool_return_client (struct CcnetClientPool *cpool,
                                  CcnetClient *client);
 
-SearpcClient *
-ccnet_client_pool_create_rpc_client (struct CcnetClientPool *cpool,
-                                     const char *service);
-
-void
-ccnet_client_pool_free_rpc_client (struct CcnetClientPool *cpool,
-                                   SearpcClient *rpc_client);
-
 /* rpc wrapper */
 
+/* Create rpc client using a single client for transport. */
 SearpcClient *
 ccnet_create_rpc_client (CcnetClient *cclient, const char *peer_id,
                          const char *service_name);
+
+/* Create rpc client using client pool for transport. */
+SearpcClient *
+ccnet_create_pooled_rpc_client (struct CcnetClientPool *cpool,
+                                const char *peer_id,
+                                const char *service);
 
 SearpcClient *
 ccnet_create_async_rpc_client (CcnetClient *cclient, const char *peer_id,

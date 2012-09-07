@@ -9,7 +9,8 @@
 
 
 SearpcClient *
-ccnet_create_rpc_client (CcnetClient *cclient, const char *peer_id,
+ccnet_create_rpc_client (CcnetClient *cclient,
+                         const char *peer_id,
                          const char *service_name)
 {
     SearpcClient *rpc_client;
@@ -20,6 +21,26 @@ ccnet_create_rpc_client (CcnetClient *cclient, const char *peer_id,
     priv->session = cclient;
     priv->peer_id = g_strdup(peer_id);
     priv->service = g_strdup(service_name);
+
+    rpc_client = searpc_client_new ();
+    rpc_client->send = ccnetrpc_transport_send;
+    rpc_client->arg = priv;
+
+    return rpc_client;
+}
+
+SearpcClient *
+ccnet_create_pooled_rpc_client (struct CcnetClientPool *cpool,
+                                const char *peer_id,
+                                const char *service)
+{
+    SearpcClient *rpc_client;
+    CcnetrpcTransportParam *priv;
+    
+    priv = g_new0(CcnetrpcTransportParam, 1);
+    priv->pool = cpool;
+    priv->peer_id = g_strdup(peer_id);
+    priv->service = g_strdup(service);
 
     rpc_client = searpc_client_new ();
     rpc_client->send = ccnetrpc_transport_send;

@@ -7,22 +7,19 @@
 #include "rpc-common.h"
 #include <ccnet/async-rpc-proc.h>
 
-
-char *
-ccnetrpc_transport_send (void *arg, const gchar *fcall_str,
-                       size_t fcall_len, size_t *ret_len)
+static char *
+invoke_service (CcnetClient *session,
+                const char *peer_id,
+                const char *service,
+                const char *fcall_str,
+                size_t fcall_len,
+                size_t *ret_len)
 {
-    CcnetrpcTransportParam *priv;
-    CcnetClient *session;
     struct CcnetResponse *rsp;
     uint32_t req_id;
+    GString *buf;
 
-    g_warn_if_fail (arg != NULL && fcall_str != NULL);
-
-    priv = (CcnetrpcTransportParam *)arg;
-    session = priv->session;
-
-    req_id = ccnet_client_get_rpc_request_id (session, priv->peer_id, priv->service);
+    req_id = ccnet_client_get_rpc_request_id (session, peer_id, service);
     if (req_id == 0) {
         *ret_len = 0;
         return NULL;
@@ -32,7 +29,6 @@ ccnetrpc_transport_send (void *arg, const gchar *fcall_str,
                               SC_CLIENT_CALL, SS_CLIENT_CALL,
                               fcall_str, fcall_len);
 
-    /* read response */
     if (ccnet_client_read_response (session) < 0) {
         *ret_len = 0;
         ccnet_client_clean_rpc_request (session, req_id);
@@ -43,44 +39,119 @@ ccnetrpc_transport_send (void *arg, const gchar *fcall_str,
     if (memcmp (rsp->code, SC_SERVER_RET, 3) == 0) {
         *ret_len = (size_t) rsp->clen;
         return g_strndup (rsp->content, rsp->clen);
+    } else if (memcmp (rsp->code, SC_SERVER_MORE, 3) != 0) {
+        g_warning ("[Sea RPC] Bad response: %s %s.\n", rsp->code, rsp->code_msg);
+        *ret_len = 0;
+        return NULL;
     }
 
-    if (memcmp (rsp->code, SC_SERVER_MORE, 3) == 0) { 
-        GString *buf;
+    buf = g_string_new_len (rsp->content, rsp->clen);
+    while (1) {
+        ccnet_client_send_update (session, req_id,
+                                  SC_CLIENT_MORE, SS_CLIENT_MORE,
+                                  fcall_str, fcall_len);
 
-        buf = g_string_new_len (rsp->content, rsp->clen);
-        *ret_len = (size_t) rsp->clen;
+        if (ccnet_client_read_response (session) < 0) {
+            *ret_len = 0;
+            ccnet_client_clean_rpc_request (session, req_id);
+            g_string_free (buf, TRUE);
+            return NULL;
+        }
+        rsp = &session->response;
 
-        do {
-            ccnet_client_send_update (session, req_id,
-                                      SC_CLIENT_MORE, SS_CLIENT_MORE,
-                                      fcall_str, fcall_len);
-            if (ccnet_client_read_response (session) < 0) {
-                *ret_len = 0;
-                g_string_free (buf, TRUE);
-                ccnet_client_clean_rpc_request (session, req_id);
-                return NULL;
-            }
-            rsp = &session->response;
-            if (memcmp (rsp->code, SC_SERVER_ERR, 3) == 0) {
-                g_warning ("[Sea RPC] Bad response: %s %s.\n",
-                           rsp->code, rsp->code_msg);
-                *ret_len = 0;
-                g_string_free (buf, TRUE);
-                ccnet_client_clean_rpc_request (session, req_id);
-                return NULL;
-            }
-
+        if (memcmp (rsp->code, SC_SERVER_RET, 3) == 0) {
             g_string_append_len (buf, rsp->content, rsp->clen);
-            *ret_len += (size_t) rsp->clen;
-        } while (memcmp (rsp->code, SC_SERVER_MORE, 3) == 0);
-
-        return g_string_free (buf, FALSE);
+            *ret_len = buf->len + 1;
+            return g_string_free (buf, FALSE);
+        } else if (memcmp (rsp->code, SC_SERVER_MORE, 3) == 0) { 
+            g_string_append_len (buf, rsp->content, rsp->clen);
+        } else {
+            g_warning ("[Sea RPC] Bad response: %s %s.\n",
+                       rsp->code, rsp->code_msg);
+            *ret_len = 0;
+            g_string_free (buf, TRUE);
+            return NULL;
+        }
     }
 
-    g_warning ("[Sea RPC] Bad response: %s %s.\n", rsp->code, rsp->code_msg);
-    *ret_len = 0;
+    /* Never reach here. */
+    g_assert (0);
     return NULL;
+}
+
+static CcnetClient *
+create_new_client (const char *conf_dir)
+{
+    CcnetClient *client;
+
+    client = ccnet_client_new ();
+    if (ccnet_client_load_confdir (client, conf_dir) < 0) {
+        g_warning ("[Sea RPC] Failed to load conf dir.\n");
+        g_object_unref (client);
+        return NULL;
+    }
+    if (ccnet_client_connect_daemon (client, CCNET_CLIENT_SYNC) < 0) {
+        g_warning ("[Sea RPC] Failed to connect ccnet.\n");
+        g_object_unref (client);
+        return NULL;
+    }
+
+    return client;
+}
+
+char *
+ccnetrpc_transport_send (void *arg, const gchar *fcall_str,
+                         size_t fcall_len, size_t *ret_len)
+{
+    CcnetrpcTransportParam *priv;
+    CcnetClient *session, *new_session;
+
+    g_warn_if_fail (arg != NULL && fcall_str != NULL);
+
+    priv = (CcnetrpcTransportParam *)arg;
+
+    if (priv->session != NULL) {
+        /* Use single ccnet client as transport. */
+        return invoke_service (priv->session, priv->peer_id, priv->service,
+                               fcall_str, fcall_len, ret_len);
+    } else {
+        /* Use client pool as transport. */
+        g_assert (priv->pool != NULL);
+
+        session = ccnet_client_pool_get_client (priv->pool);
+        if (!session) {
+            g_warning ("[Sea RPC] Failed to get client from pool.\n");
+            *ret_len = 0;
+            return NULL;
+        }
+
+        char *ret = invoke_service (session, priv->peer_id, priv->service,
+                                    fcall_str, fcall_len, ret_len);
+        if (ret != NULL)
+            return ret;
+
+        /* If we failed to send data through the ccnet client returned by
+         * client pool, ccnet may have been restarted.
+         * In this case, we create a new ccnet client and put it into
+         * the client pool after use.
+         */
+
+        new_session = create_new_client (session->config_dir);
+        if (!new_session) {
+            *ret_len = 0;
+            return NULL;
+        }
+        g_object_unref (session);
+
+        ret = invoke_service (new_session, priv->peer_id, priv->service,
+                              fcall_str, fcall_len, ret_len);
+        if (ret != NULL)
+            ccnet_client_pool_return_client (priv->pool, new_session);
+        else
+            g_object_unref (new_session);
+
+        return ret;
+    }
 }
 
 

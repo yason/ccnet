@@ -4,7 +4,9 @@
 #include <ccnet.h>
 
 typedef struct {
+    /* either session or pool will be set. */
     CcnetClient *session;
+    CcnetClientPool *pool;
     char  *peer_id;       /* NULL if local */
     char  *service;
 } CcnetrpcTransportParam;        /* this structure will be parsed to

@@ -59,27 +59,3 @@ ccnet_client_pool_return_client (struct CcnetClientPool *cpool,
     pthread_mutex_unlock (&cpool->lock);
 }
 
-SearpcClient *
-ccnet_client_pool_create_rpc_client (struct CcnetClientPool *cpool,
-                                     const char *service)
-{
-    CcnetClient *client;
-
-    client = ccnet_client_pool_get_client (cpool);
-    if (!client)
-        return NULL;
-
-    return ccnet_create_rpc_client (client, NULL, service);
-}
-
-void
-ccnet_client_pool_free_rpc_client (struct CcnetClientPool *cpool,
-                                   SearpcClient *rpc_client)
-{
-    CcnetrpcTransportParam *priv = rpc_client->arg;
-    CcnetClient *client = priv->session;
-
-    ccnet_client_pool_return_client (cpool, client);
-
-    ccnet_rpc_client_free (rpc_client);
-}
