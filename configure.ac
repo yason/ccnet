@@ -162,12 +162,11 @@ AC_SUBST(STATIC_COMPILE)
 # Read "man ld.so" for description of $ORIGIN.
 # Refer to http://blog.linuxgamepublishing.com/2009/02/08/our-new-way-to-meet-the-lgpl/
 if test x${server_pkg} = xyes; then
-#  compile_gui=no
-#  compile_client=no
-#  compile_cli=yes
-#  compile_tools=yes
+  compile_client=no
+  compile_cli=yes
+  compile_tools=yes
   compile_server=yes
-#  compile_httpserver=yes
+
   SERVER_PKG_RPATH=-Wl,-R,\'\$\$ORIGIN/../lib\'
   SERVER_PKG_PY_RPATH=-Wl,-R,\'\$\$ORIGIN/../../..\'
 fi
