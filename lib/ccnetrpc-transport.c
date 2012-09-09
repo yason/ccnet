@@ -127,14 +127,18 @@ ccnetrpc_transport_send (void *arg, const gchar *fcall_str,
 
         char *ret = invoke_service (session, priv->peer_id, priv->service,
                                     fcall_str, fcall_len, ret_len);
-        if (ret != NULL)
+        if (ret != NULL) {
+            ccnet_client_pool_return_client (priv->pool, session);
             return ret;
+        }
 
         /* If we failed to send data through the ccnet client returned by
          * client pool, ccnet may have been restarted.
          * In this case, we create a new ccnet client and put it into
          * the client pool after use.
          */
+
+        g_message ("[Sea RPC] Ccnet disconnected. Connect again.\n");
 
         new_session = create_new_client (session->config_dir);
         if (!new_session) {
