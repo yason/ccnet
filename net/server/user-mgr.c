@@ -106,9 +106,10 @@ static void check_db_table (CcnetDB *db)
         ccnet_db_query (db, sql);
 
     } else if (db_type == CCNET_DB_TYPE_SQLITE) {
-        sql = "CREATE TABLE IF NOT EXISTS EmailUser (id INTEGER NOT NULL PRIMARY KEY,"
-            " email TEXT, passwd TEXT, is_staff bool NOT NULL, is_active bool NOT NULL,"
-            " ctime INTEGER)";
+        sql = "CREATE TABLE IF NOT EXISTS EmailUser ("
+            "id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,"
+            "email TEXT, passwd TEXT, is_staff bool NOT NULL, "
+            "is_active bool NOT NULL, ctime INTEGER)";
         ccnet_db_query (db, sql);
         sql = "CREATE INDEX IF NOT EXISTS email_index on EmailUser (email)";
         ccnet_db_query (db, sql);
