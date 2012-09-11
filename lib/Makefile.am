@@ -13,15 +13,20 @@ BUILT_SOURCES = gensource
 
 lib_LTLIBRARIES = libccnet.la
 
-noinst_HEADERS = buffer.h string-array.h packet-io.h  \
-	include.h marshal.h \
+noinst_HEADERS = buffer.h \
+	string-array.h \
+	packet-io.h  \
+	include.h \
+	marshal.h \
 	net.h \
 	peer-common.h \
 	string-util.h \
 	config-db.h \
-	utils.h ccnet-object.h \
-        bloom-filter.h \
-	db.h rsa.h
+	utils.h \
+	ccnet-object.h \
+	bloom-filter.h \
+	db.h rsa.h \
+	rpc-common.h
 
 ccnetincludedir = $(includedir)/ccnet
 ccnetinclude_DATA = ccnet-object.h
@@ -77,9 +82,9 @@ searpc_gen = searpc-signature.h searpc-marshal.h
 
 gensource: ${searpc_gen}
 
-${searpc_gen}: rpc_table.py
+${searpc_gen}: $(top_srcdir)/lib/rpc_table.py
 	@echo "[libsearpc]: generating rpc header files"
-	searpc-codegen.py rpc_table.py
+	searpc-codegen.py $(top_srcdir)/lib/rpc_table.py
 	@echo "[libsearpc]: done"
 
 clean-local:

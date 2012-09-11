@@ -5,6 +5,7 @@ AM_CPPFLAGS = @GLIB2_CFLAGS@ @GOBJECT_CFLAGS@ \
 	-I$(top_srcdir)/include -I$(top_srcdir)/include/ccnet \
 	-I$(top_srcdir)/lib \
 	-I$(top_builddir)/include \
+	-I$(top_builddir)/lib \
 	@SEARPC_CFLAGS@ \
 	-Wall
 
@@ -97,7 +98,7 @@ ccnet_LDADD = -levent $(top_builddir)/lib/libccnetd.la \
 
 ccnet_LDFLAGS = @STATIC_COMPILE@ @CONSOLE@ @SERVER_PKG_RPATH@ -no-undefined
 
-check_PROGRAMS = ccnet-test
+noinst_PROGRAMS = ccnet-test
 
 ccnet_test_SOURCES = ccnet-test.c daemon-session.c $(common_srcs)
 
@@ -107,5 +108,4 @@ ccnet_test_LDADD = -levent $(top_builddir)/lib/libccnetd.la \
 
 ccnet_test_LDFLAGS = @STATIC_COMPILE@ -no-undefined @CONSOLE@
 
-TESTS = ccnet-test
 

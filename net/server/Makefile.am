@@ -5,6 +5,7 @@ AM_CPPFLAGS = @GLIB2_CFLAGS@ @GOBJECT_CFLAGS@ \
 	-I$(top_srcdir)/include -I$(top_srcdir)/include/ccnet \
 	-I$(top_srcdir)/lib \
 	-I$(top_builddir)/include \
+	-I$(top_builddir)/lib \
 	@SEARPC_CFLAGS@ \
 	@MYSQL_CFLAGS@ \
 	@ZDB_CFLAGS@ \

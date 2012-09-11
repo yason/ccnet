@@ -17,9 +17,8 @@ Server has the following functions:
 Dependency
 ==========
 
-The following packages are required to build libsearpc:
+The following packages are required to build ccnet:
 
-    json-glib >= 0.10.2
     valac >= 0.8
     libsearpc
     libmysqlclient-dev for compiling ccnet server

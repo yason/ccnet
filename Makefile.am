@@ -13,9 +13,9 @@ if COMPILE_DEMO
 endif
 
 SUBDIRS = include lib net $(MAKE_CLI) $(MAKE_TOOLS) \
-	python $(MAKE_DEMO)
+	python $(MAKE_DEMO) tests
 
-EXTRA_DIST = config.rpath install-sh
+EXTRA_DIST = install-sh
 EXTRA_DIST += libccnet.pc.in
 
 ACLOCAL_AMFLAGS = -I m4
