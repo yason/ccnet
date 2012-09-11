@@ -155,6 +155,15 @@ if test x${static_comp} = xyes; then
 fi
 AC_SUBST(STATIC_COMPILE)
 
+# check demo
+# option: compile-demo
+# default: yes
+AC_ARG_ENABLE([compile-demo],
+AS_HELP_STRING([--enable-compile-demo],
+               [compile demo programs @<:@default: yes@:>@]),
+               [compile_demo=${enableval}],
+               [compile_demo=yes])
+
 
 # If we're building server release package, set the run-time path
 # for the executables. So that the loader will lookup shared libs
@@ -179,6 +188,7 @@ AM_CONDITIONAL([COMPILE_PYTHON], [test "${compile_python}" = "yes"])
 AM_CONDITIONAL([COMPILE_CLIENT], [test "${compile_client}" = "yes"])
 AM_CONDITIONAL([COMPILE_SERVER], [test "${compile_server}" = "yes"])
 AM_CONDITIONAL([COMPILE_CLUSTER], [test "${compile_cluster}" = "yes"])
+AM_CONDITIONAL([COMPILE_DEMO], [test "${compile_demo}" = "yes"])
 
 AM_CONDITIONAL([WIN32], [test "$bwin32" = "true"])
 AM_CONDITIONAL([MACOS], [test "$bmac" = "true"])
@@ -280,6 +290,7 @@ GTK_REQUIRED=2.16.0
 SEARPC_REQUIRED=1.0
 ZDB_REQUIRED=2.10
 LIBNAUTILUS_EXTENSION_REQUIRED=2.30.1
+SEARPC_REQUIRED=1.0
 CURL_REQUIRED=7.17
 
 PKG_CHECK_MODULES(GLIB2, [glib-2.0 >= $GLIB_REQUIRED])
@@ -293,7 +304,6 @@ AC_SUBST(GOBJECT_LIBS)
 PKG_CHECK_MODULES(SEARPC, [libsearpc >= $SEARPC_REQUIRED])
 AC_SUBST(SEARPC_CFLAGS)
 AC_SUBST(SEARPC_LIBS)
-
 
 if test x${compile_python} = xyes; then
    AM_PATH_PYTHON([2.4])
@@ -344,6 +354,7 @@ AC_CONFIG_FILES(
     python/ccnet/Makefile
     tests/Makefile
     tests/common-conf.sh
+    demo/Makefile
 )
 
 AC_OUTPUT
@@ -363,5 +374,8 @@ if test x${compile_server} = xyes; then
 fi
 if test x${compile_cluster} = xyes; then
    echo    "cluster"
+fi
+if test x${compile_demo} = xyes; then
+   echo    "demo"
 fi
 echo
