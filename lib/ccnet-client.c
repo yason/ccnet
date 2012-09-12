@@ -160,11 +160,11 @@ ccnet_client_load_confdir (CcnetClient *client, const char *config_dir_r)
         goto onerror;
     }
 
-    id = g_key_file_get_string (key_file, "General", "ID", NULL);
-    user_name = g_key_file_get_string (key_file, "General", "USER_NAME", NULL);
-    name = g_key_file_get_string (key_file, "General", "NAME", NULL);
-    service_url = g_key_file_get_string (key_file, "General", "SERVICE_URL", NULL);
-    port_str = g_key_file_get_string (key_file, "Client", "PORT", NULL);
+    id = ccnet_key_file_get_string (key_file, "General", "ID");
+    user_name = ccnet_key_file_get_string (key_file, "General", "USER_NAME");
+    name = ccnet_key_file_get_string (key_file, "General", "NAME");
+    service_url = ccnet_key_file_get_string (key_file, "General", "SERVICE_URL");
+    port_str = ccnet_key_file_get_string (key_file, "Client", "PORT");
 
     if ( (id == NULL) || (strlen (id) != SESSION_ID_LENGTH) 
          || (hex_to_sha1 (id, sha1) < 0) ) 
