@@ -1038,7 +1038,7 @@ ccnet_rpc_get_all_groups (int start, int limit, GError **error)
 
     ret = ccnet_group_manager_get_all_groups (group_mgr, start, limit, error);
 
-    return g_list_reverse (ret);
+    return ret;
 }
 
 GObject *

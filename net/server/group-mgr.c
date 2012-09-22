@@ -166,35 +166,35 @@ duplicate_group_name (CcnetGroupManager *mgr,
                       const char *group_name,
                       const char *user_name)
 {
-    GList *group_ids = NULL, *ptr;
+    GList *groups = NULL, *ptr;
     CcnetOrgManager *org_mgr = NULL;
-    
-    group_ids = ccnet_group_manager_get_groupids_by_user (mgr, user_name, NULL);
-    if (!group_ids) {
+    gboolean ret = FALSE;
+
+    groups = ccnet_group_manager_get_all_groups (mgr, -1, -1, NULL);
+    if (!groups) {
         return FALSE;
     }
-
-    for (ptr = group_ids; ptr; ptr = ptr->next) {
-        int group_id = (int)(long)ptr->data;
+    
+    for (ptr = groups; ptr; ptr = ptr->next) {
+        CcnetGroup *group = (CcnetGroup *)ptr->data;
         org_mgr = ((CcnetServerSession *)(mgr->session))->org_mgr;
-        if (ccnet_org_manager_is_org_group(org_mgr, group_id, NULL)) {
-            /* Skip org groups. */            
+        if (ccnet_org_manager_is_org_group(org_mgr, ccnet_group_get_id (group),
+                                           NULL)) {
+            /* Skip org groups. */
             continue;
         }
 
-        CcnetGroup *group = ccnet_group_manager_get_group (mgr, group_id, NULL);
-        if (!group)
-            continue;
-
-        if (g_strcmp0 (group_name, ccnet_group_get_group_name(group)) == 0) {
-            g_list_free (group_ids);
-            g_object_unref (group);
-            return TRUE;
+        if (g_strcmp0 (group_name, ccnet_group_get_group_name (group)) == 0) {
+            ret = TRUE;
+            goto out;
         }
     }
-
-    g_list_free (group_ids);
-    return FALSE;
+    
+out:
+    for (ptr = groups; ptr; ptr = ptr->next)
+        g_object_unref ((GObject *)ptr->data);
+    g_list_free (groups);
+    return ret;
 }
 
 int ccnet_group_manager_create_group (CcnetGroupManager *mgr,
@@ -614,5 +614,5 @@ ccnet_group_manager_get_all_groups (CcnetGroupManager *mgr,
                                        get_all_ccnetgroups_cb, &ret) < 0) 
         return NULL;
 
-    return ret;
+    return g_list_reverse (ret);
 }
