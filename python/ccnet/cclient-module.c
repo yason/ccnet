@@ -189,12 +189,81 @@ PyCClient_send_cmd(PyCClientObject *self, PyObject *args)
     Py_RETURN_NONE;
 }
 
+/* Convert a ccnet message to a tuple. */
+static PyObject *
+msg_to_tuple(CcnetMessage *msg)
+{
+    g_assert(msg);
+    /* type, body, timestamp*/
+    PyObject *pymsg = PyTuple_New(3);
+
+    PyTuple_SetItem(pymsg, 0, PyString_FromString(msg->app));
+    PyTuple_SetItem(pymsg, 1, PyString_FromString(msg->body));
+    PyTuple_SetItem(pymsg, 2, PyString_FromFormat("%d", msg->ctime));
+
+    return pymsg;
+}
+
+static PyObject *
+PyCClient_prepare_recv_message (PyCClientObject *self, PyObject *args)
+{
+    CcnetClient *client = self->client;
+    const char *msg_type;
+    int res = 0;
+
+    if (!PyArg_ParseTuple(args, "s:Ccnet.Client.receive_message", &msg_type)) {
+        return PyInt_FromLong(-1L);
+    }
+
+    Py_BEGIN_ALLOW_THREADS
+    res = ccnet_client_prepare_recv_message(client, msg_type);
+    Py_END_ALLOW_THREADS
+
+    return PyInt_FromLong((long)res);
+}
+
+static PyObject *
+PyCClient_receive_message (PyCClientObject *self)
+{
+    CcnetClient *client = self->client;
+    CcnetMessage *msg = NULL;
+    PyObject *pymsg = NULL;
+
+    Py_BEGIN_ALLOW_THREADS
+    msg = ccnet_client_receive_message(client);
+    Py_END_ALLOW_THREADS
+
+    if (!msg) {
+        ccnet_client_disconnect_daemon (client);
+        Py_RETURN_NONE;
+    }
+
+    pymsg = msg_to_tuple(msg);
+
+    ccnet_message_free (msg);
+    
+    return pymsg;
+}
+
+static PyObject *
+PyCClient_is_connected (PyCClientObject *self)
+{
+    long connected = 0;
+    if (self->client && self->client->connected)
+        connected = 1;
+    
+    return PyBool_FromLong(connected);
+}
+
+
 static PyMethodDef PyCClient_Methods[] = { 
     {"load_confdir",                (PyCFunction)PyCClient_load_confdir,
      METH_VARARGS,                  "" },
     {"connect_daemon",              (PyCFunction)PyCClient_connect_daemon,
      METH_VARARGS|METH_KEYWORDS,    "" },
     {"get_request_id",              (PyCFunction)PyCClient_get_request_id,
+     METH_NOARGS,                   "" },
+    {"is_connected",                (PyCFunction)PyCClient_is_connected,
      METH_NOARGS,                   "" },
     {"send_request",                (PyCFunction)PyCClient_send_request,
      METH_VARARGS,                  "" },
@@ -204,6 +273,10 @@ static PyMethodDef PyCClient_Methods[] = {
      METH_VARARGS,                  "" },
     {"send_cmd",                    (PyCFunction)PyCClient_send_cmd,
      METH_VARARGS,                  "" },
+    {"prepare_recv_message",        (PyCFunction)PyCClient_prepare_recv_message,
+     METH_VARARGS,                  "" },
+    {"receive_message",             (PyCFunction)PyCClient_receive_message,
+     METH_NOARGS,                   "" },
     {NULL}
 };
 

@@ -891,21 +891,34 @@ ccnet_client_send_message (CcnetClient *client,
     return 0;
 }
 
+int
+ccnet_client_prepare_recv_message (CcnetClient *client,
+                                   const char *app)
+{
+    int req_id = ccnet_client_get_request_id (client);
+    char buf[256];
+
+    snprintf (buf, sizeof(buf), "mq-server %s", app);
+    ccnet_client_send_request (client, req_id, buf);
+
+    if (read_response_common (client) < 0)
+        return -1;
+
+    if (memcmp(client->response.code, "200", 3) != 0)
+        return -1;
+
+    return 0;
+}
+
 CcnetMessage *
-ccnet_client_receive_message (CcnetClient *client, const char *app)
+ccnet_client_receive_message (CcnetClient *client)
 {
     CcnetMessage *message;
-    char buf[64];
-    int req_id = ccnet_client_get_request_id (client);
 
-    /* -s means receiving single message and block */
-    snprintf (buf, 64, "mq-server -s %s", app);
-    ccnet_client_send_request (client, req_id, buf);
     if (read_response_common (client) < 0)
         return NULL;
     
     message = ccnet_message_from_string (client->response.content,
                                          client->response.clen);
-    g_assert (message);
     return message;
 }

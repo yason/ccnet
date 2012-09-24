@@ -163,8 +163,17 @@ const char *ccnet_client_send_cmd (CcnetClient *client,
 int ccnet_client_send_message (CcnetClient *client,
                                CcnetMessage *message);
 
-CcnetMessage *ccnet_client_receive_message (CcnetClient *client,
-                                            const char *app);
+
+/* For a sync client to receive a given type of message,
+   1. call ccnet_client_prepare_recv_message() with the message type you want to receive
+   2. call ccnet_client_receive_message() repeatly
+ */
+int
+ccnet_client_prepare_recv_message (CcnetClient *client,
+                                   const char *app);
+
+CcnetMessage *
+ccnet_client_receive_message (CcnetClient *client);
 
 uint32_t
 ccnet_client_get_rpc_request_id (CcnetClient *client, const char *peer_id,
