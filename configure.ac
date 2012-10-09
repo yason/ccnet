@@ -110,6 +110,10 @@ if test "$bmac" = true; then
    compile_cli=no
    compile_tools=no
    compile_server=no
+
+   AC_ARG_ENABLE(server, AC_HELP_STRING([--enable-server], [enable server]),
+   [compile_server=$enableval],[compile_server="no"])
+
 fi
 
 if test "$blinux" = true; then

@@ -63,7 +63,7 @@ aclocalinclude="$aclocalinclude -I m4"
 if test x"$MSYSTEM" = x"MINGW32"; then
     aclocalinclude="$aclocalinclude -I /local/share/aclocal"
 elif [[ "${TERM_PROGRAM}" =~ ^Apple ]]; then
-    aclocalinclude="$aclocalinclude -I /opt/local/share/aclocal"
+    aclocalinclude="$aclocalinclude -I /usr/local/share/aclocal"
 fi
 
 
