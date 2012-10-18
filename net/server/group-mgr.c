@@ -394,6 +394,38 @@ int ccnet_group_manager_remove_member (CcnetGroupManager *mgr,
     return 0;
 }
 
+int ccnet_group_manager_set_admin (CcnetGroupManager *mgr,
+                                   int group_id,
+                                   const char *member_name,
+                                   GError **error)
+{
+    CcnetDB *db = mgr->priv->db;
+    char sql[512];
+
+    snprintf (sql, sizeof(sql), "UPDATE `GroupUser` SET `is_staff` = 1 "
+              "WHERE `group_id` = %d and `user_name` = '%s'",
+              group_id, member_name);
+    ccnet_db_query (db, sql);
+
+    return 0;
+}
+
+int ccnet_group_manager_unset_admin (CcnetGroupManager *mgr,
+                                     int group_id,
+                                     const char *member_name,
+                                     GError **error)
+{
+    CcnetDB *db = mgr->priv->db;
+    char sql[512];
+
+    snprintf (sql, sizeof(sql), "UPDATE `GroupUser` SET `is_staff` = 0 "
+              "WHERE `group_id` = %d and `user_name` = '%s'",
+              group_id, member_name);
+    ccnet_db_query (db, sql);
+
+    return 0;
+}
+
 int ccnet_group_manager_quit_group (CcnetGroupManager *mgr,
                                     int group_id,
                                     const char *user_name,

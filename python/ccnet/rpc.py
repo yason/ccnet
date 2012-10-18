@@ -277,6 +277,14 @@ class CcnetThreadedRpcClient(RpcClientBase):
     @searpc_func("int", ["int", "string", "string"])
     def group_remove_member(self, group_id, user_name, member_name):
         pass
+
+    @searpc_func("int", ["int", "string"])
+    def group_set_admin(self, group_id, member_name):
+        pass
+
+    @searpc_func("int", ["int", "string"])
+    def group_unset_admin(self, group_id, member_name):
+        pass
     
     @searpc_func("int", ["int", "string"])
     def quit_group(self, group_id, user_name):

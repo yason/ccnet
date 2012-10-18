@@ -229,6 +229,14 @@ ccnet_start_rpc(CcnetSession *session)
                                      "group_remove_member",
                                      searpc_signature_int__int_string_string());
     searpc_server_register_function ("ccnet-threaded-rpcserver",
+                                     ccnet_rpc_group_set_admin,
+                                     "group_set_admin",
+                                     searpc_signature_int__int_string());
+    searpc_server_register_function ("ccnet-threaded-rpcserver",
+                                     ccnet_rpc_group_unset_admin,
+                                     "group_unset_admin",
+                                     searpc_signature_int__int_string());
+    searpc_server_register_function ("ccnet-threaded-rpcserver",
                                      ccnet_rpc_quit_group,
                                      "quit_group",
                                      searpc_signature_int__int_string());
@@ -965,6 +973,44 @@ ccnet_rpc_group_remove_member (int group_id, const char *user_name,
     ret = ccnet_group_manager_remove_member (group_mgr, group_id, user_name,
                                              member_name, error);
 
+    return ret;
+}
+
+int
+ccnet_rpc_group_set_admin (int group_id, const char *member_name,
+                           GError **error)
+{
+    CcnetGroupManager *group_mgr = 
+        ((CcnetServerSession *)session)->group_mgr;
+    int ret;
+
+    if (group_id <= 0 || !member_name) {
+        g_set_error (error, CCNET_DOMAIN, CCNET_ERR_INTERNAL,
+                     "Bad arguments");
+        return -1;
+    }
+
+    ret = ccnet_group_manager_set_admin (group_mgr, group_id, member_name,
+                                         error);
+    return ret;
+}
+
+int
+ccnet_rpc_group_unset_admin (int group_id, const char *member_name,
+                           GError **error)
+{
+    CcnetGroupManager *group_mgr = 
+        ((CcnetServerSession *)session)->group_mgr;
+    int ret;
+
+    if (group_id <= 0 || !member_name) {
+        g_set_error (error, CCNET_DOMAIN, CCNET_ERR_INTERNAL,
+                     "Bad arguments");
+        return -1;
+    }
+
+    ret = ccnet_group_manager_unset_admin (group_mgr, group_id, member_name,
+                                           error);
     return ret;
 }
 

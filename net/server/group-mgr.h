@@ -52,6 +52,16 @@ int ccnet_group_manager_remove_member (CcnetGroupManager *mgr,
                                        const char *member_name,
                                        GError **error);
 
+int ccnet_group_manager_set_admin (CcnetGroupManager *mgr,
+                                   int group_id,
+                                   const char *member_name,
+                                   GError **error);
+
+int ccnet_group_manager_unset_admin (CcnetGroupManager *mgr,
+                                     int group_id,
+                                     const char *member_name,
+                                     GError **error);
+
 int ccnet_group_manager_quit_group (CcnetGroupManager *mgr,
                                     int group_id,
                                     const char *user_name,
