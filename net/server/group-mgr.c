@@ -371,7 +371,7 @@ int ccnet_group_manager_remove_member (CcnetGroupManager *mgr,
     /* check whether user is the staff of the group */
     if (!check_group_staff (db, group_id, user_name)) {
         g_set_error (error, CCNET_DOMAIN, 0,
-                     "Permission error: only group staff can remove member");
+                     "Only group staff can remove member");
         return -1; 
     }    
 
@@ -383,10 +383,10 @@ int ccnet_group_manager_remove_member (CcnetGroupManager *mgr,
 
     /* can not remove myself */
     if (g_strcmp0 (user_name, member_name) == 0) {
-        g_set_error (error, CCNET_DOMAIN, 0, "Permission error: can not remove myself");
+        g_set_error (error, CCNET_DOMAIN, 0, "Can not remove myself");
         return -1;
     }
-    
+
     snprintf (sql, sizeof(sql), "DELETE FROM `GroupUser` WHERE `group_id`=%d AND "
               "`user_name`='%s'", group_id, member_name);
     ccnet_db_query (db, sql);
