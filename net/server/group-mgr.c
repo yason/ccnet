@@ -161,41 +161,41 @@ create_group_common (CcnetGroupManager *mgr,
     return group_id;
 }
 
-static gboolean
-duplicate_group_name (CcnetGroupManager *mgr,
-                      const char *group_name,
-                      const char *user_name)
-{
-    GList *groups = NULL, *ptr;
-    CcnetOrgManager *org_mgr = NULL;
-    gboolean ret = FALSE;
+/* static gboolean */
+/* duplicate_group_name (CcnetGroupManager *mgr, */
+/*                       const char *group_name, */
+/*                       const char *user_name) */
+/* { */
+/*     GList *groups = NULL, *ptr; */
+/*     CcnetOrgManager *org_mgr = NULL; */
+/*     gboolean ret = FALSE; */
 
-    groups = ccnet_group_manager_get_all_groups (mgr, -1, -1, NULL);
-    if (!groups) {
-        return FALSE;
-    }
+/*     groups = ccnet_group_manager_get_all_groups (mgr, -1, -1, NULL); */
+/*     if (!groups) { */
+/*         return FALSE; */
+/*     } */
     
-    for (ptr = groups; ptr; ptr = ptr->next) {
-        CcnetGroup *group = (CcnetGroup *)ptr->data;
-        org_mgr = ((CcnetServerSession *)(mgr->session))->org_mgr;
-        if (ccnet_org_manager_is_org_group(org_mgr, ccnet_group_get_id (group),
-                                           NULL)) {
-            /* Skip org groups. */
-            continue;
-        }
+/*     for (ptr = groups; ptr; ptr = ptr->next) { */
+/*         CcnetGroup *group = (CcnetGroup *)ptr->data; */
+/*         org_mgr = ((CcnetServerSession *)(mgr->session))->org_mgr; */
+/*         if (ccnet_org_manager_is_org_group(org_mgr, ccnet_group_get_id (group), */
+/*                                            NULL)) { */
+/*             /\* Skip org groups. *\/ */
+/*             continue; */
+/*         } */
 
-        if (g_strcmp0 (group_name, ccnet_group_get_group_name (group)) == 0) {
-            ret = TRUE;
-            goto out;
-        }
-    }
+/*         if (g_strcmp0 (group_name, ccnet_group_get_group_name (group)) == 0) { */
+/*             ret = TRUE; */
+/*             goto out; */
+/*         } */
+/*     } */
     
-out:
-    for (ptr = groups; ptr; ptr = ptr->next)
-        g_object_unref ((GObject *)ptr->data);
-    g_list_free (groups);
-    return ret;
-}
+/* out: */
+/*     for (ptr = groups; ptr; ptr = ptr->next) */
+/*         g_object_unref ((GObject *)ptr->data); */
+/*     g_list_free (groups); */
+/*     return ret; */
+/* } */
 
 int ccnet_group_manager_create_group (CcnetGroupManager *mgr,
                                       const char *group_name,
@@ -203,10 +203,10 @@ int ccnet_group_manager_create_group (CcnetGroupManager *mgr,
                                       GError **error)
 {
 
-    if (duplicate_group_name (mgr, group_name, user_name)) {
-        g_set_error (error, CCNET_DOMAIN, 0, "The group has already created");
-        return -1;
-    }
+    /* if (duplicate_group_name (mgr, group_name, user_name)) { */
+    /*     g_set_error (error, CCNET_DOMAIN, 0, "The group has already created"); */
+    /*     return -1; */
+    /* } */
 
     return create_group_common (mgr, group_name, user_name, error);
 }
@@ -341,13 +341,13 @@ int ccnet_group_manager_add_member (CcnetGroupManager *mgr,
     }
 
     /* check whether group is full */
-    snprintf (sql, sizeof(sql), "SELECT count(group_id) FROM `GroupUser` "
-              "WHERE `group_id` = %d", group_id);
-    int count = ccnet_db_get_int (db, sql);
-    if (count >= MAX_GROUP_MEMBERS) {
-        g_set_error (error, CCNET_DOMAIN, 0, "Group is full");
-        return -1;
-    }
+    /* snprintf (sql, sizeof(sql), "SELECT count(group_id) FROM `GroupUser` " */
+    /*           "WHERE `group_id` = %d", group_id); */
+    /* int count = ccnet_db_get_int (db, sql); */
+    /* if (count >= MAX_GROUP_MEMBERS) { */
+    /*     g_set_error (error, CCNET_DOMAIN, 0, "Group is full"); */
+    /*     return -1; */
+    /* } */
     
     snprintf (sql, sizeof(sql), "INSERT INTO `GroupUser` VALUES (%d, '%s', %d)",
               group_id, member_name, 0);

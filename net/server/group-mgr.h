@@ -5,7 +5,7 @@
 
 #include "../common/session.h"
 
-#define MAX_GROUP_MEMBERS	16
+/* #define MAX_GROUP_MEMBERS	16 */
 
 typedef struct _CcnetGroupManager CcnetGroupManager;
 typedef struct _CcnetGroupManagerPriv CcnetGroupManagerPriv;
