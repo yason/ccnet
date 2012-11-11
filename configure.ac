@@ -257,7 +257,7 @@ elif test "$bmac" = true ; then
   LIB_SHELL32=
   LIB_PSAPI=
   MSVC_CFLAGS=
-  LIB_DIRWATCH=-framework CoreServices
+  LIB_DIRWATCH="-framework CoreServices"
 else
   LIB_WS32=
   LIB_GDI32=
