@@ -81,6 +81,15 @@ server_session_prepare (CcnetSession *session)
         return -1;
     }
 
+    /*  */
+    char *enc;
+    enc = ccnet_key_file_get_string (session->keyf, "NETWORK", "ENCRYPT_CHANNEL");
+    if (enc && g_ascii_strncasecmp(enc, "false", 5) == 0)
+        session->encrypt_channel = 0;
+    else
+        /* encrypt channel on default */
+        session->encrypt_channel = 1;
+
     ccnet_user_manager_prepare (server_session->user_mgr);
     ccnet_group_manager_prepare (server_session->group_mgr);
     ccnet_org_manager_prepare (server_session->org_mgr);

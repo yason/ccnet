@@ -9,7 +9,7 @@
 #define CCNET_MSG_RESPONSE   3
 #define CCNET_MSG_UPDATE     4
 #define CCNET_MSG_RELAY      5  /* NOT USED NOW */
-
+#define CCNET_MSG_ENCPACKET  6  /* an encrypt packet */
 
 typedef struct ccnet_header    ccnet_header;
 
@@ -17,7 +17,7 @@ struct ccnet_header {
     uint8_t  version;
     uint8_t  type;
     uint16_t length;            /* length of payload */
-    uint32_t id;
+    uint32_t id;                /* used as length in ecrypted packet */
 };
 
 typedef struct ccnet_packet    ccnet_packet;

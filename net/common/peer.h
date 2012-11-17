@@ -49,6 +49,8 @@ struct _CcnetPeer
 
     RSA          *pubkey;
     char         *session_key;
+    unsigned char key[16];
+    unsigned char iv[16];
 
     char         *name;         /* hostname */
     char         *public_addr;
@@ -101,6 +103,8 @@ struct _CcnetPeer
     unsigned int  cluster_member : 1;
 
     unsigned int  in_processor_call : 1;
+
+    unsigned int  encrypt_channel : 1;
 
     struct CcnetPacketIO  *io;
 
@@ -161,6 +165,7 @@ void        ccnet_peer_update_address (CcnetPeer *peer,
 
 void        ccnet_peer_set_pubkey (CcnetPeer *peer, char *str);
 
+int         ccnet_peer_prepare_channel_encryption (CcnetPeer *peer);
 
 /* role management */
 void

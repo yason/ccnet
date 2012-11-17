@@ -193,6 +193,26 @@ json_vprintf(const char *format, va_list args);
 gint64 get_current_time();
 
 int
+ccnet_generate_cipher (const char *passwd, int plen,
+                       unsigned char *key, unsigned char *iv);
+
+int
+ccnet_encrypt_with_key (char **data_out,
+                        int *out_len,
+                        const char *data_in,
+                        const int in_len,
+                        const unsigned char *key,
+                        const unsigned char *iv);
+
+int
+ccnet_decrypt_with_key (char **data_out,
+                        int *out_len,
+                        const char *data_in,
+                        const int in_len,
+                        const unsigned char *key,
+                        const unsigned char *iv);
+
+int
 ccnet_encrypt (char **data_out,
                int *out_len,
                const char *data_in,

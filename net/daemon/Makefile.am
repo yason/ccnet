@@ -22,7 +22,9 @@ PROC_HEADER_FILES = $(addprefix ../common/processors/, \
 	rpcserver-proc.h \
 	echo-proc.h \
 	sendsessionkey-proc.h \
-	recvsessionkey-proc.h )
+	recvsessionkey-proc.h \
+	sendsessionkey-v2-proc.h \
+	recvsessionkey-v2-proc.h )
 
 # sync-kvitem-proc.h sync-kvitem-slave-proc.h
 # 	getmsg-proc.h putmsg-proc.h \
@@ -84,7 +86,9 @@ common_srcs = ../common/session.c ../common/peer-mgr.c ../common/packet-io.c \
 	../common/processors/rpcserver-proc.c \
 	../common/processors/echo-proc.c \
 	../common/processors/sendsessionkey-proc.c \
-	../common/processors/recvsessionkey-proc.c
+	../common/processors/recvsessionkey-proc.c \
+	../common/processors/sendsessionkey-v2-proc.c \
+	../common/processors/recvsessionkey-v2-proc.c
 
 ccnet_SOURCES = ccnet-daemon.c \
 	daemon-session.c \

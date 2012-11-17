@@ -22,8 +22,8 @@ ${ccnet} -c ${conf3} --no-multicast -D all -f - &
 sleep 5
 
 
-${ccnet_tool} -c ${conf1} set-relay --default --addr 127.0.0.1:10002
-${ccnet_tool} -c ${conf3} set-relay --addr 127.0.0.1:10002
+${ccnet_tool} -c ${conf1} add-relay --addr 127.0.0.1:10002
+${ccnet_tool} -c ${conf3} add-relay --addr 127.0.0.1:10002
 
 sleep 30
 echo "+++ Added relay"

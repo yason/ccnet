@@ -17,6 +17,8 @@
 #include "processors/service-stub-proc.h"
 #include "processors/sendsessionkey-proc.h"
 #include "processors/recvsessionkey-proc.h"
+#include "processors/sendsessionkey-v2-proc.h"
+#include "processors/recvsessionkey-v2-proc.h"
 
 
 #ifdef CCNET_SERVER
@@ -149,6 +151,11 @@ ccnet_proc_factory_new (CcnetSession *session)
     ccnet_proc_factory_register_processor (factory, "receive-session-key",
                                            ccnet_recvsessionkey_proc_get_type ());
 
+    ccnet_proc_factory_register_processor (factory, "send-skey2",
+                                           ccnet_sendskey2_proc_get_type());
+    ccnet_proc_factory_register_processor (factory, "receive-skey2",
+                                           ccnet_recvskey2_proc_get_type ());
+
     ccnet_proc_factory_register_processor (factory, "mq-server",
                                            ccnet_mqserver_proc_get_type ());
 
@@ -162,19 +169,6 @@ ccnet_proc_factory_new (CcnetSession *session)
                                            ccnet_rpcserver_proc_get_type());
 
 
-#ifdef CCNET_SERVER
-    ccnet_proc_factory_register_processor (factory, "recvlogin",
-                                           ccnet_recvlogin_proc_get_type());
-    
-    ccnet_proc_factory_register_processor (factory, "recvlogout",
-                                           ccnet_recvlogout_proc_get_type());
-#else
-    ccnet_proc_factory_register_processor (factory, "sendlogin",
-                                           ccnet_sendlogin_proc_get_type());
-    
-    ccnet_proc_factory_register_processor (factory, "sendlogout",
-                                           ccnet_sendlogout_proc_get_type());
-#endif
 
 /*
     if (session->is_relay) {

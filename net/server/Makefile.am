@@ -13,8 +13,7 @@ AM_CPPFLAGS = @GLIB2_CFLAGS@ @GOBJECT_CFLAGS@ \
 
 bin_PROGRAMS = ccnet-server
 
-PROC_HEADER_FILES =  $(addprefix processors/, \
-	recvlogin-proc.h recvlogout-proc.h) \
+PROC_HEADER_FILES = \
 	$(addprefix ../common/processors/, \
 	rcvmsg-proc.h \
 	rcvcmd-proc.h \
@@ -27,7 +26,9 @@ PROC_HEADER_FILES =  $(addprefix processors/, \
 	threaded-rpcserver-proc.h \
 	echo-proc.h \
 	sendsessionkey-proc.h \
-	recvsessionkey-proc.h )
+	recvsessionkey-proc.h \
+	sendsessionkey-v2-proc.h \
+	recvsessionkey-v2-proc.h )
 
 # sync-kvitem-proc.h sync-kvitem-slave-proc.h 
 #	update-user-slave-proc.h \
@@ -91,11 +92,12 @@ common_srcs = ../common/ccnet-db.c \
 	../common/processors/threaded-rpcserver-proc.c \
 	../common/processors/echo-proc.c \
 	../common/processors/sendsessionkey-proc.c \
-	../common/processors/recvsessionkey-proc.c
+	../common/processors/recvsessionkey-proc.c \
+	../common/processors/sendsessionkey-v2-proc.c \
+	../common/processors/recvsessionkey-v2-proc.c
 
 ccnet_server_SOURCES = ccnet-server.c \
 	server-session.c user-mgr.c group-mgr.c org-mgr.c \
-	processors/recvlogin-proc.c processors/recvlogout-proc.c \
 	$(common_srcs)
 
 ccnet_server_LDADD = -levent $(top_builddir)/lib/libccnetd.la \

@@ -386,6 +386,34 @@ static void recv_keepalive_rsp(CcnetProcessor *processor,
     processor->state = FULL;
 }
 
+static void on_send_skey_done (CcnetProcessor *processor,
+                               gboolean success, void *data)
+{
+    if (!success) {
+        /* try the old version */
+        CcnetProcessor *p;
+        CcnetProcFactory *factory = processor->session->proc_factory;
+        CcnetPeer *peer = processor->peer;
+
+        if (peer->session_key) {
+            ccnet_warning ("peer %s already has session key\n", peer->id); 
+            return;
+        }
+
+        p = ccnet_proc_factory_create_master_processor (
+        factory, "send-session-key", peer);    
+        if (!p) {
+            ccnet_warning ("create send session key processor failed\n");
+            return;
+        }
+
+        if (ccnet_processor_startl (p, NULL) < 0) {
+            ccnet_warning ("start send session key processor failed\n");
+            return;
+        }
+    }
+}
+
 static void
 send_session_key (CcnetPeer *peer)
 {
@@ -396,14 +424,16 @@ send_session_key (CcnetPeer *peer)
         ccnet_warning ("peer %s already has session key\n", peer->id); 
         return;
     }
-    
-    processor = ccnet_proc_factory_create_master_processor (
-        factory, "send-session-key", peer);
 
+    processor = ccnet_proc_factory_create_master_processor (
+        factory, "send-skey2", peer);    
     if (!processor) {
         ccnet_warning ("create send session key processor failed\n");
         return;
     }
+
+    g_signal_connect (processor, "done",
+                      G_CALLBACK(on_send_skey_done), NULL);
 
     if (ccnet_processor_startl (processor, NULL) < 0) {
         ccnet_warning ("start send session key processor failed\n");

@@ -522,3 +522,10 @@ static void on_peer_auth_done (CcnetPeerManager *manager,
     
     CCNET_SESSION_GET_CLASS (session)->on_peer_auth_done(session, peer);
 }
+
+
+gboolean
+ccnet_session_should_encrypt_channel (CcnetSession *session)
+{
+    return session->encrypt_channel;
+}

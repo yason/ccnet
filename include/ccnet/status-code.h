@@ -50,6 +50,8 @@
 #define SS_UNKNOWN_PEER "Unknown peer"
 #define SC_UNKNOWN_SERVICE "511"
 #define SS_UNKNOWN_SERVICE "Unknown service"
+#define SC_UNKNOWN_SERVICE_IN_PERM "511"
+#define SS_UNKNOWN_SERVICE_IN_PERM "Unknown service in permission check"
 #define SC_PEER_UNREACHABLE "512"
 #define SS_PEER_UNREACHABLE "Peer Unreachable"
 #define SC_CON_TIMEOUT "513"

@@ -67,6 +67,7 @@ struct CcnetSession
 
     unsigned int                saving : 1;
     unsigned int                saving_pub : 1;
+    unsigned int                encrypt_channel : 1;
 
     int                         local_port;
     struct event                local_event;
@@ -115,5 +116,6 @@ CcnetService* ccnet_session_get_service (CcnetSession *session,
 void ccnet_session_unregister_service (CcnetSession *session,
                                        struct _CcnetPeer *peer);
 
+gboolean ccnet_session_should_encrypt_channel (CcnetSession *session);
 
 #endif

@@ -345,6 +345,19 @@ void ccnet_peer_set_pubkey (CcnetPeer *peer, char *str)
     peer->need_saving = 1;
 }
 
+int
+ccnet_peer_prepare_channel_encryption (CcnetPeer *peer)
+{
+    if (!peer->session_key)
+        return -1;
+
+    if ( ccnet_generate_cipher(peer->session_key, strlen(peer->session_key),
+                               peer->key, peer->iv) < 0)
+        return -1;
+
+    peer->encrypt_channel = 1;
+    return 0;
+}
 
 /* -------- role management -------- */
 
@@ -439,6 +452,7 @@ _peer_shutdown (CcnetPeer *peer)
     peer->dns_done = 0;
 
     /* clear session key when peer down  */
+    peer->encrypt_channel = 0;
     g_free (peer->session_key);
     peer->session_key = NULL;
 
@@ -520,7 +534,7 @@ create_local_processor (CcnetPeer *peer, int req_id, int argc, char **argv)
             ccnet_peer_send_response (peer, req_id, SC_UNKNOWN_SERVICE,
                                     SS_UNKNOWN_SERVICE,
                                     NULL, 0);
-            ccnet_warning ("Unknown service %s invoke by %s(%.8s)\n",
+            ccnet_debug ("Unknown service %s invoke by %s(%.8s)\n",
                            argv[0], peer->name, peer->id);
         }
     }
@@ -577,7 +591,8 @@ handle_request (CcnetPeer *peer, int req_id, char *data, int len)
     int  i, perm;
 
     /* TODO: remove string copy */
-    g_assert (len >= 1);
+    if (len < 1)
+        return;
     msg = g_malloc (len+1);
     memcpy (msg, data, len);
     msg[len] = '\0';
@@ -585,7 +600,7 @@ handle_request (CcnetPeer *peer, int req_id, char *data, int len)
     commands = g_strsplit_set (msg, " \t", 10);
     for (i=0, pcmd = commands; *pcmd; pcmd++)
         i++;
-    g_assert (i > 0);
+    if (i <= 0) return;
     g_free (msg);
 
     /* permission checking */
@@ -603,8 +618,8 @@ handle_request (CcnetPeer *peer, int req_id, char *data, int len)
                                       NULL, 0);
             goto ret;
         } else if (perm == PERM_CHECK_NOSERVICE) {
-            ccnet_peer_send_response (peer, req_id, SC_UNKNOWN_SERVICE,
-                                      SS_UNKNOWN_SERVICE, NULL, 0);
+            ccnet_peer_send_response (peer, req_id, SC_UNKNOWN_SERVICE_IN_PERM,
+                                      SS_UNKNOWN_SERVICE_IN_PERM, NULL, 0);
             goto ret;
         }
     }
@@ -759,21 +774,10 @@ error:
     ccnet_warning ("Bad update format from %s\n", peer->id);
 }
 
-static void canRead (ccnet_packet *packet, void *vpeer);
-
 
 static void
-canRead (ccnet_packet *packet, void *vpeer)
+handle_packet (ccnet_packet *packet, CcnetPeer *peer)
 {
-    CcnetPeer *peer = vpeer;
-    g_object_ref (peer);
-
-    /* if (!peer->is_local) */
-    /*     ccnet_debug ("[RECV] Recieve packat from %s type is %d, id is %d\n", */
-    /*                  peer->id, packet->header.type, packet->header.id); */
-
-    g_assert (packet->header.id != 0);
-
     switch (packet->header.type) {
     case CCNET_MSG_REQUEST:
         handle_request (peer, packet->header.id, 
@@ -789,9 +793,53 @@ canRead (ccnet_packet *packet, void *vpeer)
         break;
     default: 
         ccnet_warning ("Unknown header type %d\n", packet->header.type);
-        g_assert (0);
     };
+}
 
+static void
+canRead (ccnet_packet *packet, void *vpeer)
+{
+    CcnetPeer *peer = vpeer;
+    g_object_ref (peer);
+
+    /* if (!peer->is_local) */
+    /*     ccnet_debug ("[RECV] Recieve packat from %s type is %d, id is %d\n", */
+    /*                  peer->id, packet->header.type, packet->header.id); */
+
+    if (packet->header.id == 0)
+        return;
+
+    if (packet->header.type != CCNET_MSG_ENCPACKET) {
+        handle_packet (packet, peer);
+    } else {
+        /* ccnet_debug ("receive an encrypt packet\n"); */
+
+        if (!peer->session_key) {
+            ccnet_debug("Receive a encrypted packet from %s(%.8s) while "
+                        "not having session key \n", peer->name, peer->id);
+            goto out;
+        }
+
+        char *data;
+        int len;
+        int ret;
+        ret = ccnet_decrypt_with_key (&data, &len, packet->data, packet->header.id,
+                                      peer->key, peer->iv);
+        if (ret < 0)
+            ccnet_warning ("[SEND] decryption error for peer %s(%.8s) \n",
+                           peer->name, peer->id);
+        else {
+            ccnet_packet *new_pac = (ccnet_packet *)data;
+            /* byte order, from network to host */
+            new_pac->header.length = ntohs(new_pac->header.length);
+            new_pac->header.id = ntohl (new_pac->header.id);
+
+            handle_packet (new_pac, peer);
+            g_free (data);
+        }
+    }
+
+out:
     g_object_unref (peer);
 }
 
@@ -973,7 +1021,32 @@ ccnet_peer_packet_send (const CcnetPeer *peer)
     }
 
     if (peer->net_state == PEER_CONNECTED) {
-        ret = bufferevent_write_buffer (peer->io->bufev, peer->packet);
+        if (!peer->encrypt_channel) {
+            ret = bufferevent_write_buffer (peer->io->bufev, peer->packet);
+        } else {
+            ccnet_header enc_header;
+            char *data = (char *)EVBUFFER_DATA(peer->packet);
+            uint32_t len = EVBUFFER_LENGTH(peer->packet);
+            char *enc_data;
+            int enc_len;
+            ret = ccnet_encrypt_with_key (&enc_data, &enc_len, data, len,
+                                          peer->key, peer->iv);
+            if (ret < 0) {
+                ccnet_warning ("[SEND] encryption error for sending packet "
+                               "to peer %s(%.8s) \n", peer->name, peer->id);
+                evbuffer_drain (peer->packet, EVBUFFER_LENGTH(peer->packet));
+                return;
+            }
+
+            enc_header.version = 1;
+            enc_header.type = CCNET_MSG_ENCPACKET;
+            enc_header.length = 0;
+            enc_header.id = htonl(enc_len);
+            bufferevent_write (peer->io->bufev, &enc_header, sizeof (enc_header));
+            bufferevent_write (peer->io->bufev, enc_data, enc_len);
+            g_free (enc_data);
+            evbuffer_drain (peer->packet, EVBUFFER_LENGTH(peer->packet));
+        }
         if (ret < 0)
             ccnet_warning ("[SEND] bufferevent failed to send packet to peer(%.8s) \n",
                 peer->id);

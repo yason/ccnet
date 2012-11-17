@@ -46,7 +46,7 @@ canReadWrapper (struct bufferevent *e, void *user_data)
 {
     CcnetPacketIO *c = user_data;
     ccnet_packet *packet;
-    int len;
+    uint32_t len;
 
     g_assert (sizeof(ccnet_header) == CCNET_PACKET_LENGTH_HEADER);
 
@@ -63,7 +63,11 @@ canReadWrapper (struct bufferevent *e, void *user_data)
     while (1) {
         packet = (ccnet_packet *) EVBUFFER_DATA (e->input);
 
-        len = ntohs (packet->header.length);
+        if (packet->header.type == CCNET_MSG_ENCPACKET)
+            len = ntohl (packet->header.id);
+        else
+            len = ntohs (packet->header.length);
+
         if (EVBUFFER_LENGTH (e->input) - CCNET_PACKET_LENGTH_HEADER < len)
             break;                 /* wait for more data */
 

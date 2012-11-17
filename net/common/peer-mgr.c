@@ -13,6 +13,7 @@
 
 #include "peer.h"
 #include "session.h"
+#include "ccnet-config.h"
 #include "peer-mgr.h"
 #include "peermgr-message.h"
 #include "connect-mgr.h"
@@ -785,109 +786,8 @@ void ccnet_peer_manager_on_exit (CcnetPeerManager *manager)
 #include "server-session.h"
 #include "user-mgr.h"
 
-static void
-handle_bind_query_message (CcnetPeerManager *manager,
-                           CcnetMessage *msg,
-                           char *body)
-{
-    CcnetUserManager *user_mgr = 
-        ((CcnetServerSession *)manager->session)->user_mgr;
-
-    char *email;
-    CcnetPeer *peer = ccnet_peer_manager_get_peer (manager, msg->from);
-
-    email = ccnet_user_manager_get_binding_email (user_mgr,
-                                                  msg->from);
-    if (email)
-        ccnet_peer_manager_send_bind_status (manager, peer->id, email);
-    else
-        ccnet_peer_manager_send_bind_status (manager, peer->id, "not-bind");
-
-    g_free (email);
-    g_object_unref (peer);
-}
-
-void
-ccnet_peer_manager_send_bind_status (CcnetPeerManager *manager,
-                                     const char *peer_id,
-                                     const char *result)
-{
-    CcnetMessage *msg = NULL;
-    char buf[256];
-
-    snprintf (buf, 256, "v%d\n%s\n%s\n", PEERMGR_VERSION, BIND_STATUS,
-              result);
-    msg = ccnet_message_new (manager->session->base.id,
-                             peer_id, IPEERMGR_APP,
-                             buf, 0);
-    ccnet_send_message (manager->session, msg);
-    ccnet_message_unref (msg);
-}
 
 #endif  /* CCNET_SERVER */
-
-static void
-publish_bind_no_message (CcnetSession *session, CcnetPeer *relay)
-{
-    CcnetMessage *msg;
-    char *self_id = session->base.id;
-    msg = ccnet_message_new (self_id, self_id,           /* from, to  */
-                             "ccnet.relay_not_binded",   /* app */
-                             relay->name,                /* body */
-                             0);                         /* flags */
-    
-    ccnet_send_message (session, msg);
-    ccnet_message_free (msg);
-}
-
-
-static void
-handle_bind_status_message (CcnetPeerManager *manager,
-                            CcnetMessage *msg,
-                            char *body)
-{
-    CcnetPeer *peer = ccnet_peer_manager_get_peer (manager, msg->from);
-    ccnet_debug ("[peer] Received bind status from peer %s(%.8s): %s\n",
-                 peer->name, peer->id, body);
-
-    /* body is end with "\n", so use memcmp */
-    if (memcmp(body, "not-bind", 8) == 0) {
-        if (peer->bind_status == BIND_UNKNOWN
-            && !(peer->want_tobe_relay)) {
-            publish_bind_no_message (manager->session, peer);
-        }
-        peer->bind_status = BIND_NO;
-        ccnet_debug ("[peer] set bind status to %d\n", peer->bind_status);
-    } else {
-        peer->bind_status = BIND_YES;
-        if (peer->bind_email)
-            g_free (peer->bind_email);
-        
-        /* strip trailing '\n' */
-        char *ptr = body;
-        while (*ptr != '\0' && *ptr != '\n') ptr++;
-        *ptr = '\0';
-        
-        peer->bind_email = g_strdup(body);
-        ccnet_debug ("[peer] bind email on %s is %s\n", peer->name, body);
-    }
-
-    g_object_unref (peer);
-}
-
-static void
-send_bind_query (CcnetPeerManager *manager, CcnetPeer *peer)
-{
-    CcnetMessage *msg = NULL;
-    char buf[256];
-
-    snprintf (buf, 256, "v%d\n%s\n", PEERMGR_VERSION, BIND_QUERY);
-    msg = ccnet_message_new (manager->session->base.id,
-                             peer->id, IPEERMGR_APP,
-                             buf, 0);
-    ccnet_send_message (manager->session, msg);
-    ccnet_message_unref (msg);
-}
 
 
 void
@@ -912,10 +812,6 @@ handle_service_ready_message (CcnetPeerManager *manager,
     CcnetPeer *peer = ccnet_peer_manager_get_peer (manager, msg->from);
     peer->is_ready = 1;
     ccnet_debug ("[peer] Received ready from peer %s(%.8s)\n", peer->name, peer->id);
-
-#ifdef CCNET_DAEMON
-    send_bind_query (manager, peer);
-#endif
 
     g_object_unref (peer);
 }
@@ -1058,12 +954,6 @@ ccnet_peer_manager_receive_message (CcnetPeerManager *manager,
         handle_role_notify_message (manager, msg, body);
     else if (strcmp(type, SERVICE_READY) == 0)
         handle_service_ready_message (manager, msg, body);
-    else if (strcmp(type, BIND_STATUS) == 0)
-        handle_bind_status_message (manager, msg, body);
-#ifdef CCNET_SERVER
-    else if (strcmp(type, BIND_QUERY) == 0)
-        handle_bind_query_message (manager, msg, body);
-#endif
     else if (strcmp(type, PEER_REDIRECT) == 0)
         handle_redirect_message (manager, msg, body);
 }

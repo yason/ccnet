@@ -51,6 +51,7 @@ ccnet_session_config_get_int (CcnetSession *session,
         return -1;
     }
 
+    *exists = TRUE;
     ret = atoi (value);
     g_free (value);
     return ret;

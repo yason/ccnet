@@ -53,7 +53,7 @@ struct cmd
 
 static int send_cmd        (int, char **);
 static int set_timeout     (int, char **);
-static int set_relay       (int, char **);
+static int add_relay       (int, char **);
 static int set_addr        (int, char **);
 static int add_role        (int, char **);
 static int add_peer        (int, char **);
@@ -65,7 +65,7 @@ static int disconnect_peer (int, char **);
 static int invoke_echo     (int, char **);
 
 static struct cmd cmdtab[] =  {
-    { "set-relay",      set_relay },
+    { "add-relay",      add_relay },
     { "set-addr",       set_addr  },
     { "add-role",       add_role  },
     { "add-peer",       add_peer  },
@@ -118,8 +118,7 @@ void usage()
 "Available commands are:\n"
 "  add-peer          Add a peer\n"
 "  del-peer          Delete a peer\n"
-"  del-user          Delete a user\n"
-"  set-relay         Set my default relay\n"
+"  add-relay         Add a relay\n"
 "  set-addr          Set peer public address\n"
 "  send-cmd          Send command to ccnet daemon\n"
 "  connect-peer      Connect to a peer\n"
@@ -234,19 +233,19 @@ static int set_addr (int argc, char **argv)
     return 0;
 }
 
-static int set_relay (int argc, char **argv)
+static int add_relay (int argc, char **argv)
 {
     char buf[1024];
     char *c;
     GError *error = NULL;
 
     if (argc < 1) {
-        fputs ("set-relay [--default] [<peer-id> | --addr <addr:port>]\n", stderr);
+        fputs ("add-relay [--id <peer-id>] [--addr <addr:port>]\n", stderr);
         return -1;
     }
 
     c = strjoin_n (" ", argc, argv);    
-    snprintf (buf, 1024, "set-relay %s", c);
+    snprintf (buf, 1024, "add-relay %s", c);
     ccnet_client_send_cmd (client, buf, &error);
     if (error) {
         fprintf (stderr, "Error: %s\n", error->message);
