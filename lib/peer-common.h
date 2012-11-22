@@ -27,6 +27,7 @@ enum {
     P_BIND_STATUS,
     P_BIND_EMAIL,
     P_SESSION_KEY,
+    P_ENCRYPT_CHANNEL,
 };
 
 static void
@@ -117,6 +118,9 @@ get_property (GObject *object, guint property_id,
         break;
     case P_SESSION_KEY:
         g_value_set_string (v, peer->session_key);
+        break;
+    case P_ENCRYPT_CHANNEL:
+        g_value_set_boolean (v, peer->encrypt_channel);
         break;
     default:
         G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
@@ -231,6 +235,9 @@ set_property_common (GObject *object, guint property_id,
         g_free (peer->session_key);
         peer->session_key = g_value_dup_string (v);
         break;
+    case P_ENCRYPT_CHANNEL:
+        peer->encrypt_channel = g_value_get_boolean (v);
+        break;
     default:
         G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
         return;
@@ -328,6 +335,10 @@ define_properties (GObjectClass *gobject_class)
     g_object_class_install_property (gobject_class, P_SESSION_KEY,
         g_param_spec_string ("session-key", NULL, "session key",
                               NULL, G_PARAM_READWRITE));
+
+    g_object_class_install_property (gobject_class, P_ENCRYPT_CHANNEL,
+        g_param_spec_boolean ("encrypt-channel", NULL, "encrypt channel",
+                              0, G_PARAM_READWRITE));
 }
 
 

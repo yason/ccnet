@@ -48,6 +48,7 @@ struct _CcnetPeer
     unsigned int  in_local_network : 1;
     unsigned int  in_connection : 1;
     unsigned int  is_ready : 1;
+    unsigned int  encrypt_channel : 1;
 
     gboolean      login_started;
     char          *login_error;
