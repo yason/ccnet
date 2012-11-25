@@ -99,7 +99,7 @@ static void check_db_table (CcnetDB *db)
             "id INTEGER NOT NULL PRIMARY KEY AUTO_INCREMENT, "
             "email VARCHAR(255), passwd CHAR(41), "
             "is_staff BOOL NOT NULL, is_active BOOL NOT NULL, "
-            "ctime INTEGER, UNIQUE INDEX (email))";
+            "ctime BIGINT, UNIQUE INDEX (email))";
         ccnet_db_query (db, sql);
         sql = "CREATE TABLE IF NOT EXISTS Binding (email VARCHAR(255), peer_id CHAR(41),"
             "UNIQUE INDEX (peer_id), INDEX (email(20)))";
