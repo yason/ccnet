@@ -1455,6 +1455,93 @@ win32_spawn_process (char *cmdline_in, char *working_directory)
     CloseHandle(pi.hProcess);
     return 0;
 }
+
+char *
+wchar_to_utf8 (const wchar_t *wch)
+{
+    if (wch == NULL) {
+        return NULL;
+    }
+
+    char *utf8 = NULL;
+    int bufsize, len;
+
+    bufsize = WideCharToMultiByte
+        (CP_UTF8,               /* multibyte code page */
+         0,                     /* flags */
+         wch,                   /* src */
+         -1,                    /* src len, -1 for all includes \0 */
+         utf8,                  /* dst */
+         0,                     /* dst buf len */
+         NULL,                  /* default char */
+         NULL);                 /* BOOL flag indicates default char is used */
+
+    if (bufsize <= 0) {
+        g_warning ("failed to convert a string from wchar to utf8 0");
+        return NULL;
+    }
+
+    utf8 = g_malloc(bufsize);
+    len = WideCharToMultiByte
+        (CP_UTF8,               /* multibyte code page */
+         0,                     /* flags */
+         wch,                   /* src */
+         -1,                    /* src len, -1 for all includes \0 */
+         utf8,                  /* dst */
+         bufsize,               /* dst buf len */
+         NULL,                  /* default char */
+         NULL);                 /* BOOL flag indicates default char is used */
+
+    if (len != bufsize) {
+        g_free (utf8);
+        g_warning ("failed to convert a string from wchar to utf8");
+        return NULL;
+    }
+
+    return utf8;
+}
+
+wchar_t *
+wchar_from_utf8 (const char *utf8)
+{
+    if (utf8 == NULL) {
+        return NULL;
+    }
+
+    wchar_t *wch = NULL;
+    int bufsize, len;
+
+    bufsize = MultiByteToWideChar
+        (CP_UTF8,               /* multibyte code page */
+         0,                     /* flags */
+         utf8,                  /* src */
+         -1,                    /* src len, -1 for all includes \0 */
+         wch,                   /* dst */
+         0);                    /* dst buf len */
+
+    if (bufsize <= 0) {
+        g_warning ("failed to convert a string from wchar to utf8 0");
+        return NULL;
+    }
+
+    wch = g_malloc (bufsize * sizeof(wchar_t));
+    len = MultiByteToWideChar
+        (CP_UTF8,               /* multibyte code page */
+         0,                     /* flags */
+         utf8,                  /* src */
+         -1,                    /* src len, -1 for all includes \0 */
+         wch,                   /* dst */
+         bufsize);              /* dst buf len */
+
+    if (len != bufsize) {
+        g_free (wch);
+        g_warning ("failed to convert a string from utf8 to wchar");
+        return NULL;
+    }
+
+    return wch;
+}
+
 #endif  /* ifdef WIN32 */
 
 #ifdef __linux__
