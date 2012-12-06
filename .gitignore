@@ -82,3 +82,6 @@ lib/searpc-signature.h
 net/cluster/ccnet-cserver
 tests/common-conf.sh
 libccnet.pc
+demo/ccnet-demo-client
+demo/ccnet-demo-server
+net/daemon/ccnet-test
