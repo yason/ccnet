@@ -21,15 +21,6 @@
 #include "processors/recvsessionkey-v2-proc.h"
 
 
-#ifdef CCNET_SERVER
-#include "processors/recvlogin-proc.h"
-#include "processors/recvlogout-proc.h"
-#else
-#include "processors/sendlogin-proc.h"
-#include "processors/sendlogout-proc.h"
-#endif
-
-
 #define DEBUG_FLAG  CCNET_DEBUG_PROCESSOR
 #include "log.h"
 #include "utils.h"

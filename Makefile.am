@@ -18,4 +18,6 @@ SUBDIRS = include lib net $(MAKE_CLI) $(MAKE_TOOLS) \
 EXTRA_DIST = install-sh
 EXTRA_DIST += libccnet.pc.in
 
+DISTCHECK_CONFIGURE_FLAGS = --enable-server
+
 ACLOCAL_AMFLAGS = -I m4
