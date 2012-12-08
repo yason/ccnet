@@ -389,7 +389,7 @@ static void recv_keepalive_rsp(CcnetProcessor *processor,
 static void on_send_skey_done (CcnetProcessor *processor,
                                gboolean success, void *data)
 {
-    if (!success) {
+    if (!success && !processor->peer->in_shutdown) {
         /* try the old version */
         CcnetProcessor *p;
         CcnetProcFactory *factory = processor->session->proc_factory;
