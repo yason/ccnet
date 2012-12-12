@@ -1,14 +1,6 @@
 
-import cclient
-from rpc import NetworkError
+from ccnet.client import Client, NetworkError
 import Queue
-
-class Client(cclient.Client):
-    """ccnet.Client is a _builtin_ type. We need wrap it with a class if we
-    want to write code like client.req_ids = {}.
-
-    """
-    pass
 
 class ClientPool(object):
     """ccnet client pool."""
@@ -23,11 +15,10 @@ class ClientPool(object):
         self._pool = Queue.Queue(pool_size)
 
     def _create_client(self):
-        client = Client()
-        client.load_confdir(self.conf_dir)
+        client = Client(self.conf_dir)
         client.req_ids = {}
-        if (client.connect_daemon(cclient.CLIENT_SYNC) < 0):
-            raise NetworkError("Can't connect to daemon")
+        client.connect_daemon()
+
         return client
 
     def get_client(self):

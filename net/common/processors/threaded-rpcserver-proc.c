@@ -84,7 +84,7 @@ call_function_done (void *vprocessor)
     if (priv->buf) {
         if (priv->len < MAX_TRANSFER_LENGTH) {
             ccnet_processor_send_response (processor, SC_SERVER_RET, SS_SERVER_RET,
-                                           priv->buf, priv->len + 1);
+                                           priv->buf, priv->len);
             g_free (priv->buf);
             /* ccnet_processor_done (processor, TRUE); */
             return;

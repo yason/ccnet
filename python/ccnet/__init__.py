@@ -1,5 +1,4 @@
-
-from cclient import CLIENT_SYNC, CLIENT_ASYNC
-from pool import Client, ClientPool
-from rpc import RpcClientBase, CcnetRpcClient, CcnetThreadedRpcClient, NetworkError
+from client import Client, NetworkError
+from pool import ClientPool
+from rpc import RpcClientBase, CcnetRpcClient, CcnetThreadedRpcClient
 

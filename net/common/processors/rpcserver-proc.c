@@ -86,7 +86,7 @@ handle_update (CcnetProcessor *processor,
         g_assert (ret);
         if (ret_len < MAX_TRANSFER_LENGTH) {
             ccnet_processor_send_response (
-                processor, SC_SERVER_RET, SS_SERVER_RET, ret, ret_len + 1);
+                processor, SC_SERVER_RET, SS_SERVER_RET, ret, ret_len);
             g_free (ret);
             /* ccnet_processor_done (processor, TRUE); */
             return;
@@ -94,7 +94,7 @@ handle_update (CcnetProcessor *processor,
 
         /* we need to split data into multiple segments */
         priv->buf = ret;
-        priv->len = ret_len + 1; /* including the trailing '\0' */
+        priv->len = ret_len;
         priv->off = 0;
         
         /* fprintf (stderr, "Send %d\n", MAX_TRANSFER_LENGTH); */

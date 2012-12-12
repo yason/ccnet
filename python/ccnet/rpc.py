@@ -1,25 +1,10 @@
-import threading
-
 from pysearpc import SearpcClient, searpc_func, SearpcError
 
-_SC_CLIENT_CALL = "301"
-_SS_CLIENT_CALL = "CLIENT CALL"
-_SC_CLIENT_MORE = "302"
-_SS_CLIENT_MORE = "MORE"
-_SC_SERVER_RET = "311"
-_SS_SERVER_RET = "SERVER RET"
-_SC_SERVER_MORE = "312"
-_SS_SERVER_MORE = "HAS MORE"
-_SC_SERVER_ERR = "411"
-_SS_SERVER_ERR = "FAIL TO CALL"
-_SC_PROC_DEAD = "102"
+from ccnet.status_code import SC_CLIENT_CALL, SS_CLIENT_CALL, \
+    SC_CLIENT_MORE, SS_CLIENT_MORE, SC_SERVER_RET, \
+    SC_SERVER_MORE, SC_PROC_DEAD
 
-class NetworkError(Exception):
-    def __init__(self, msg):
-        self.msg = msg
-
-    def __str__(self):
-        return self.msg
+from ccnet.client import NetworkError
 
 class DeadProcError(Exception):
     def __str__(self):
@@ -30,6 +15,7 @@ class RpcClientBase(SearpcClient):
     
     def __init__(self, ccnet_client_pool, service_name, retry_num=1,
                  is_remote=False, remote_peer_id='', req_pool=False):
+        SearpcClient.__init__(self)
         self.pool = ccnet_client_pool
         self.service_name = service_name
         self.retry_num = retry_num
@@ -45,39 +31,36 @@ class RpcClientBase(SearpcClient):
         if self.is_remote:
             req_str = "remote " + self.remote_peer_id + " " + self.service_name
         client.send_request(req_id, req_str)
-        if client.read_response() < 0:
-            raise NetworkError("Read response error")
-
-        rsp = client.response
-        if rsp[0] != "200":
-            raise SearpcError("Error received: %s %s (In _start_service)" % (rsp[0], rsp[1]))
+        rsp = client.read_response()
+        if rsp.code != "200":
+            raise SearpcError("Error received: %s %s (In _start_service)" % (rsp.code, rsp.code_msg))
         return req_id
 
     def _real_call(self, client, req_id, fcall_str):
-        client.send_update(req_id, "301", "CLIENT CALL", fcall_str, len(fcall_str))
+        client.send_update(req_id, SC_CLIENT_CALL, SS_CLIENT_CALL, fcall_str)
                 
-        if client.read_response() < 0:
-            raise NetworkError("Read response error")
+        rsp = client.read_response()
+        if rsp.code == SC_SERVER_RET:
+            return rsp.content
+        elif rsp.code == SC_SERVER_MORE:
+            buf = rsp.content
+            while True:
+                client.send_update(req_id, SC_CLIENT_MORE,
+                                   SS_CLIENT_MORE, '')
+                rsp = client.read_response()
+                if rsp.code == SC_SERVER_MORE:
+                    buf += rsp.content
+                elif rsp.code == SC_SERVER_RET:
+                    buf += rsp.content
+                    break
+                else:
+                    raise SearpcError("Error received: %s %s (In Read More)" % (rsp.code, rsp.code_msg))
 
-        rsp = client.response
-        if rsp[0] == _SC_SERVER_RET:
-            return rsp[2]
-        elif rsp[0] == _SC_SERVER_MORE:
-            buf = rsp[2]
-            while rsp[0] == _SC_SERVER_MORE:
-                client.send_update(req_id, _SC_CLIENT_MORE,
-                                   _SS_CLIENT_MORE, "", 0)
-                if client.read_response() < 0:
-                    raise NetworkError("Read response error")
-                rsp = client.response
-                if rsp[0] == _SC_SERVER_ERR:
-                    raise SearpcError("Error received: %s %s (In Read More)" % (rsp[0], rsp[1]))
-                buf += rsp[2]
             return buf
-        elif rsp[0] == _SC_PROC_DEAD:
+        elif rsp.code == SC_PROC_DEAD:
             raise DeadProcError()
         else:
-            raise SearpcError("Error received: %s %s" % (rsp[0], rsp[1]))
+            raise SearpcError("Error received: %s %s" % (rsp.code, rsp.code_msg))
 
     def call_remote_func_sync(self, fcall_str):
         """Call remote function `fcall_str` and wait response."""
@@ -108,17 +91,16 @@ class RpcClientBase(SearpcClient):
                     # no req pool
                     req_id = self._start_service(client)
                     ret = self._real_call(client, req_id, fcall_str)
-                    client.send_update(req_id, "103", "service is done", "", 0)
+                    client.send_update(req_id, "103", "service is done", "")
                     self.pool.return_client(client)
                     return ret
             except (NetworkError, SearpcError):
-                # the client is not return to the pool and is freed automatically
+                # the client is not returned to the pool and is freed automatically
                 if retried < self.retry_num:
                     retried = retried + 1
                     continue
                 else:
                     raise
-
 
 class CcnetRpcClient(RpcClientBase):
 
@@ -168,19 +150,19 @@ class CcnetRpcClient(RpcClientBase):
         pass
 
     @searpc_func("objlist", ["int", "int"])
-    def get_procs_alive(offset, limit):
+    def get_procs_alive(self, offset, limit):
         pass
 
     @searpc_func("int", [])
-    def count_procs_alive():
+    def count_procs_alive(self):
         pass
 
     @searpc_func("objlist", ["int", "int"])
-    def get_procs_dead(offset, limit):
+    def get_procs_dead(self, offset, limit):
         pass
 
     @searpc_func("int", [])
-    def count_procs_dead():
+    def count_procs_dead(self):
         pass
     
     @searpc_func("string", ["string"])
