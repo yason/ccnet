@@ -61,7 +61,7 @@ invoke_service (CcnetClient *session,
 
         if (memcmp (rsp->code, SC_SERVER_RET, 3) == 0) {
             g_string_append_len (buf, rsp->content, rsp->clen);
-            *ret_len = buf->len + 1;
+            *ret_len = buf->len;
             return g_string_free (buf, FALSE);
         } else if (memcmp (rsp->code, SC_SERVER_MORE, 3) == 0) { 
             g_string_append_len (buf, rsp->content, rsp->clen);
