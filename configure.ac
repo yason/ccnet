@@ -25,9 +25,6 @@ AC_PROG_MAKE_SET
 # AC_PROG_RANLIB
 AC_PROG_LIBTOOL
 
-# python
-AM_PATH_PYTHON([2.4]) 
-
 # Checks for headers.
 AC_HEADER_DIRENT
 AC_HEADER_STDC
@@ -237,7 +234,6 @@ if test "$bwin32" = true; then
   LIB_RT=
   LIB_INTL=-lintl
   LIBS=
-  LIB_PYTHON=-lpython26
   LIB_RESOLV=
   LIB_UUID=-lRpcrt4
   LIB_IPHLPAPI=-liphlpapi
@@ -250,7 +246,6 @@ elif test "$bmac" = true ; then
   LIB_GDI32=
   LIB_RT=
   LIB_INTL=
-  LIB_PYTHON=-lpython2.7
   LIB_RESOLV=-lresolv
   LIB_UUID=-luuid
   LIB_IPHLPAPI=
@@ -263,7 +258,6 @@ else
   LIB_GDI32=
   LIB_RT=
   LIB_INTL=
-  LIB_PYTHON=
   LIB_RESOLV=-lresolv
   LIB_UUID=-luuid
   LIB_IPHLPAPI=
@@ -276,7 +270,6 @@ fi
 AC_SUBST(LIB_WS32)
 AC_SUBST(LIB_GDI32)
 AC_SUBST(LIB_RT)
-AC_SUBST(LIB_PYTHON)
 AC_SUBST(LIB_INTL)
 AC_SUBST(LIB_RESOLV)
 AC_SUBST(LIB_UUID)
@@ -310,8 +303,7 @@ AC_SUBST(SEARPC_CFLAGS)
 AC_SUBST(SEARPC_LIBS)
 
 if test x${compile_python} = xyes; then
-   AM_PATH_PYTHON([2.4])
-   AM_CHECK_PYTHON_HEADERS(,[AC_MSG_ERROR(could not find Python headers)])
+   AM_PATH_PYTHON([2.6])
 
    if test "$bwin32" = true; then
        # set pyexecdir to somewhere like /c/Python26/Lib/site-packages

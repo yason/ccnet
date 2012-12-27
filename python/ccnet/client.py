@@ -111,13 +111,16 @@ class Client(object):
 
     '''
     def __init__(self, config_dir):
+        if not isinstance(config_dir, unicode):
+            config_dir = config_dir.decode('UTF-8')
+
         config_dir = os.path.expanduser(config_dir)
-        cf = os.path.join(config_dir, 'ccnet.conf')
-        if not os.path.exists(cf):
-            raise RuntimeError('%s does not exits' % cf)
+        config_file = os.path.join(config_dir, u'ccnet.conf')
+        if not os.path.exists(config_file):
+            raise RuntimeError(u'%s does not exits' % config_file)
 
         self.config_dir = config_dir
-        self.config_file = cf
+        self.config_file = config_file
         self.config = None
 
         self.port = None
