@@ -76,7 +76,6 @@ struct _CcnetPeer
 
     char         *intend_role;  /* used in peer resolving */
 
-    unsigned int  in_nat : 1;
     unsigned int  is_self : 1;
     unsigned int  is_local : 1;
     unsigned int  can_connect : 1;
