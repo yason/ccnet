@@ -21,3 +21,6 @@ EXTRA_DIST += libccnet.pc.in
 DISTCHECK_CONFIGURE_FLAGS = --enable-server
 
 ACLOCAL_AMFLAGS = -I m4
+
+install-data-local:
+	sed -i "s|(DESTDIR)|${DESTDIR}|g" $(pcfiles)
