@@ -16,7 +16,7 @@ struct _CcnetGroupManagerPriv {
 };
 
 static int open_db (CcnetGroupManager *manager);
-static void check_db_table (CcnetDB *db);
+static int check_db_table (CcnetDB *db);
 
 CcnetGroupManager* ccnet_group_manager_new (CcnetSession *session)
 {
@@ -80,13 +80,12 @@ open_db (CcnetGroupManager *manager)
     }
     
     manager->priv->db = db;
-    check_db_table (db);
-    return 0;
+    return check_db_table (db);
 }
 
 /* -------- Group Database Management ---------------- */
 
-static void check_db_table (CcnetDB *db)
+static int check_db_table (CcnetDB *db)
 {
     char *sql;
 
@@ -94,30 +93,41 @@ static void check_db_table (CcnetDB *db)
     if (db_type == CCNET_DB_TYPE_MYSQL) {
         sql = "CREATE TABLE IF NOT EXISTS `Group` (`group_id` INTEGER"
             " PRIMARY KEY AUTO_INCREMENT, `group_name` VARCHAR(255),"
-            " `creator_name` VARCHAR(255), `timestamp` BIGINT)";
-        ccnet_db_query (db, sql);
+            " `creator_name` VARCHAR(255), `timestamp` BIGINT)"
+            "ENGINE=INNODB";
+        if (ccnet_db_query (db, sql) < 0)
+            return -1;
 
         sql = "CREATE TABLE IF NOT EXISTS `GroupUser` (`group_id` INTEGER,"
             " `user_name` VARCHAR(255), `is_staff` tinyint, UNIQUE INDEX"
-            " (`group_id`, `user_name`), INDEX (`user_name`))";
-        ccnet_db_query (db, sql);
+            " (`group_id`, `user_name`), INDEX (`user_name`))"
+            "ENGINE=INNODB";
+        if (ccnet_db_query (db, sql) < 0)
+            return -1;
     } else if (db_type == CCNET_DB_TYPE_SQLITE) {
         sql = "CREATE TABLE IF NOT EXISTS `Group` (`group_id` INTEGER"
             " PRIMARY KEY AUTOINCREMENT, `group_name` VARCHAR(255),"
             " `creator_name` VARCHAR(255), `timestamp` BIGINT)";
-        ccnet_db_query (db, sql);
+        if (ccnet_db_query (db, sql) < 0)
+            return -1;
 
         sql = "CREATE TABLE IF NOT EXISTS `GroupUser` (`group_id` INTEGER, "
             "`user_name` VARCHAR(255), `is_staff` tinyint)";
-        ccnet_db_query (db, sql);
+        if (ccnet_db_query (db, sql) < 0)
+            return -1;
+
         sql = "CREATE UNIQUE INDEX IF NOT EXISTS groupid_username_indx on "
             "`GroupUser` (`group_id`, `user_name`)";
-        ccnet_db_query (db, sql);
+        if (ccnet_db_query (db, sql) < 0)
+            return -1;
+
         sql = "CREATE INDEX IF NOT EXISTS username_indx on "
             "`GroupUser` (`user_name`)";
-        ccnet_db_query (db, sql);
+        if (ccnet_db_query (db, sql) < 0)
+            return -1;
     }
 
+    return 0;
 }
 
 static int

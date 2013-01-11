@@ -90,9 +90,15 @@ server_session_prepare (CcnetSession *session)
         /* encrypt channel on default */
         session->encrypt_channel = 1;
 
-    ccnet_user_manager_prepare (server_session->user_mgr);
-    ccnet_group_manager_prepare (server_session->group_mgr);
-    ccnet_org_manager_prepare (server_session->org_mgr);
+    if (ccnet_user_manager_prepare (server_session->user_mgr) < 0)
+        return -1;
+
+    if (ccnet_group_manager_prepare (server_session->group_mgr) < 0)
+        return -1;
+
+    if (ccnet_org_manager_prepare (server_session->org_mgr) < 0)
+        return -1;
+
     return 0;
 }
 
@@ -144,9 +150,6 @@ static int init_mysql_database (CcnetSession *session)
     }
     unix_socket = ccnet_key_file_get_string (session->keyf,
                                              "Database", "UNIX_SOCKET");
-    if (!unix_socket) {
-        g_warning ("Unix socket path not set in config.\n");
-    }
 
     session->db = ccnet_db_new_mysql (host, user, passwd, db, unix_socket);
     if (!session->db) {

@@ -111,15 +111,19 @@ get_db_connection (CcnetDB *db)
      * and then return NULL.
      */
     while (!conn) {
-        if (retries++ == MAX_GET_CONNECTION_RETRIES)
-            break;
+        if (retries++ == MAX_GET_CONNECTION_RETRIES) {
+            g_warning ("Too many concurrent connections. "
+                       "Failed to create new connection.\n");
+            goto out;
+        }
         sleep (1);
         conn = ConnectionPool_getConnection (db->pool);
     }
 
     if (!conn)
-        g_warning ("Too many concurrent connections. Failed to create new connection.\n");
+        g_warning ("Failed to create new connection.\n");
 
+out:
     return conn;
 }
 
@@ -153,8 +157,9 @@ ccnet_db_check_for_existence (CcnetDB *db, const char *sql)
     gboolean ret = TRUE;
 
     conn = get_db_connection (db);
-    if (!conn)
+    if (!conn) {
         return FALSE;
+    }
 
     TRY
         result = Connection_executeQuery (conn, "%s", sql);
@@ -164,8 +169,14 @@ ccnet_db_check_for_existence (CcnetDB *db, const char *sql)
         return FALSE;
     END_TRY;
 
-    if (!ResultSet_next (result))
-        ret = FALSE;
+    TRY
+        if (!ResultSet_next (result))
+            ret = FALSE;
+    CATCH (SQLException)
+        g_warning ("Error exec query %s: %s.\n", sql, Exception_frame.message);
+        Connection_close (conn);
+        return FALSE;
+    END_TRY;
 
     Connection_close (conn);
 
@@ -194,11 +205,17 @@ ccnet_db_foreach_selected_row (CcnetDB *db, const char *sql,
     END_TRY;
 
     ccnet_row.res = result;
-    while (ResultSet_next (result)) {
-        n_rows++;
-        if (!callback (&ccnet_row, data))
-            break;
-    }
+    TRY
+        while (ResultSet_next (result)) {
+            n_rows++;
+            if (!callback (&ccnet_row, data))
+                break;
+        }
+    CATCH (SQLException)
+        g_warning ("Error exec query %s: %s.\n", sql, Exception_frame.message);
+        Connection_close (conn);
+        return -1;
+    END_TRY;
 
     Connection_close (conn);
     return n_rows;
@@ -228,7 +245,8 @@ ccnet_db_row_get_column_int64 (CcnetDBRow *row, guint32 idx)
     return ResultSet_getLLong (row->res, idx+1);
 }
 
-int ccnet_db_get_int (CcnetDB *db, const char *sql)
+int
+ccnet_db_get_int (CcnetDB *db, const char *sql)
 {
     int ret = -1;
     Connection_T conn;
@@ -248,15 +266,22 @@ int ccnet_db_get_int (CcnetDB *db, const char *sql)
     END_TRY;
 
     ccnet_row.res = result;
-    
-    if (ResultSet_next (result))
-        ret = ccnet_db_row_get_column_int (&ccnet_row, 0);
+
+    TRY
+        if (ResultSet_next (result))
+            ret = ccnet_db_row_get_column_int (&ccnet_row, 0);
+    CATCH (SQLException)
+        g_warning ("Error exec query %s: %s.\n", sql, Exception_frame.message);
+        Connection_close (conn);
+        return -1;
+    END_TRY;
 
     Connection_close (conn);
     return ret;
 }
 
-gint64 ccnet_db_get_int64 (CcnetDB *db, const char *sql)
+gint64
+ccnet_db_get_int64 (CcnetDB *db, const char *sql)
 {
     gint64 ret = -1;
     Connection_T conn;
@@ -276,15 +301,22 @@ gint64 ccnet_db_get_int64 (CcnetDB *db, const char *sql)
     END_TRY;
 
     ccnet_row.res = result;
-    
-    if (ResultSet_next (result))
-        ret = ccnet_db_row_get_column_int64 (&ccnet_row, 0);
+
+    TRY
+        if (ResultSet_next (result))
+            ret = ccnet_db_row_get_column_int64 (&ccnet_row, 0);
+    CATCH (SQLException)
+        g_warning ("Error exec query %s: %s.\n", sql, Exception_frame.message);
+        Connection_close (conn);
+        return -1;
+    END_TRY;
 
     Connection_close (conn);
     return ret;
 }
 
-char *ccnet_db_get_string (CcnetDB *db, const char *sql)
+char *
+ccnet_db_get_string (CcnetDB *db, const char *sql)
 {
     char *ret = NULL;
     const char *s;
@@ -306,10 +338,16 @@ char *ccnet_db_get_string (CcnetDB *db, const char *sql)
 
     ccnet_row.res = result;
     
-    if (ResultSet_next (result)) {
-        s = ccnet_db_row_get_column_text (&ccnet_row, 0);
-        ret = g_strdup(s);
-    }
+    TRY
+        if (ResultSet_next (result)) {
+            s = ccnet_db_row_get_column_text (&ccnet_row, 0);
+            ret = g_strdup(s);
+        }
+    CATCH (SQLException)
+        g_warning ("Error exec query %s: %s.\n", sql, Exception_frame.message);
+        Connection_close (conn);
+        return NULL;
+    END_TRY;
 
     Connection_close (conn);
     return ret;

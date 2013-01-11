@@ -89,7 +89,7 @@ void ccnet_user_manager_on_exit (CcnetUserManager *manager)
 
 /* -------- DB Operations -------- */
 
-static void check_db_table (CcnetDB *db)
+static int check_db_table (CcnetDB *db)
 {
     char *sql;
 
@@ -99,28 +99,42 @@ static void check_db_table (CcnetDB *db)
             "id INTEGER NOT NULL PRIMARY KEY AUTO_INCREMENT, "
             "email VARCHAR(255), passwd CHAR(41), "
             "is_staff BOOL NOT NULL, is_active BOOL NOT NULL, "
-            "ctime BIGINT, UNIQUE INDEX (email))";
-        ccnet_db_query (db, sql);
+            "ctime BIGINT, UNIQUE INDEX (email))"
+            "ENGINE=INNODB";
+        if (ccnet_db_query (db, sql) < 0)
+            return -1;
         sql = "CREATE TABLE IF NOT EXISTS Binding (email VARCHAR(255), peer_id CHAR(41),"
-            "UNIQUE INDEX (peer_id), INDEX (email(20)))";
-        ccnet_db_query (db, sql);
+            "UNIQUE INDEX (peer_id), INDEX (email(20)))"
+            "ENGINE=INNODB";
+        if (ccnet_db_query (db, sql) < 0)
+            return -1;
 
     } else if (db_type == CCNET_DB_TYPE_SQLITE) {
         sql = "CREATE TABLE IF NOT EXISTS EmailUser ("
             "id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,"
             "email TEXT, passwd TEXT, is_staff bool NOT NULL, "
             "is_active bool NOT NULL, ctime INTEGER)";
-        ccnet_db_query (db, sql);
+        if (ccnet_db_query (db, sql) < 0)
+            return -1;
+
         sql = "CREATE UNIQUE INDEX IF NOT EXISTS email_index on EmailUser (email)";
-        ccnet_db_query (db, sql);
+        if (ccnet_db_query (db, sql) < 0)
+            return -1;
 
         sql = "CREATE TABLE IF NOT EXISTS Binding (email TEXT, peer_id TEXT)";
-        ccnet_db_query (db, sql);
+        if (ccnet_db_query (db, sql) < 0)
+            return -1;
+
         sql = "CREATE INDEX IF NOT EXISTS email_index on Binding (email)";
-        ccnet_db_query (db, sql);
+        if (ccnet_db_query (db, sql) < 0)
+            return -1;
+
         sql = "CREATE UNIQUE INDEX IF NOT EXISTS peer_index on Binding (peer_id)";
-        ccnet_db_query (db, sql);
+        if (ccnet_db_query (db, sql) < 0)
+            return -1;
     }
+
+    return 0;
 }
 
 
@@ -168,8 +182,7 @@ open_db (CcnetUserManager *manager)
     }
 
     manager->priv->db = db;
-    check_db_table (db);
-    return 0;
+    return check_db_table (db);
 }
 
 
