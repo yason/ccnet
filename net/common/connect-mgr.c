@@ -335,8 +335,8 @@ ccnet_conn_manager_connect_peer (CcnetConnManager *manager, CcnetPeer *peer)
     io = ccnet_packet_io_new_outgoing (manager->session, addr, port);
     
     if (io == NULL) {
-        ccnet_warning ("Failed to create socket for peer %s (%.10s)\n", 
-                       peer->name, peer->id);
+        /* ccnet_warning ("Failed to create socket for peer %s (%.10s)\n", 
+           peer->name, peer->id); */
         goto err_connect;
     } else {
         peer->in_connection = 1;

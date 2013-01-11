@@ -174,8 +174,8 @@ ccnet_packet_io_new_outgoing (CcnetSession *session,
     }
 
     socket = ccnet_net_open_tcp ((struct sockaddr *)&addr, TRUE);
-    if (socket < 0)
-        ccnet_warning ("opening tcp connection fails: %s\n", strerror(errno));
+    /*if (socket < 0)
+      ccnet_warning ("opening tcp connection fails: %s\n", strerror(errno)); */
       
     return socket < 0
         ? NULL
