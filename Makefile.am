@@ -23,4 +23,8 @@ DISTCHECK_CONFIGURE_FLAGS = --enable-server
 ACLOCAL_AMFLAGS = -I m4
 
 install-data-local:
+if MACOS
+	sed -i '' -e "s|(DESTDIR)|${DESTDIR}|g" $(pcfiles)
+else
 	sed -i "s|(DESTDIR)|${DESTDIR}|g" $(pcfiles)
+endif
