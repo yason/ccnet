@@ -7,7 +7,8 @@ AM_CFLAGS = -DPKGDATADIR=\"$(pkgdatadir)\" \
 	-I$(top_srcdir)/include \
 	-I$(top_srcdir)/lib  \
 	-I$(top_builddir)/include \
-	@GLIB2_CFLAGS@
+	@GLIB2_CFLAGS@ \
+	@SEARPC_CFLAGS@
 
 
 
@@ -17,7 +18,7 @@ bin_PROGRAMS = ccnet-servtool ccnet-tool
 ccnet_servtool_SOURCES = ccnet-servtool.c
 
 ccnet_servtool_LDADD = $(top_builddir)/lib/libccnet.la \
-	 @GLIB2_LIBS@  @GOBJECT_LIBS@ 
+	 @GLIB2_LIBS@  @GOBJECT_LIBS@ @SEARPC_LIBS@
 
 ccnet_servtool_LDFLAGS = @STATIC_COMPILE@ @CONSOLE@ @SERVER_PKG_RPATH@
 
