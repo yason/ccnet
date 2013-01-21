@@ -73,7 +73,11 @@ ccnet_create_async_rpc_client (CcnetClient *cclient, const char *peer_id,
 void
 ccnet_rpc_client_free (SearpcClient *client)
 {
-    CcnetrpcTransportParam *priv = client->arg;
+    CcnetrpcTransportParam *priv;
+
+    if (!client) return;
+
+    priv = client->arg;
 
     g_free (priv->peer_id);
     g_free (priv->service);
@@ -187,6 +191,14 @@ ccnet_get_groups_by_user (SearpcClient *client, const char *user)
     return searpc_client_call__objlist (
         client, "get_groups", CCNET_TYPE_GROUP, NULL,
         1, "string", user);
+}
+
+GList *
+ccnet_get_group_members (SearpcClient *client, int group_id)
+{
+    return searpc_client_call__objlist (
+        client, "get_group_members", CCNET_TYPE_GROUP_USER, NULL,
+        1, "int", group_id);
 }
 
 int
