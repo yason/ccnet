@@ -1,13 +1,8 @@
 /* -*- Mode: C; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
 
 #include "include.h"
-
-#include "rsa.h"
 #include "peer.h"
-#include "utils.h"
-
 #include "ccnet-client.h"
-
 #include "peer-common.h"
 
 static void ccnet_peer_free (GObject *object);

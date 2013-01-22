@@ -2,8 +2,6 @@
 #include "option.h"
 #include "include.h"
 
-#include "utils.h"
-
 #include "ccnet-session-base.h"
 
 G_DEFINE_TYPE (CcnetSessionBase, ccnet_session_base, G_TYPE_OBJECT);

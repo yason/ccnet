@@ -1180,7 +1180,7 @@ ccnet_encrypt_with_key (char **data_out,
     blks = (in_len / BLK_SIZE) + 1;
     *data_out = (char *) g_malloc(blks * BLK_SIZE);
     if (*data_out == NULL) {
-        g_warning ("failed to allocate the ouput buffer.\n");
+        g_warning ("failed to allocate the output buffer.\n");
         goto enc_error;
     }
 
@@ -1256,7 +1256,7 @@ ccnet_decrypt_with_key (char **data_out,
     /* Allocating output buffer. */
     *data_out = (char *)g_malloc (in_len);
     if (*data_out == NULL) {
-        g_warning ("failed to allocate the ouput buffer.\n");
+        g_warning ("failed to allocate the output buffer.\n");
         goto dec_error;
     }
 

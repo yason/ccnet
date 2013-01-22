@@ -1,19 +1,12 @@
 /* -*- Mode: C; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
 
-#include <config.h>
-
-#include <unistd.h>
-#include <stdlib.h>
-#include <string.h>
-#include <stdio.h>
+#include "include.h"
 
 #include "ccnet-client.h"
 
-#include "utils.h"
 #include "peer.h"
 #include "processor.h"
 #include "invoke-service-proc.h"
-
 
 static int invoke_service_start (CcnetProcessor *processor, 
                                   int argc, char **argv);
@@ -52,7 +45,7 @@ static int invoke_service_start (CcnetProcessor *processor,
         ccnet_processor_done (processor, FALSE);
     }
     
-    cmd = strjoin_n (" ", argc, argv);
+    cmd = ccnet_util_strjoin_n (" ", argc, argv);
 
     ccnet_client_send_request (processor->session,
                                REQUEST_ID (processor->id), cmd);

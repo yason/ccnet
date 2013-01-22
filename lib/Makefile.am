@@ -4,7 +4,6 @@ AM_CPPFLAGS = @GLIB2_CFLAGS@ -I$(top_srcdir)/include \
 	-I$(top_srcdir)/lib \
 	-I$(top_builddir)/include \
 	-DG_LOG_DOMAIN=\"Ccnet\" \
-	-DCCNET_LIB \
 	@SEARPC_CFLAGS@ \
 	@MSVC_CFLAGS@ \
 	-Wall
@@ -14,36 +13,35 @@ BUILT_SOURCES = gensource
 lib_LTLIBRARIES = libccnet.la
 
 noinst_HEADERS = buffer.h \
-	string-array.h \
 	packet-io.h  \
 	include.h \
 	marshal.h \
-	net.h \
 	peer-common.h \
 	string-util.h \
-	config-db.h \
-	utils.h \
+	libccnet_utils.h \
 	ccnet-object.h \
+	rpc-common.h \
+	net.h \
+	utils.h \
 	bloom-filter.h \
-	db.h rsa.h \
-	rpc-common.h
+	db.h \
+	rsa.h
 
 ccnetincludedir = $(includedir)/ccnet
 ccnetinclude_DATA = ccnet-object.h
 
-libccnet_la_SOURCES = ccnet-client.c packet-io.c utils.c db.c \
+libccnet_la_CPPFLAGS = $(AM_CPPFLAGS) -DCCNET_LIB
+
+libccnet_la_SOURCES = ccnet-client.c packet-io.c libccnet_utils.c \
 	message.c proc-factory.c \
 	processor.c buffer.c \
 	peer.c sendcmd-proc.c \
 	mqclient-proc.c invoke-service-proc.c \
-	string-array.c \
-	marshal.c  rsa.c \
-	bloom-filter.c \
-	mainloop.c net.c cevent.c timer.c ccnet-session-base.c job-mgr.c \
+	marshal.c \
+	mainloop.c cevent.c timer.c ccnet-session-base.c job-mgr.c \
 	rpcserver-proc.c ccnetrpc-transport.c threaded-rpcserver-proc.c \
 	ccnetobj.c \
 	async-rpc-proc.c ccnet-rpc-wrapper.c \
-	config-db.c \
 	client-pool.c
 
 EXTRA_DIST = ccnetobj.vala rpc_table.py

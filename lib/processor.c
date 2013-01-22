@@ -2,8 +2,6 @@
 
 #include "include.h"
 
-#include <glib.h>
-#include <stdlib.h>
 #include <pthread.h>
 #include <event.h>
 
@@ -12,7 +10,6 @@
 #include "proc-factory.h"
 #include "timer.h"
 #include "peer.h"
-#include "utils.h"
 #include "job-mgr.h"
 
 G_DEFINE_TYPE (CcnetProcessor, ccnet_processor, G_TYPE_OBJECT);

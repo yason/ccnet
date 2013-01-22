@@ -1,18 +1,8 @@
 /* -*- Mode: C; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
 
-#include <config.h>
+#include "include.h"
 
-#include <stdio.h>
-#include <time.h>
-#include <string.h>
-#include <stdlib.h>
-
-#include <glib.h>
-
-#include "utils.h"
 #include "message.h"
-#include "db.h"
-
 
 enum {
     P_ID = 1,
@@ -162,7 +152,7 @@ ccnet_message_new_full (const char *from,
     message->body = g_strdup(body);
     message->ctime = (ctime ? ctime : time(NULL));
     message->rtime = rcv_time;
-    message->id = (msg_id ? g_strdup (msg_id) : gen_uuid());
+    message->id = (msg_id ? g_strdup (msg_id) : ccnet_util_gen_uuid());
 
     return message;
 }

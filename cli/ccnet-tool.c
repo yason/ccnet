@@ -14,7 +14,7 @@
 #include <glib-object.h>
 
 #include <ccnet.h>
-#include "utils.h"
+#include "libccnet_utils.h"
 
 #define DEFAULT_LOG_LEVEL G_LOG_LEVEL_INFO
 
@@ -222,7 +222,7 @@ static int set_addr (int argc, char **argv)
         return -1;
     }
 
-    c = strjoin_n (" ", argc, argv);
+    c = ccnet_util_strjoin_n (" ", argc, argv);
     snprintf (buf, 1024, "set-addr %s", c);
     ccnet_client_send_cmd (client, buf, &error);
     if (error) {
@@ -244,7 +244,7 @@ static int add_relay (int argc, char **argv)
         return -1;
     }
 
-    c = strjoin_n (" ", argc, argv);    
+    c = ccnet_util_strjoin_n (" ", argc, argv);    
     snprintf (buf, 1024, "add-relay %s", c);
     ccnet_client_send_cmd (client, buf, &error);
     if (error) {
@@ -287,7 +287,7 @@ static int add_peer (int argc, char **argv)
         return -1;
     }
     
-    c = strjoin_n (" ", argc, argv);    
+    c = ccnet_util_strjoin_n (" ", argc, argv);    
     snprintf (buf, 1024, "add-peer %s", c);
     ccnet_client_send_cmd (client, buf, &error);
     if (error) {
@@ -356,7 +356,7 @@ send_cmd (int argc, char **argv)
         return -1;
     }
 
-    cmd = strjoin_n (sep, argc, argv);
+    cmd = ccnet_util_strjoin_n (sep, argc, argv);
     ccnet_client_send_cmd (client, cmd, &error);
     free (cmd);
     if (error) {

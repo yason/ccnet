@@ -1,7 +1,6 @@
 /* -*- Mode: C; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
 
 #include "include.h"
-#include "utils.h"
 #include "cevent.h"
 
 #define CEVENT_SIZE  (sizeof(CEvent))
@@ -29,7 +28,7 @@ void pipe_callback (int fd, short event, void *vmgr)
     CEvent *cevent;
     char buf[CEVENT_SIZE];
     
-    if (pipereadn(fd, buf, CEVENT_SIZE) != CEVENT_SIZE) {
+    if (ccnet_util_pipereadn(fd, buf, CEVENT_SIZE) != CEVENT_SIZE) {
         g_warning ("read pipe error\n");
         return;
     }
@@ -47,7 +46,7 @@ void pipe_callback (int fd, short event, void *vmgr)
 
 int cevent_manager_start (CEventManager *manager)
 {
-    if (ccnet_pipe(manager->pipefd) < 0) {
+    if (ccnet_util_pipe(manager->pipefd) < 0) {
         g_warning ("pipe error: %s\n", strerror(errno));
         return -1;
     }
@@ -98,7 +97,7 @@ cevent_manager_add_event (CEventManager *manager, uint32_t id,
 
     cevent.id = id;
     cevent.data = data;
-    if (pipewriten(manager->pipefd[1], buf, CEVENT_SIZE) != CEVENT_SIZE) {
+    if (ccnet_util_pipewriten(manager->pipefd[1], buf, CEVENT_SIZE) != CEVENT_SIZE) {
         g_warning ("add event error\n");
     }
 

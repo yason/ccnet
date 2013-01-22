@@ -19,9 +19,6 @@
     #include <arpa/inet.h>
 #endif
 
-
-#include <utils.h>
-#include <db.h>
 #include "message.h"
 
 #include "processor.h"
@@ -33,8 +30,6 @@
 #include "job-mgr.h"
 
 #include "ccnet-object.h"
-
-#include "net.h"
 
 /**
  * SECTION:ccnet-client
@@ -143,9 +138,9 @@ ccnet_client_load_confdir (CcnetClient *client, const char *config_dir_r)
     GKeyFile *key_file;
     CcnetSessionBase *base = CCNET_SESSION_BASE(client);
 
-    config_dir = ccnet_expand_path (config_dir_r);
+    config_dir = ccnet_util_expand_path (config_dir_r);
 
-    if (checkdir(config_dir) < 0) {
+    if (ccnet_util_checkdir(config_dir) < 0) {
         g_warning ("Config dir %s does not exist or is not "
                    "a directory.\n", config_dir);
         return -1;
@@ -160,14 +155,14 @@ ccnet_client_load_confdir (CcnetClient *client, const char *config_dir_r)
         goto onerror;
     }
 
-    id = ccnet_key_file_get_string (key_file, "General", "ID");
-    user_name = ccnet_key_file_get_string (key_file, "General", "USER_NAME");
-    name = ccnet_key_file_get_string (key_file, "General", "NAME");
-    service_url = ccnet_key_file_get_string (key_file, "General", "SERVICE_URL");
-    port_str = ccnet_key_file_get_string (key_file, "Client", "PORT");
+    id = ccnet_util_key_file_get_string (key_file, "General", "ID");
+    user_name = ccnet_util_key_file_get_string (key_file, "General", "USER_NAME");
+    name = ccnet_util_key_file_get_string (key_file, "General", "NAME");
+    service_url = ccnet_util_key_file_get_string (key_file, "General", "SERVICE_URL");
+    port_str = ccnet_util_key_file_get_string (key_file, "Client", "PORT");
 
     if ( (id == NULL) || (strlen (id) != SESSION_ID_LENGTH) 
-         || (hex_to_sha1 (id, sha1) < 0) ) 
+         || (ccnet_util_hex_to_sha1 (id, sha1) < 0) ) 
     {
         ccnet_error ("Wrong ID\n");
         g_key_file_free (key_file);

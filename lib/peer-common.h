@@ -1,7 +1,10 @@
-
+#ifdef CCNET_LIB
+    #define string_list_parse_sorted ccnet_util_string_list_parse_sorted
+    #define string_list_free ccnet_util_string_list_free
+    #define string_list_join ccnet_util_string_list_join
+#endif
 
 G_DEFINE_TYPE (CcnetPeer, ccnet_peer, G_TYPE_OBJECT);
-
 
 enum {
     P_ID = 1,
@@ -66,7 +69,7 @@ get_property (GObject *object, guint property_id,
         g_value_set_int (v, peer->net_state);
         break;
     case P_PUBKEY:
- #ifndef CCNET_LIB
+#ifndef CCNET_LIB
         if (peer->pubkey) {
             GString *str = public_key_to_gstring(peer->pubkey);
             g_value_set_string (v, str->str);

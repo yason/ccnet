@@ -1,13 +1,26 @@
 /* -*- Mode: C; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
 
-#include "include.h"
-
 #include <event.h>
-#include "job-mgr.h"
-#include "utils.h"
+
+#include <string.h>
+#include <stdlib.h>
+#include <stdio.h>
+#include <errno.h>
 
 #define MAX_THREADS 50
 #define MAX_IDLE_THREADS 10
+
+#ifdef CCNET_LIB
+    #include "libccnet_utils.h"
+    #define pipereadn       ccnet_util_pipereadn
+    #define pipewriten      ccnet_util_pipewriten
+    #define pipeclose       ccnet_util_pipeclose
+    #define ccnet_pipe      ccnet_util_pipe
+#else
+    #include "utils.h"
+#endif
+
+#include "job-mgr.h"
 
 struct _CcnetJob {
     CcnetJobManager *manager;

@@ -14,8 +14,7 @@
 #include <glib-object.h>
 
 #include <ccnet.h>
-#include "utils.h"
-
+#include "libccnet_utils.h"
 
 CcnetClient *client;
 
@@ -224,7 +223,7 @@ static int add_peer (int argc, char **argv)
         return -1;
     }
     
-    c = strjoin_n (" ", argc, argv);    
+    c = ccnet_util_strjoin_n (" ", argc, argv);    
     snprintf (buf, 1024, "add-peer %s", c);
     ccnet_client_send_cmd (client, buf, &error);
     if (error) {
@@ -271,7 +270,7 @@ static int add_member (int argc, char **argv)
         return -1;
     }
 
-    c = strjoin_n (" ", argc, argv);    
+    c = ccnet_util_strjoin_n (" ", argc, argv);    
     snprintf (buf, 1024, "add-member %s", c);
     ccnet_client_send_cmd (client, buf, &error);
     if (error) {
@@ -294,7 +293,7 @@ static int add_master (int argc, char **argv)
         return -1;
     }
 
-    c = strjoin_n (" ", argc, argv);    
+    c = ccnet_util_strjoin_n (" ", argc, argv);    
     snprintf (buf, 1024, "add-master %s", c);
     ccnet_client_send_cmd (client, buf, &error);
     if (error) {

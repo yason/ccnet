@@ -2,14 +2,15 @@
 
 #include <event.h>
 #include <sys/time.h>
-#include <glib.h>
 
-#include "utils.h"
-#include "timer.h"
-
-#ifdef WIN32
-#include "net.h"
+#ifdef CCNET_LIB
+    #include "libccnet_utils.h"
+    #define timeval_from_msec ccnet_util_timeval_from_msec
+#else
+    #include "utils.h"
 #endif
+
+#include "timer.h"
 
 struct CcnetTimer
 {
@@ -54,7 +55,6 @@ ccnet_timer_free (CcnetTimer **ptimer)
         g_free (timer);
     }
 }
-
 
 CcnetTimer*
 ccnet_timer_new (TimerCB         func,

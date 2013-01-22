@@ -8,7 +8,7 @@
 
 #include <glib.h>
 
-#include "utils.h"
+#include "libccnet_utils.h"
 #include <ccnet/valid-check.h>
 
 #ifndef ccnet_warning
@@ -27,6 +27,7 @@
   #define ccnet_debug(fmt, ...) g_debug(fmt, ##__VA_ARGS__)
 #endif
 
+#define CCNET_DOMAIN g_quark_from_string("ccnet")
 
 #ifndef ENABLE_DEBUG
 #undef g_debug
