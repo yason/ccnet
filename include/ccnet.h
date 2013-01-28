@@ -110,5 +110,8 @@ void
 ccnet_login_to_relay (SearpcClient *client, const char *relay_id,
                       const char *username, const char *passwd);
 
+int
+ccnet_update_peer_address (SearpcClient *client, const char *peer_id,
+                           const char *addr, int port);
 
 #endif

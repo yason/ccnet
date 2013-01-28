@@ -80,6 +80,11 @@ ccnet_start_rpc(CcnetSession *session)
                                      "get_peer_by_idname",
                                      searpc_signature_object__string());
 
+    searpc_server_register_function ("ccnet-rpcserver",
+                                     ccnet_rpc_update_peer_address,
+                                     "update_peer_address",
+                                     searpc_signature_int__string_string_int());
+
 
     searpc_server_register_function ("ccnet-rpcserver",
                                      ccnet_rpc_get_session_info,
@@ -380,6 +385,27 @@ ccnet_rpc_get_peer(const char *peer_id, GError **error)
     return (GObject*)peer;
 }
 
+int
+ccnet_rpc_update_peer_address (const char *peer_id,
+                               const char *addr,
+                               int port,
+                               GError **error)
+{
+    if (!peer_id || !addr || port <= 0 || port > 65536) {
+        g_set_error(error, CCNET_DOMAIN, CCNET_ERR_INTERNAL, "Invalid arguments");
+        return -1;
+    }
+
+    CcnetPeer *peer = ccnet_peer_manager_get_peer (session->peer_mgr, peer_id);
+    if (!peer) {
+        return -1;
+    }
+
+    ccnet_peer_manager_set_peer_public_addr (session->peer_mgr, peer, addr, port);
+    g_object_unref (peer);
+
+    return 0;
+}
 
 GObject *
 ccnet_rpc_get_peer_by_idname(const char *idname, GError **error)

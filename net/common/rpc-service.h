@@ -16,6 +16,9 @@ GList* ccnet_rpc_get_peers_by_role(const char *role, GError **error);
 
 GObject *ccnet_rpc_get_peer(const char *peerid, GError **error);
 
+int
+ccnet_rpc_update_peer_address(const char *peer_id, const char *addr,
+                              int port, GError **error);
 
 GObject *ccnet_rpc_get_peer_by_idname(const char *idname, GError **error);
 

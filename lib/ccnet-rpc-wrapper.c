@@ -295,3 +295,12 @@ ccnet_peer_is_ready (SearpcClient *client, const char *peer_id)
     g_object_unref (peer);
     return ret;
 }
+
+int
+ccnet_update_peer_address (SearpcClient *client, const char *peer_id,
+                           const char *addr, int port)
+{
+    return searpc_client_call__int (
+        client, "update_peer_address", NULL,
+        3, "string", peer_id, "string", addr, "int", port);
+}
