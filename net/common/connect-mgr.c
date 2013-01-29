@@ -190,8 +190,11 @@ myHandshakeDoneCB (CcnetHandshake *handshake,
     CcnetPeer *peer;
 
     if (!is_connected) {
-        if (ccnet_packet_io_is_incoming (io))
+        if (ccnet_packet_io_is_incoming (io)) {
+            ccnet_warning ("[conn] incomming handshake fails.\n");
+            ccnet_packet_io_free (io);
             return;
+        }
 
         /* temporally use peer, so don't need to increase the reference */
         peer = handshake->peer;
@@ -238,7 +241,7 @@ myHandshakeDoneCB (CcnetHandshake *handshake,
         }
         peer = ccnet_peer_manager_get_peer (peerMgr, peer_id);
         if (!peer) {
-            ccnet_warning ("Unknown peer %s connecting\n", peer_id);
+            ccnet_message ("Unknown peer %s connecting\n", peer_id);
             peer = ccnet_peer_new (peer_id);
             ccnet_peer_manager_add_peer (peerMgr, peer);
             on_unauthed_peer_connected (peer, io);

@@ -193,9 +193,9 @@ gotError (struct bufferevent * evbuf, short what, void *arg)
     /* if the error happened while we were sending a public key, we might
      * have encountered a peer that doesn't do encryption... reconnect and
      * try a plaintext handshake */
-    /* ccnet_warning ("libevent got an error on peer %s what==%d, errno=%d (%s)\n", */
-    /*                handshake->peer->name, (int)what, */
-    /*                errno, strerror(errno)); */
+    ccnet_warning ("libevent got an error on peer %s what==%d, errno=%d (%s)\n",
+                   handshake->peer ? handshake->peer->name : "(no-id)",
+                   (int)what, errno, strerror(errno));
     ccnet_handshake_abort (handshake);
 }
 
