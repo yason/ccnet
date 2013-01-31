@@ -17,6 +17,11 @@
 
 #include <openssl/sha.h>
 
+#ifdef HAVE_LDAP
+#define LDAP_DEPRECATED 1
+#include <ldap.h>
+#endif
+
 #define DEBUG_FLAG  CCNET_DEBUG_PEER
 #include "log.h"
 
@@ -31,6 +36,10 @@ G_DEFINE_TYPE (CcnetUserManager, ccnet_user_manager, G_TYPE_OBJECT);
 
 
 static int open_db (CcnetUserManager *manager);
+
+#ifdef HAVE_LDAP
+static int try_load_ldap_settings (CcnetUserManager *manager);
+#endif
 
 struct CcnetUserManagerPriv {
     CcnetDB    *db;
@@ -65,6 +74,11 @@ ccnet_user_manager_new (CcnetSession *session)
 int
 ccnet_user_manager_prepare (CcnetUserManager *manager)
 {
+#ifdef HAVE_LDAP 
+   if (try_load_ldap_settings (manager) < 0)
+        return -1;
+#endif
+
     manager->userdb_path = g_build_filename (manager->session->config_dir,
                                              "user-db", NULL);
     return open_db(manager);
@@ -86,6 +100,207 @@ void ccnet_user_manager_on_exit (CcnetUserManager *manager)
 {
 }
 
+/* -------- LDAP related --------- */
+
+#ifdef HAVE_LDAP
+
+static int try_load_ldap_settings (CcnetUserManager *manager)
+{
+    GKeyFile *config = manager->session->keyf;
+
+    manager->ldap_host = g_key_file_get_string (config, "LDAP", "HOST", NULL);
+    if (!manager->ldap_host)
+        return 0;
+
+    manager->use_ldap = TRUE;
+
+    manager->base = g_key_file_get_string (config, "LDAP", "BASE", NULL);
+    if (!manager->base) {
+        ccnet_warning ("LDAP: BASE not found in config file.\n");
+        return -1;
+    }
+
+    manager->user_dn = g_key_file_get_string (config, "LDAP", "USER_DN", NULL);
+    if (manager->user_dn) {
+        manager->password = g_key_file_get_string (config, "LDAP", "PASSWORD", NULL);
+        if (!manager->password) {
+            ccnet_warning ("LDAP: PASSWORD not found in config file.\n");
+            return -1;
+        }
+    }
+    /* Use anonymous if user_dn is not set. */
+
+    manager->login_attr = g_key_file_get_string (config, "LDAP", "LOGIN_ATTR", NULL);
+    if (!manager->login_attr)
+        manager->login_attr = g_strdup("mail");
+
+    return 0;
+}
+
+static LDAP *ldap_init_and_bind (const char *host,
+                                 const char *user_dn,
+                                 const char *password)
+{
+    LDAP *ld;
+    int res;
+    int desired_version = LDAP_VERSION3;
+
+    res = ldap_initialize (&ld, host);
+    if (res != LDAP_SUCCESS) {
+        ccnet_warning ("ldap_initialize failed: %s.\n", ldap_err2string(res));
+        return NULL;
+    }
+
+    /* set the LDAP version to be 3 */
+    res = ldap_set_option (ld, LDAP_OPT_PROTOCOL_VERSION, &desired_version);
+    if (res != LDAP_OPT_SUCCESS) {
+        ccnet_warning ("ldap_set_option failed: %s.\n", ldap_err2string(res));
+        return NULL;
+    }
+
+    if (user_dn) {
+        res = ldap_bind_s (ld, user_dn, password, LDAP_AUTH_SIMPLE);
+        if (res != LDAP_SUCCESS ) {
+            ccnet_warning ("ldap_bind failed: %s.\n", ldap_err2string(res));
+            ldap_unbind_s (ld);
+            return NULL;
+        }
+    }
+
+    return ld;
+}
+
+static int ldap_verify_user_password (CcnetUserManager *manager,
+                                      const char *uid,
+                                      const char *password)
+{
+    LDAP *ld = NULL;
+    int res;
+    GString *filter;
+    char *filter_str = NULL;
+    char *attrs[2];
+    LDAPMessage *msg = NULL, *entry;
+    char *dn = NULL;
+    int ret = 0;
+
+    /* First search for the DN with the given uid. */
+
+    ld = ldap_init_and_bind (manager->ldap_host,
+                             manager->user_dn,
+                             manager->password);
+    if (!ld)
+        return -1;
+
+    filter = g_string_new (NULL);
+    g_string_printf (filter, "(%s=%s)", manager->login_attr, uid);
+    filter_str = g_string_free (filter, FALSE);
+
+    attrs[0] = manager->login_attr;
+    attrs[1] = NULL;
+
+    res = ldap_search_s (ld, manager->base, LDAP_SCOPE_SUBTREE,
+                         filter_str, attrs, 0, &msg);
+    if (res != LDAP_SUCCESS) {
+        ccnet_warning ("ldap_search failed: %s.\n", ldap_err2string(res));
+        ret = -1;
+        goto out;
+    }
+
+    entry = ldap_first_entry (ld, msg);
+    if (!entry) {
+        ccnet_warning ("user with uid %s not found in LDAP.\n", uid);
+        ret = -1;
+        goto out;
+    }
+
+    dn = ldap_get_dn (ld, entry);
+
+    /* Then bind the DN with password. */
+
+    ldap_unbind_s (ld);
+
+    ld = ldap_init_and_bind (manager->ldap_host, dn, password);
+    if (!ld) {
+        ccnet_warning ("Password check for %s failed.\n", uid);
+        ret = -1;
+    }
+
+out:
+    ldap_msgfree (msg);
+    ldap_memfree (dn);
+    g_free (filter_str);
+    if (ld) ldap_unbind_s (ld);
+    return ret;
+}
+
+/*
+ * @uid: user's uid, list all users if * is passed in.
+ */
+static GList *ldap_list_users (CcnetUserManager *manager, const char *uid)
+{
+    LDAP *ld = NULL;
+    GList *ret = NULL;
+    int res;
+    GString *filter;
+    char *filter_str;
+    char *attrs[2];
+    LDAPMessage *msg = NULL, *entry;
+
+    ld = ldap_init_and_bind (manager->ldap_host,
+                             manager->user_dn,
+                             manager->password);
+    if (!ld)
+        return NULL;
+
+    filter = g_string_new (NULL);
+    g_string_printf (filter, "(%s=%s)", manager->login_attr, uid);
+    filter_str = g_string_free (filter, FALSE);
+
+    attrs[0] = manager->login_attr;
+    attrs[1] = NULL;
+
+    res = ldap_search_s (ld, manager->base, LDAP_SCOPE_SUBTREE,
+                         filter_str, attrs, 0, &msg);
+    if (res != LDAP_SUCCESS) {
+        ccnet_warning ("ldap_search failed: %s.\n", ldap_err2string(res));
+        ret = NULL;
+        goto out;
+    }
+
+    for (entry = ldap_first_entry (ld, msg);
+         entry != NULL;
+         entry = ldap_next_entry (ld, entry))
+    {
+        char *attr;
+        char **vals;
+        BerElement *ber;
+        CcnetEmailUser *user;
+
+        attr = ldap_first_attribute (ld, entry, &ber);
+        vals = ldap_get_values (ld, entry, attr);
+
+        user = g_object_new (CCNET_TYPE_EMAIL_USER,
+                             "id", 0,
+                             "email", vals[0],
+                             "is_staff", FALSE,
+                             "is_active", TRUE,
+                             "ctime", (gint64)0,
+                             NULL);
+        ret = g_list_prepend (ret, user);
+
+        ldap_memfree (attr);
+        ldap_value_free (vals);
+        ber_free (ber, 0);
+    }
+
+out:
+    ldap_msgfree (msg);
+    g_free (filter_str);
+    if (ld) ldap_unbind_s (ld);
+    return ret;
+}
+
+#endif  /* HAVE_LDAP */
 
 /* -------- DB Operations -------- */
 
@@ -188,19 +403,39 @@ open_db (CcnetUserManager *manager)
 
 /* -------- EmailUser Management -------- */
 
+static void
+hash_password (const char *passwd, char *hashed_passwd)
+{
+    unsigned char sha1[20];
+    SHA_CTX s;
+
+    SHA1_Init (&s);
+    SHA1_Update (&s, passwd, strlen(passwd));
+    SHA1_Final (sha1, &s);
+    rawdata_to_hex (sha1, hashed_passwd, 20);
+}
+
 int
 ccnet_user_manager_add_emailuser (CcnetUserManager *manager,
                                   const char *email,
-                                  const char *encry_passwd,
+                                  const char *passwd,
                                   int is_staff, int is_active)
 {
     CcnetDB *db = manager->priv->db;
     gint64 now = get_current_time();
     char sql[512];
-    
+    char hashed_passwd[41];
+
+#ifdef HAVE_LDAP
+    if (manager->use_ldap)
+        return 0;
+#endif
+
+    hash_password (passwd, hashed_passwd);
+
     snprintf (sql, 512, "INSERT INTO EmailUser(email, passwd, is_staff, "
               "is_active, ctime) VALUES ('%s', '%s', '%d', '%d', "
-              "%"G_GINT64_FORMAT")", email, encry_passwd, is_staff,
+              "%"G_GINT64_FORMAT")", email, hashed_passwd, is_staff,
               is_active, now);
 
     return ccnet_db_query (db, sql);
@@ -213,31 +448,14 @@ ccnet_user_manager_remove_emailuser (CcnetUserManager *manager,
     CcnetDB *db = manager->priv->db;
     char sql[512];
 
+#ifdef HAVE_LDAP
+    if (manager->use_ldap)
+        return 0;
+#endif
+
     snprintf (sql, 512, "DELETE FROM EmailUser WHERE email='%s'", email);
 
     return ccnet_db_query (db, sql);
-}
-
-int
-ccnet_user_manager_validate_emailuser (CcnetUserManager *manager,
-                                       const char *email,
-                                       const char *passwd)
-{
-    CcnetDB *db = manager->priv->db;
-    char sql[512];
-    unsigned char sha1[20];
-    SHA_CTX s;
-    char encry_passwd[41];
-
-    SHA1_Init (&s);
-    SHA1_Update (&s, passwd, strlen(passwd));
-    SHA1_Final (sha1, &s);
-    rawdata_to_hex (sha1, encry_passwd, 20);
-    
-    snprintf (sql, 512, "SELECT email FROM EmailUser WHERE email='%s' AND "
-              "passwd='%s'", email, encry_passwd);
-    
-    return ccnet_db_check_for_existence (db, sql);
 }
 
 static gboolean
@@ -247,20 +465,59 @@ get_emailuser_cb (CcnetDBRow *row, void *data)
 
     int id = ccnet_db_row_get_column_int (row, 0);
     const char *email = (const char *)ccnet_db_row_get_column_text (row, 1);
-    const char* passwd = (const char *)ccnet_db_row_get_column_text (row, 2);
-    int is_staff = ccnet_db_row_get_column_int (row, 3);
-    int is_active = ccnet_db_row_get_column_int (row, 4);
-    gint64 ctime = ccnet_db_row_get_column_int64 (row, 5);
+    int is_staff = ccnet_db_row_get_column_int (row, 2);
+    int is_active = ccnet_db_row_get_column_int (row, 3);
+    gint64 ctime = ccnet_db_row_get_column_int64 (row, 4);
     *p_emailuser = g_object_new (CCNET_TYPE_EMAIL_USER,
                               "id", id,
                               "email", email,
-                              "passwd", passwd,
                               "is_staff", is_staff,
                               "is_active", is_active,
                               "ctime", ctime,
                               NULL);
 
     return FALSE;
+}
+
+int
+ccnet_user_manager_validate_emailuser (CcnetUserManager *manager,
+                                       const char *email,
+                                       const char *passwd)
+{
+    CcnetDB *db = manager->priv->db;
+    char sql[512];
+    char hashed_passwd[41];
+
+    hash_password (passwd, hashed_passwd);
+
+#ifdef HAVE_LDAP
+    if (manager->use_ldap) {
+        CcnetEmailUser *emailuser;
+
+        snprintf (sql, sizeof(sql), 
+                  "SELECT id, email, is_staff, is_active, ctime"
+                  " FROM EmailUser WHERE email='%s' AND passwd='%s'",
+                  email, hashed_passwd);
+        if (ccnet_db_foreach_selected_row (db, sql,
+                                           get_emailuser_cb, &emailuser) > 0)
+        {
+            if (ccnet_email_user_get_is_staff(emailuser)) {
+                g_object_unref (emailuser);
+                return 0;
+            }
+            g_object_unref (emailuser);
+        }
+
+        return ldap_verify_user_password (manager, email, passwd);
+    }
+#endif
+
+    snprintf (sql, 512, "SELECT email FROM EmailUser WHERE email='%s' AND "
+              "passwd='%s'", email, hashed_passwd);
+    
+    if (ccnet_db_check_for_existence (db, sql))
+        return 0;
+    return -1;
 }
 
 CcnetEmailUser*
@@ -271,8 +528,38 @@ ccnet_user_manager_get_emailuser (CcnetUserManager *manager,
     char sql[512];
     CcnetEmailUser *emailuser = NULL;
 
+#ifdef HAVE_LDAP
+    if (manager->use_ldap) {
+        GList *users, *ptr;
+
+        /* Lookup admin first. */
+        snprintf (sql, sizeof(sql), 
+                  "SELECT id, email, is_staff, is_active, ctime"
+                  " FROM EmailUser WHERE email='%s'", email);
+        if (ccnet_db_foreach_selected_row (db, sql,
+                                           get_emailuser_cb, &emailuser) > 0)
+        {
+            if (ccnet_email_user_get_is_staff(emailuser))
+                return emailuser;
+            g_object_unref (emailuser);
+        }
+
+        users = ldap_list_users (manager, email);
+        if (!users)
+            return NULL;
+        emailuser = users->data;
+
+        /* Free all except the first user. */
+        for (ptr = users->next; ptr; ptr = ptr->next)
+            g_object_unref (ptr->data);
+        g_list_free (users);
+
+        return emailuser;
+    }
+#endif
+
     snprintf (sql, sizeof(sql), 
-              "SELECT id, email, passwd, is_staff, is_active, ctime"
+              "SELECT id, email, is_staff, is_active, ctime"
               " FROM EmailUser WHERE email='%s'", email);
     if (ccnet_db_foreach_selected_row (db, sql, get_emailuser_cb, &emailuser) < 0)
         return NULL;
@@ -287,8 +574,13 @@ ccnet_user_manager_get_emailuser_by_id (CcnetUserManager *manager, int id)
     char sql[512];
     CcnetEmailUser *emailuser = NULL;
 
+#ifdef HAVE_LDAP
+    if (manager->use_ldap)
+        return NULL;
+#endif
+
     snprintf (sql, sizeof(sql), 
-              "SELECT id, email, passwd, is_staff, is_active, ctime"
+              "SELECT id, email, is_staff, is_active, ctime"
               " FROM EmailUser WHERE id='%d'", id);
     if (ccnet_db_foreach_selected_row (db, sql, get_emailuser_cb, &emailuser) < 0)
         return NULL;
@@ -304,14 +596,13 @@ get_emailusers_cb (CcnetDBRow *row, void *data)
 
     int id = ccnet_db_row_get_column_int (row, 0);
     const char *email = (const char *)ccnet_db_row_get_column_text (row, 1);
-    const char* passwd = (const char *)ccnet_db_row_get_column_text (row, 2);
+    /* const char* passwd = (const char *)ccnet_db_row_get_column_text (row, 2); */
     int is_staff = ccnet_db_row_get_column_int (row, 3);
     int is_active = ccnet_db_row_get_column_int (row, 4);
     gint64 ctime = ccnet_db_row_get_column_int64 (row, 5);
     emailuser = g_object_new (CCNET_TYPE_EMAIL_USER,
                               "id", id,
                               "email", email,
-                              "passwd", passwd,
                               "is_staff", is_staff,
                               "is_active", is_active,
                               "ctime", ctime,
@@ -329,10 +620,19 @@ ccnet_user_manager_get_emailusers (CcnetUserManager *manager, int start, int lim
     GList *ret = NULL;
     char sql[256];
 
+#ifdef HAVE_LDAP
+    /* Assuming admin user is in LDAP database too.
+     * is_staff is not set here.
+     */
+    if (manager->use_ldap)
+        return ldap_list_users (manager, "*");
+#endif
+
     if (start == -1 && limit == -1)
         snprintf (sql, 256, "SELECT * FROM EmailUser");
     else
-        snprintf (sql, 256, "SELECT * FROM EmailUser LIMIT %d, %d", start, limit);
+        snprintf (sql, 256, "SELECT * FROM EmailUser LIMIT %d, %d",
+                  start, limit);    
 
     if (ccnet_db_foreach_selected_row (db, sql, get_emailusers_cb, &ret) < 0) {
         while (ret != NULL) {
@@ -347,16 +647,27 @@ ccnet_user_manager_get_emailusers (CcnetUserManager *manager, int start, int lim
 
 int
 ccnet_user_manager_update_emailuser (CcnetUserManager *manager,
-                                     int id, const char* encry_passwd,
+                                     int id, const char* passwd,
                                      int is_staff, int is_active)
 {
     CcnetDB* db = manager->priv->db;
     char sql[512];
+    char hashed_passwd[41];
 
-    snprintf (sql, 512, "UPDATE EmailUser SET passwd='%s', is_staff='%d', "
-              "is_active='%d' WHERE id='%d'", encry_passwd, is_staff,
-              is_active, id);
+#ifdef HAVE_LDAP
+    if (!manager->use_ldap || is_staff) {
+#endif
+        hash_password (passwd, hashed_passwd);
 
-    return ccnet_db_query (db, sql);
+        snprintf (sql, 512, "UPDATE EmailUser SET passwd='%s', is_staff='%d', "
+                  "is_active='%d' WHERE id='%d'", hashed_passwd, is_staff,
+                  is_active, id);
+
+        return ccnet_db_query (db, sql);
+#ifdef HAVE_LDAP
+    }
+#endif
+
+    return 0;
 }
 

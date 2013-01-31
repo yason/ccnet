@@ -29,6 +29,16 @@ struct _CcnetUserManager
     char           *userdb_path;
     GHashTable     *user_hash;
 
+#ifdef HAVE_LDAP
+    /* LDAP related */
+    gboolean        use_ldap;
+    char           *ldap_host;
+    char           *base;       /* base DN from where all users can be reached */
+    char           *user_dn;    /* DN of the admin user */
+    char           *password;   /* password for admin user */
+    char           *login_attr;  /* attribute name used for login */
+#endif
+
     CcnetUserManagerPriv *priv;
 };
 

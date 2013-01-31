@@ -97,6 +97,9 @@ if test "$blinux" = true; then
    AC_ARG_ENABLE(server, AC_HELP_STRING([--enable-server], [enable server]),
       [compile_server=$enableval],[compile_server="no"])
 
+   AC_ARG_ENABLE(ldap, AC_HELP_STRING([--enable-ldap], [enable LDAP]),
+      [compile_ldap=$enableval],[compile_ldap="no"])
+
    AC_ARG_ENABLE(cluster, AC_HELP_STRING([--enable-cluster],
       [enable cluster]), [compile_cluster=$enableval],
       [compile_cluster="no"])
@@ -307,6 +310,17 @@ if test "${compile_server}" = "yes"; then
 
    AC_SUBST(MYSQL_LIBS)
    AC_SUBST(MYSQL_CFLAGS)
+fi
+
+if test "${compile_ldap}" = "yes"; then
+   AC_CHECK_LIB(ldap, ldap_init, [have_ldap="yes"],
+      AC_MSG_ERROR([*** Unable to find ldap client library]), )
+
+   if test "${have_ldap}" = "yes"; then
+      echo "found ldap client library"
+      AC_DEFINE([HAVE_LDAP], [1], [Define if ldap library exists.])
+      AC_SUBST(LDAP_LIBS, "-lldap -llber")
+   fi
 fi
 
 ac_configure_args="$ac_configure_args -q"

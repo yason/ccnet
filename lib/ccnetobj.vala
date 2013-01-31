@@ -57,7 +57,6 @@ public class EmailUser : Object {
 
     public int id { get; set; }
     public string email { get; set; }
-    public string passwd { get; set; }
     public bool is_staff { get; set; }
     public bool is_active { get; set; }
     public int64 ctime { get; set; }
