@@ -191,7 +191,7 @@ myHandshakeDoneCB (CcnetHandshake *handshake,
 
     if (!is_connected) {
         if (ccnet_packet_io_is_incoming (io)) {
-            ccnet_warning ("[conn] incomming handshake fails.\n");
+            ccnet_warning ("[conn] incoming handshake fails.\n");
             ccnet_packet_io_free (io);
             return;
         }
