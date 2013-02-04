@@ -15,8 +15,7 @@ endif
 SUBDIRS = include lib net $(MAKE_CLI) $(MAKE_TOOLS) \
 	python $(MAKE_DEMO) tests
 
-EXTRA_DIST = install-sh
-EXTRA_DIST += libccnet.pc.in
+EXTRA_DIST = install-sh libccnet.pc.in LICENCE.txt
 
 DISTCHECK_CONFIGURE_FLAGS = --enable-server
 
