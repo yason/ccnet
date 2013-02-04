@@ -86,6 +86,7 @@ ${searpc_gen}: $(top_srcdir)/lib/rpc_table.py
 	@echo "[libsearpc]: done"
 
 clean-local:
-	-rm ${searpc_gen} 
+	rm -f ${searpc_gen}
+	rm -f $(top_srcdir)/lib/rpc_table.pyc
 
-CLEANFILES = ccnetobj.c ccnet-object.h ${searpc_gen}
+CLEANFILES = ${searpc_gen}
