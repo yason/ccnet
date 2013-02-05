@@ -76,7 +76,9 @@ ccnet_util_hex_to_rawdata (const char *hex_str,
                            int n_bytes);
 
 #ifdef WIN32
-extern int inet_pton(int af, const char *src, void *dst);
+int ccnet_util_inet_pton(int af, const char *src, void *dst);
+#else
+#define ccnet_util_inet_pton inet_pton
 #endif
 
 #endif

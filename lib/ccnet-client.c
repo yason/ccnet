@@ -229,7 +229,7 @@ ccnet_client_connect_daemon (CcnetClient *client, CcnetClientMode mode)
     memset (&servaddr, 0, sizeof(servaddr));
     servaddr.sin_family = AF_INET;
     servaddr.sin_port = htons (client->daemon_port);
-    inet_pton (AF_INET, "127.0.0.1", &servaddr.sin_addr);
+    ccnet_util_inet_pton (AF_INET, "127.0.0.1", &servaddr.sin_addr);
     
     if (connect (sockfd, (struct sockaddr *) &servaddr, sizeof(servaddr)) < 0)
         return -1;

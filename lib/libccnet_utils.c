@@ -495,7 +495,8 @@ ccnet_util_hex_to_rawdata (const char *hex_str,
 #endif
 
 #ifndef inet_ntop
-static const char *inet_ntop4(const u_char *src, char *dst, size_t size)
+static const char *
+inet_ntop4 (const u_char *src, char *dst, size_t size)
 {
     static const char fmt[] = "%u.%u.%u.%u";
     char tmp[sizeof("255.255.255.255")];
@@ -507,7 +508,9 @@ static const char *inet_ntop4(const u_char *src, char *dst, size_t size)
     strncpy(dst, tmp, size);
     return (dst);
 }
-static const char *inet_ntop6(const u_char *src, char *dst, size_t size)
+
+static const char *
+inet_ntop6 (const u_char *src, char *dst, size_t size)
 {
     char tmp[sizeof "ffff:ffff:ffff:ffff:ffff:ffff:255.255.255.255"];
     char *tp, *ep;
@@ -599,7 +602,9 @@ static const char *inet_ntop6(const u_char *src, char *dst, size_t size)
     dst[size] = '\0';
     return (dst);
 }
-const char *inet_ntop(int af, const void *src, char *dst, size_t size)
+
+const char *
+ccnet_util_inet_ntop(int af, const void *src, char *dst, size_t size)
 {
     switch (af) {
     case AF_INET:
@@ -614,7 +619,8 @@ const char *inet_ntop(int af, const void *src, char *dst, size_t size)
 #endif //inet_ntop
 
 #ifndef inet_aton
-int inet_aton(const char *string, struct in_addr *addr)
+int
+ccnet_util_inet_aton (const char *string, struct in_addr *addr)
 {
     addr->s_addr = inet_addr(string);
     if (addr->s_addr != -1 || strcmp("255.255.255.255", string) == 0)
@@ -640,7 +646,8 @@ int inet_aton(const char *string, struct in_addr *addr)
  * author:
  *      Paul Vixie, 1996.
  */
-int inet_pton4(const char *src, u_char *dst, int pton)
+static int
+inet_pton4 (const char *src, u_char *dst, int pton)
 {
     u_int val;
     u_int digit;
@@ -759,7 +766,8 @@ int inet_pton4(const char *src, u_char *dst, int pton)
  * author:
  *      Paul Vixie, 1996.
  */
-int inet_pton6(const char *src, u_char *dst)
+static int
+inet_pton6 (const char *src, u_char *dst)
 {
     static const char xdigits_l[] = "0123456789abcdef",
         xdigits_u[] = "0123456789ABCDEF";
@@ -855,9 +863,10 @@ int inet_pton6(const char *src, u_char *dst)
  * author:
  *      Paul Vixie, 1996.
  */
-int inet_pton(int af, const char *src, void *dst)
+int
+ccnet_util_inet_pton (int af, const char *src, void *dst)
 {
-     switch (af) {
+    switch (af) {
     case AF_INET:
         return (inet_pton4(src, dst, 1));
     case AF_INET6:
