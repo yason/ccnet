@@ -24,11 +24,6 @@ enum {
     PEER_CONNECTED
 };
 
-enum {
-    BIND_UNKNOWN,
-    BIND_YES,
-    BIND_NO
-};
 
 typedef struct _CcnetPeer CcnetPeer;
 typedef struct _CcnetPeerClass CcnetPeerClass;
@@ -56,9 +51,6 @@ struct _CcnetPeer
     char         *public_addr;
     uint16_t      public_port;  /* port from pubinfo */
     char         *service_url;
-    gboolean      login_started;
-    char         *login_error;
-    gboolean      logout_started;
 
     /* fields not from pubinfo */
     char         *addr_str;     /* hold the ip actually used in connection */
@@ -123,9 +115,6 @@ struct _CcnetPeer
     GHashTable *processors;
 
     GList      *write_cbs;
-
-    gint8       bind_status;
-    char       *bind_email;
 
     int         last_mult_recv;
 };

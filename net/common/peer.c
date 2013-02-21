@@ -73,7 +73,6 @@ ccnet_peer_finalize (GObject *object)
     g_free (peer->name);
     g_free (peer->addr_str);
     g_free (peer->service_url);
-    g_free (peer->login_error);
     g_hash_table_unref (peer->processors);
     g_free (peer->session_key);
     evbuffer_free (peer->packet);

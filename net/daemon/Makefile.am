@@ -52,7 +52,6 @@ common_headers = ../common/algorithms.h \
 	../common/processor.h \
 	../common/peermgr-message.h \
 	../common/list.h ../common/rpc-service.h \
-	 processors/sendlogin-proc.h processors/sendlogout-proc.h \
 	../common/ccnet-db.h
 
 # ../common/group.h
@@ -74,7 +73,6 @@ common_srcs = ../common/session.c ../common/peer-mgr.c ../common/packet-io.c \
 	../common/ccnet-config.c \
 	../common/rpc-service.c \
 	../common/peermgr-message.c \
-	processors/sendlogin-proc.c processors/sendlogout-proc.c \
 	../common/processors/sendmsg-proc.c ../common/processors/rcvmsg-proc.c \
 	../common/processors/rcvcmd-proc.c \
 	../common/processors/getpubinfo-proc.c \
