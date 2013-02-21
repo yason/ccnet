@@ -178,6 +178,22 @@ static void on_unauthed_peer_connected (CcnetPeer *peer, CcnetPacketIO *io)
     ccnet_processor_startl (processor, NULL);
 }
 
+static void set_peer_address_from_socket(CcnetPeer *peer, CcnetPacketIO *io)
+{
+    if (peer == NULL || io == NULL)
+        return;
+
+    if (peer->addr_str)
+        g_free (peer->addr_str);
+
+    struct sockaddr_in addr;
+    socklen_t len = sizeof(struct sockaddr_in);
+    int socket = io->socket;
+    getsockname (socket, (struct sockaddr *)&addr, &len);
+    char *p = inet_ntoa (addr.sin_addr);
+    peer->addr_str = strdup(p);
+}
+
 static void
 myHandshakeDoneCB (CcnetHandshake *handshake,
                    CcnetPacketIO  *io,
@@ -250,10 +266,12 @@ myHandshakeDoneCB (CcnetHandshake *handshake,
             ccnet_message ("Unknown peer %s connecting\n", peer_id);
             peer = ccnet_peer_new (peer_id);
             ccnet_peer_manager_add_peer (peerMgr, peer);
+            set_peer_address_from_socket(peer, io);
             on_unauthed_peer_connected (peer, io);
             g_object_unref (peer);
             return;
         }
+        set_peer_address_from_socket(peer, io);
     }
     /* hold a reference on the peer */
 

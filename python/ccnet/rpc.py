@@ -123,15 +123,6 @@ class CcnetRpcClient(RpcClientBase):
     @searpc_func("object", ["string"])
     def get_peer(self):
         pass
-    
-
-#    @searpc_func("string", [])
-#    def list_groups(self):
-#        pass
-
-#    @searpc_func("object", ["string"], ret_obj_class=Group)
-#    def get_group(self):
-#        pass
 
     @searpc_func("object", [])
     def get_session_info(self):
@@ -172,14 +163,6 @@ class CcnetRpcClient(RpcClientBase):
     @searpc_func("int", ["string", "string"])
     def set_config(self, key, value):
         pass        
-
-    @searpc_func("int", ["string", "string", "string"])
-    def login_relay(self, relay_id, email, passwd):
-        pass
-        
-    @searpc_func("int", ["string"])
-    def logout_relay(self, relay_id):
-        pass
 
 
 class CcnetThreadedRpcClient(RpcClientBase):

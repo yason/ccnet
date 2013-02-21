@@ -20,15 +20,10 @@ enum {
     P_PUBKEY,
     P_CAN_CONNECT,              /* can be connected */
     P_IN_LOCAL_NET,
-    P_LOGIN_STARTED,
-    P_LOGIN_ERROR,
-    P_LOGOUT_STARTED,
     P_IN_CONNECTION,
     P_IS_READY,
     P_ROLE_LIST,
     P_MY_ROLE_LIST,
-    P_BIND_STATUS,
-    P_BIND_EMAIL,
     P_SESSION_KEY,
     P_ENCRYPT_CHANNEL,
 };
@@ -86,15 +81,6 @@ get_property (GObject *object, guint property_id,
     case P_IN_LOCAL_NET:
         g_value_set_boolean (v, peer->in_local_network);
         break;
-    case P_LOGIN_ERROR:
-        g_value_set_string (v, peer->login_error);
-        break;
-    case P_LOGIN_STARTED:
-        g_value_set_boolean (v, peer->login_started);
-        break;
-    case P_LOGOUT_STARTED:
-        g_value_set_boolean (v, peer->logout_started);
-        break;
     case P_IN_CONNECTION:
         g_value_set_boolean (v, peer->in_connection);
         break;
@@ -112,12 +98,6 @@ get_property (GObject *object, guint property_id,
         string_list_join (peer->myrole_list, buf, ",");
         g_value_take_string (v, buf->str);
         g_string_free (buf, FALSE);
-        break;
-    case P_BIND_STATUS:
-        g_value_set_int (v, peer->bind_status);
-        break;
-    case P_BIND_EMAIL:
-        g_value_set_string (v, peer->bind_email);
         break;
     case P_SESSION_KEY:
         g_value_set_string (v, peer->session_key);
@@ -205,16 +185,6 @@ set_property_common (GObject *object, guint property_id,
     case P_IN_LOCAL_NET:
         peer->in_local_network = g_value_get_boolean (v);
         break;   
-    case P_LOGIN_STARTED:
-        peer->login_started = g_value_get_boolean (v);
-        break;   
-    case P_LOGIN_ERROR:
-        g_free (peer->login_error);
-        peer->login_error = g_value_dup_string (v);
-        break;   
-    case P_LOGOUT_STARTED:
-        peer->logout_started = g_value_get_boolean (v);
-        break;   
     case P_IN_CONNECTION:
         peer->in_connection = g_value_get_boolean (v);
         break;
@@ -226,13 +196,6 @@ set_property_common (GObject *object, guint property_id,
         break;
     case P_MY_ROLE_LIST:
         set_my_roles (peer, g_value_get_string(v));
-        break;
-    case P_BIND_STATUS:
-        peer->bind_status = g_value_get_int (v);
-        break;
-    case P_BIND_EMAIL:
-        g_free (peer->bind_email);
-        peer->bind_email = g_value_dup_string (v);
         break;
     case P_SESSION_KEY:
         g_free (peer->session_key);
@@ -299,17 +262,6 @@ define_properties (GObjectClass *gobject_class)
         g_param_spec_boolean ("in-local-network", NULL, "In local network",
                               0, G_PARAM_READWRITE));
 
-    g_object_class_install_property (gobject_class, P_LOGIN_STARTED,
-        g_param_spec_boolean ("login-started", NULL, "login has been started",
-                              0, G_PARAM_READWRITE));
-
-    g_object_class_install_property (gobject_class, P_LOGIN_ERROR,
-        g_param_spec_string ("login-error", NULL, "login error",
-                             NULL, G_PARAM_READWRITE));
-
-    g_object_class_install_property (gobject_class, P_LOGOUT_STARTED,
-        g_param_spec_boolean ("logout-started", NULL, "logout has been started",
-                              0, G_PARAM_READWRITE));
 
     g_object_class_install_property (gobject_class, P_IN_CONNECTION,
         g_param_spec_boolean ("in-connection", NULL, "in connection",
@@ -327,13 +279,6 @@ define_properties (GObjectClass *gobject_class)
         g_param_spec_string ("myrole-list", NULL, "My role list",
                               NULL, G_PARAM_READWRITE));
 
-    g_object_class_install_property (gobject_class, P_BIND_STATUS,
-        g_param_spec_int ("bind-status", NULL, "Bind Status",
-                          0, 8, 0, G_PARAM_READWRITE));
-
-    g_object_class_install_property (gobject_class, P_BIND_EMAIL,
-        g_param_spec_string ("bind-email", NULL, "bind email",
-                              NULL, G_PARAM_READWRITE));
 
     g_object_class_install_property (gobject_class, P_SESSION_KEY,
         g_param_spec_string ("session-key", NULL, "session key",
