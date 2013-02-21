@@ -107,16 +107,6 @@ ccnet_start_rpc(CcnetSession *session)
                                      "remove_role",
                                      searpc_signature_int__string_string());
 
-#if 0
-    searpc_server_register_function ("ccnet-rpcserver",
-                                     ccnet_rpc_get_events,
-                                     "get_events",
-                                     searpc_signature_objlist__int_int());
-    searpc_server_register_function ("ccnet-rpcserver",
-                                     ccnet_rpc_count_event,
-                                     "count_event",
-                                     searpc_signature_int__void());
-#endif  /* 0 */
 
     searpc_server_register_function ("ccnet-rpcserver",
                                      ccnet_rpc_get_procs_alive,
@@ -313,21 +303,6 @@ ccnet_start_rpc(CcnetSession *session)
                                      ccnet_rpc_is_org_staff,
                                      "is_org_staff",
                                      searpc_signature_int__int_string());
-    
-    
-#else
-
-
-    searpc_server_register_function ("ccnet-rpcserver",
-                                     ccnet_rpc_login_relay,
-                                     "login_relay",
-                                     searpc_signature_int__string_string_string());
-
-    searpc_server_register_function ("ccnet-rpcserver",
-                                     ccnet_rpc_logout_relay,
-                                     "logout_relay",
-                                     searpc_signature_int__string());
-
 
 #endif  /* CCNET_SERVER */
 
@@ -507,20 +482,6 @@ ccnet_rpc_remove_role(const char *peer_id, const char *role, GError **error)
     return 0;
 }
 
-#if 0
-GList *
-ccnet_rpc_get_events(int offset, int limit, GError **error)
-{
-    GList *list = ccnet_session_get_events (session, offset, limit);
-    return list;
-}
-
-int
-ccnet_rpc_count_event (GError **error)
-{
-    return ccnet_session_count_event (session);
-}
-#endif  /* 0 */
 
 GList *
 ccnet_rpc_get_procs_alive(int offset, int limit, GError **error)
@@ -1318,89 +1279,3 @@ ccnet_rpc_is_org_staff (int org_id, const char *email, GError **error)
 
 
 #endif  /* CCNET_SERVER */
-
-#ifndef CCNET_SERVER
-int
-ccnet_rpc_login_relay (const char *relay_id, const char *email,
-                       const char *passwd, GError **error)
-{
-    if (!relay_id || !email || !passwd) {
-        g_set_error (error, CCNET_DOMAIN, 0, "Relay id can't be NULL");
-        return -1;
-    }
-
-    CcnetPeerManager *peer_mgr = session->peer_mgr;
-    CcnetPeer *relay = ccnet_peer_manager_get_peer(peer_mgr, relay_id);
-    if (!relay) {
-        g_set_error (error, CCNET_DOMAIN, 0, "No peer %.10s exists", relay_id);
-        return -1;
-    }
-
-    if (!ccnet_peer_has_role (relay, "MyRelay")) {
-        g_set_error (error, CCNET_DOMAIN, 0, "%.10s is not a relay", relay_id);
-        g_object_unref (relay);
-        return -1;
-    }
-
-    CcnetProcessor *proc = ccnet_proc_factory_create_master_processor
-        (session->proc_factory, "sendlogin", relay);
-    if (!proc) {
-        ccnet_warning ("Failed to create sendlogin processor\n");
-        g_set_error (error, CCNET_DOMAIN, 0, "Internal error");
-        g_object_unref (relay);
-        return -1;
-    }
-
-    if (ccnet_processor_startl(proc, email, passwd, NULL) < 0) {
-        ccnet_warning ("Failed to start sendlogin processor\n");
-        g_set_error (error, CCNET_DOMAIN, 0, "Failed to start processor");
-        g_object_unref (relay);
-        return -1;
-    }
-
-    g_object_unref (relay);
-    return 0;
-}
-
-int
-ccnet_rpc_logout_relay (const char *relay_id, GError **error)
-{
-    if (!relay_id) {
-        g_set_error (error, CCNET_DOMAIN, 0, "Relay id can't be NULL");
-        return -1;
-    }
-
-    CcnetPeerManager *peer_mgr = session->peer_mgr;
-    CcnetPeer *relay = ccnet_peer_manager_get_peer(peer_mgr, relay_id);
-    if (!relay) {
-        g_set_error (error, CCNET_DOMAIN, 0, "No peer %.10s exists", relay_id);
-        return -1;
-    }
-
-    if (!ccnet_peer_has_role (relay, "MyRelay")) {
-        g_set_error (error, CCNET_DOMAIN, 0, "%.10s is not a relay", relay_id);
-        g_object_unref (relay);
-        return -1;
-    }
-
-    CcnetProcessor *proc = ccnet_proc_factory_create_master_processor
-        (session->proc_factory, "sendlogout", relay);
-    if (!proc) {
-        ccnet_warning ("Failed to create sendlogout processor\n");
-        g_set_error (error, CCNET_DOMAIN, 0, "Internal error");
-        g_object_unref (relay);
-        return -1;
-    }
-
-    if (ccnet_processor_startl(proc, NULL) < 0) {
-        ccnet_warning ("Failed to start sendlogout processor\n");
-        g_set_error (error, CCNET_DOMAIN, 0, "Failed to start processor");
-        g_object_unref (relay);
-        return -1;
-    }
-
-    g_object_unref (relay);
-    return 0;
-}
-
-#endif
