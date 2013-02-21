@@ -267,11 +267,13 @@ myHandshakeDoneCB (CcnetHandshake *handshake,
             peer = ccnet_peer_new (peer_id);
             ccnet_peer_manager_add_peer (peerMgr, peer);
             set_peer_address_from_socket(peer, io);
+            peer->last_up = time(NULL);
             on_unauthed_peer_connected (peer, io);
             g_object_unref (peer);
             return;
         }
         set_peer_address_from_socket(peer, io);
+        peer->last_up = time(NULL);
     }
     /* hold a reference on the peer */
 

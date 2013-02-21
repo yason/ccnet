@@ -137,6 +137,13 @@ ccnet_start_rpc(CcnetSession *session)
 
 
 #ifdef CCNET_SERVER
+
+    searpc_server_register_function ("ccnet-rpcserver",
+                                     ccnet_rpc_list_peer_stat,
+                                     "list_peer_stat",
+                                     searpc_signature_objlist__void());
+
+
     searpc_server_register_function ("ccnet-threaded-rpcserver",
                                      ccnet_rpc_add_emailuser,
                                      "add_emailuser",
@@ -563,6 +570,46 @@ ccnet_rpc_set_config (const char *key, const char *value, GError **error)
 #include "user-mgr.h"
 #include "group-mgr.h"
 #include "org-mgr.h"
+
+
+GList *
+ccnet_rpc_list_peer_stat (GError **error)
+{
+    GList *res = NULL;
+    GList *ptr, *peer_list;
+    CcnetPeer *peer;
+    CcnetPeerManager *peer_mgr = session->peer_mgr;
+
+    peer_list = ccnet_peer_manager_get_peer_list(peer_mgr);
+    if (peer_list == NULL) {
+        g_set_error(error, CCNET_DOMAIN, CCNET_ERR_INTERNAL, "Failed to get peer list");
+        return NULL;
+    }
+
+    ptr = peer_list;
+    while (ptr) {
+        peer = ptr->data;
+        if (peer->is_self)
+            continue;
+        
+        guint proc_num = g_hash_table_size (peer->processors);
+
+        CcnetPeerStat* stat = ccnet_peer_stat_new ();
+        g_object_set (stat, "id", peer->id,
+                      "name", peer->name,
+                      "ip", peer->addr_str,
+                      "encrypt", peer->encrypt_channel,
+                      "last_up", (gint64) peer->last_up,
+                      "proc_num", (int)proc_num,
+                      NULL);
+        res = g_list_prepend (res, stat);
+        ptr = ptr->next;
+    }
+    g_list_free(peer_list);
+
+    return g_list_reverse (res);
+}
+
 
 int
 ccnet_rpc_add_emailuser (const char *email, const char *passwd,

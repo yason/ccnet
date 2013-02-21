@@ -2,33 +2,7 @@
 
 namespace Ccnet {
 
-public const string EVENT_USER_ROLE = "user-role";
-public const string EVENT_USER_MYROLE = "user-myrole";
-public const string EVENT_GROUP_FOLLOW = "group-follow";
-public const string EVENT_GROUP_NOT_FOLLOW = "group-not-follow";
 
-/*
-public class Event : Object {
-
-    public string _etype;
-    public string etype { 
-        get { return _etype; }
-        set { _etype = value; }
-    }
-
-    public int _ctime;
-    public int ctime { 
-        get { return _ctime; }
-        set { _ctime = value; }
-    }
-
-    public string _body;
-    public string body {
-        get { return _body; }
-        set { _body = value; }
-    }
-}
-*/
 public class Proc : Object {
 
     public string peer_name { get; set; }
@@ -87,6 +61,15 @@ public class Organization : Object {
    public string creator { get; set; }
    public int64 ctime { get; set; }
    
+}
+
+public class PeerStat : Object {
+   public string id { get; set; }
+   public string name { get; set; }
+   public string ip { get; set; }
+   public bool encrypt { get; set; }
+   public int64 last_up { get; set; }
+   public int proc_num { get; set; }
 }
 
 } // namespace

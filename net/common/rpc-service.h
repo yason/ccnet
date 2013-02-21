@@ -81,6 +81,10 @@ int
 ccnet_rpc_upload_profile (const char *relay_id, GError **error);
 
 #ifdef CCNET_SERVER
+
+GList *
+ccnet_rpc_list_peer_stat (GError **error);
+
 int
 ccnet_rpc_add_emailuser (const char *email, const char *passwd,
                          int is_staff, int is_active, GError **error);

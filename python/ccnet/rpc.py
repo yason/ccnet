@@ -162,7 +162,11 @@ class CcnetRpcClient(RpcClientBase):
 
     @searpc_func("int", ["string", "string"])
     def set_config(self, key, value):
-        pass        
+        pass   
+
+    @searpc_func("objlist", [])
+    def list_peer_stat(self, key, value):
+        pass
 
 
 class CcnetThreadedRpcClient(RpcClientBase):

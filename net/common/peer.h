@@ -117,6 +117,9 @@ struct _CcnetPeer
     GList      *write_cbs;
 
     int         last_mult_recv;
+
+    /* statistics */
+    time_t      last_up;
 };
 
 struct _CcnetPeerClass
