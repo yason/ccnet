@@ -589,8 +589,10 @@ ccnet_rpc_list_peer_stat (GError **error)
     ptr = peer_list;
     while (ptr) {
         peer = ptr->data;
-        if (peer->is_self)
+        if (peer->is_self) {
+            ptr = ptr->next;
             continue;
+        }
         
         guint proc_num = g_hash_table_size (peer->processors);
 
