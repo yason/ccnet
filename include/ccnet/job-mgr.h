@@ -39,7 +39,7 @@ void
 ccnet_job_cancel (CcnetJob *job);
 
 CcnetJobManager *
-ccnet_job_manager_new ();
+ccnet_job_manager_new (int max_threads);
 
 void
 ccnet_job_manager_free (CcnetJobManager *mgr);

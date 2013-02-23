@@ -97,7 +97,8 @@ ccnet_client_init (CcnetClient *client)
     client->processors = g_hash_table_new_full (g_int_hash, g_int_equal, 
                                                 g_free, NULL);
     client->proc_factory = ccnet_proc_factory_new (client);
-    client->job_mgr = ccnet_job_manager_new ();
+    /* job_mgr should be created by user, so that max_thread can
+     * be chosen properly. */
 }
 
 CcnetClient*

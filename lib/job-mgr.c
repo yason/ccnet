@@ -133,7 +133,7 @@ ccnet_job_free (CcnetJob *job)
 }
 
 CcnetJobManager *
-ccnet_job_manager_new ()
+ccnet_job_manager_new (int max_threads)
 {
     CcnetJobManager *mgr;
 
@@ -143,7 +143,7 @@ ccnet_job_manager_new ()
 #ifndef WIN32
     mgr->thread_pool = g_thread_pool_new (job_thread_wrapper,
                                           NULL,
-                                          MAX_THREADS,
+                                          max_threads,
                                           FALSE,
                                           NULL);
     /* g_thread_pool_set_max_unused_threads (MAX_IDLE_THREADS); */

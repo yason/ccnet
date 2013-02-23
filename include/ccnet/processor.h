@@ -162,7 +162,14 @@ void ccnet_processor_send_response(CcnetProcessor *processor,
 typedef void* (*ProcThreadFunc)(void *data);
 typedef void (*ProcThreadDoneFunc)(void *result);
 
+struct _CcnetJobManager;
+
+/*
+ * @job_mgr: the thread pool to create the worker thread.
+ *           If it's NULL, processor->session->job_mgr will be used.
+ */
 int ccnet_processor_thread_create (CcnetProcessor *processor,
+                                   struct _CcnetJobManager *job_mgr,
                                    ProcThreadFunc func,
                                    ProcThreadDoneFunc done_func,
                                    void *data);

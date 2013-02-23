@@ -340,11 +340,14 @@ processor_thread_func_wrapper (void *vdata)
 
 int
 ccnet_processor_thread_create (CcnetProcessor *processor,
+                               CcnetJobManager *job_mgr,
                                ProcThreadFunc func,
                                ProcThreadDoneFunc done_func,
                                void *data)
 {
     ProcThreadData *tdata;
+
+    g_assert (job_mgr || processor->session->job_mgr);
 
     tdata = g_new(ProcThreadData, 1);
     tdata->proc = processor;
@@ -352,7 +355,7 @@ ccnet_processor_thread_create (CcnetProcessor *processor,
     tdata->done_func = done_func;
     tdata->data = data;
 
-    ccnet_job_manager_schedule_job (processor->session->job_mgr,
+    ccnet_job_manager_schedule_job (job_mgr ? job_mgr : processor->session->job_mgr,
                                     processor_thread_func_wrapper,
                                     processor_thread_done,
                                     tdata);

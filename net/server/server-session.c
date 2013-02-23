@@ -32,6 +32,7 @@
 #include "log.h"
 #define CCNET_DB "ccnet.db"
 
+#define THREAD_POOL_SIZE 50
 
 G_DEFINE_TYPE (CcnetServerSession, ccnet_server_session, CCNET_TYPE_SESSION);
 
@@ -55,7 +56,7 @@ static void
 ccnet_server_session_init (CcnetServerSession *server_session)
 {
     CcnetSession *session = (CcnetSession *)server_session;
-    server_session->job_mgr = ccnet_job_manager_new ();
+    server_session->job_mgr = ccnet_job_manager_new (THREAD_POOL_SIZE);
     server_session->user_mgr = ccnet_user_manager_new (session);
     server_session->group_mgr = ccnet_group_manager_new (session);
     server_session->org_mgr = ccnet_org_manager_new (session);
