@@ -16,7 +16,7 @@ bin_PROGRAMS = ccnet-tool ccnet-servtool
 ccnet_tool_SOURCES = ccnet-tool.c
 
 ccnet_tool_LDADD = $(top_builddir)/lib/libccnet.la \
-	 @GLIB2_LIBS@  @GOBJECT_LIBS@
+	 @GLIB2_LIBS@  @GOBJECT_LIBS@ @SEARPC_LIBS@
 
 ccnet_tool_LDFLAGS = @STATIC_COMPILE@ @CONSOLE@ @SERVER_PKG_RPATH@
 
