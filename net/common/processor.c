@@ -11,6 +11,11 @@
 #include "proc-factory.h"
 #include "utils.h"
 
+#ifdef CCNET_SERVER
+#include "server-session.h"
+#include "job-mgr.h"
+#endif
+
 #include "processors/keepalive2-proc.h"
 #include "processors/service-proxy-proc.h"
 #include "processors/service-stub-proc.h"
@@ -136,9 +141,36 @@ ccnet_processor_release_resource(CcnetProcessor *processor)
     CCNET_PROCESSOR_GET_CLASS (processor)->release_resource(processor);
 }
 
+/*
+ * processor->detached is set in two places:
+ * 1. ccnet_peer_remove_process(), which is called when one processor is done;
+ * 2. ccnet_proc_factory_shutdown_processors(), which is called when peer shutdown.
+ *
+ * There are two shutdown/done situation:
+ * 1. processor thread is not running;
+ * 2. processor thread was running, now it's a delayed shutdown.
+ *
+ * In non-delayed shutdown,
+ * 1. if it's peer shutdown, detached is TRUE, no need to remove
+ *    the processor from the peer.
+ * 2. if it's not peer shutdown, detached is FALSE, remove it from the peer.
+ *
+ * In delayed shutdown,
+ * 1. if it was a peer shutdown, detached is TRUE.
+ * 2. if it was not a peer shutdown, detached is FALSE.
+ *
+ * Checking peer->in_shutdown is not reliable for delayed shutdown,
+ * because the peer may already be free'd when shutdown/done is called.
+ */
+
 void
 ccnet_processor_shutdown (CcnetProcessor *processor, int reason)
 {
+    if (processor->thread_running) {
+        processor->delay_shutdown = TRUE;
+        return;
+    }
+
     if (processor->state == STATE_IN_SHUTDOWN) {
         return;
     }
@@ -156,7 +188,7 @@ ccnet_processor_shutdown (CcnetProcessor *processor, int reason)
     else
         g_signal_emit (processor, signals[DONE_SIG], 0, FALSE);
 
-    if (!processor->peer->in_shutdown) {
+    if (!processor->detached) {
         ccnet_peer_remove_processor (processor->peer, processor);
     }
     ccnet_processor_release_resource (processor);
@@ -167,6 +199,11 @@ ccnet_processor_shutdown (CcnetProcessor *processor, int reason)
 void
 ccnet_processor_done (CcnetProcessor *processor, gboolean success)
 {
+    if (processor->thread_running) {
+        processor->delay_shutdown = TRUE;
+        return;
+    }
+
     if (processor->state == STATE_IN_SHUTDOWN) {
         return;
     }
@@ -178,7 +215,7 @@ ccnet_processor_done (CcnetProcessor *processor, gboolean success)
         ccnet_debug ("Processsor %s(%d) done %d\n", GET_PNAME(processor),
                      PRINT_ID(processor->id), success);
 
-    if (processor->peer && !processor->peer->in_shutdown && success)
+    if (!processor->detached && success)
     {
         if (!IS_SLAVE (processor)) {
             ccnet_processor_send_update (processor, SC_PROC_DONE, SS_PROC_DONE,
@@ -192,7 +229,7 @@ ccnet_processor_done (CcnetProcessor *processor, gboolean success)
      * twice. */
     g_signal_emit (processor, signals[DONE_SIG], 0, success);
 
-    if (!processor->peer->in_shutdown) {
+    if (!processor->detached) {
         ccnet_peer_remove_processor (processor->peer, processor);
     }
 
@@ -422,3 +459,59 @@ static void ccnet_processor_keep_alive_response (CcnetProcessor *processor)
         ccnet_processor_send_update (processor, SC_PROC_ALIVE, 
                                      SS_PROC_ALIVE, NULL, 0);
 }
+
+#ifdef CCNET_SERVER
+
+typedef struct ProcThreadData {
+    CcnetProcessor *proc;
+    ProcThreadFunc func;
+    void *data;
+    ProcThreadDoneFunc done_func;
+    void *result;
+} ProcThreadData;
+
+static void
+processor_thread_done (void *vdata)
+{
+    ProcThreadData *tdata = vdata;
+
+    tdata->proc->thread_running = FALSE;
+    tdata->done_func (tdata->result);
+
+    g_free (tdata);
+}
+
+static void *
+processor_thread_func_wrapper (void *vdata)
+{
+    ProcThreadData *tdata = vdata;
+    tdata->result = tdata->func (tdata->data);
+    return vdata;
+}
+
+int
+ccnet_processor_thread_create (CcnetProcessor *processor,
+                               CcnetJobManager *job_mgr,
+                               ProcThreadFunc func,
+                               ProcThreadDoneFunc done_func,
+                               void *data)
+{
+    ProcThreadData *tdata;
+
+    g_assert (job_mgr || processor->session->job_mgr);
+
+    tdata = g_new(ProcThreadData, 1);
+    tdata->proc = processor;
+    tdata->func = func;
+    tdata->done_func = done_func;
+    tdata->data = data;
+
+    ccnet_job_manager_schedule_job (job_mgr ? job_mgr : processor->session->job_mgr,
+                                    processor_thread_func_wrapper,
+                                    processor_thread_done,
+                                    tdata);
+    processor->thread_running = TRUE;
+    return 0;
+}
+
+#endif  /* CCNET_SERVER */

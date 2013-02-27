@@ -150,8 +150,6 @@ ccnet_peer_new (const char *id)
 
     peer->processors = g_hash_table_new_full (g_direct_hash,  g_direct_equal, 
                                               NULL, NULL);
-    INIT_LIST_HEAD (&peer->procs_list);
-
     peer->reqID = CCNET_USER_ID_START;
 
     peer->packet = evbuffer_new ();
@@ -1149,7 +1147,6 @@ ccnet_peer_add_processor (CcnetPeer *peer, CcnetProcessor *processor)
         ccnet_debug ("[Proc] Add %s(%d) to peer %s\n", GET_PNAME(processor),
                      PRINT_ID(processor->id), peer->name);
     g_hash_table_insert (peer->processors, (gpointer)(long)processor->id, processor);
-    list_add (&processor->per_peer_list, &peer->procs_list);
     processor->detached = 0;
 }
 
@@ -1160,7 +1157,6 @@ ccnet_peer_remove_processor (CcnetPeer *peer, CcnetProcessor *processor)
     /* ccnet_debug ("[Proc] Remove %s(%d) from peer %s\n", GET_PNAME(processor),  */
     /*              PRINT_ID(processor->id), peer->name); */
     g_hash_table_remove (peer->processors, (gpointer)(long)processor->id);
-    list_del (&processor->per_peer_list);
     processor->detached = 1;
 }
 

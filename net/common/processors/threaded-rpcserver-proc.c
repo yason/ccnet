@@ -79,6 +79,12 @@ static void
 call_function_done (void *vprocessor)
 {
     CcnetProcessor *processor = vprocessor;
+
+    if (processor->delay_shutdown) {
+        ccnet_processor_done (processor, FALSE);
+        return;
+    }
+
     CcnetThreadedRpcserverProcPriv *priv = GET_PRIV(processor);
 
     if (priv->buf) {
@@ -111,15 +117,15 @@ handle_update (CcnetProcessor *processor,
                char *content, int clen)
 {
     CcnetThreadedRpcserverProcPriv *priv = GET_PRIV (processor);
-    CcnetSession *session = processor->session;
 
     if (memcmp (code, SC_CLIENT_CALL, 3) == 0) {
         priv->call_buf = g_memdup (content, clen);
         priv->call_len = (gsize)clen;
-        ccnet_job_manager_schedule_job (session->job_mgr,
-                                        call_function_job,
-                                        call_function_done,
-                                        processor);
+        ccnet_processor_thread_create (processor,
+                                       NULL,
+                                       call_function_job,
+                                       call_function_done,
+                                       processor);
         return;
     }
 

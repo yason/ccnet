@@ -305,7 +305,7 @@ ccnet_proc_factory_shutdown_processors (CcnetProcFactory *factory,
     list = g_hash_table_get_values (peer->processors);
     for (ptr = list; ptr; ptr = ptr->next) {
         processor = CCNET_PROCESSOR (ptr->data);
-        list_del (&processor->per_peer_list);
+        processor->detached = TRUE;
         shutdown_processor (processor, code, code_msg);
     }
     g_hash_table_remove_all (peer->processors);

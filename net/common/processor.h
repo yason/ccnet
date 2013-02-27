@@ -60,11 +60,19 @@ struct _CcnetProcessor {
     unsigned int           detached  : 1;
 
     struct list_head       list;
-    struct list_head       per_peer_list;
 
     /* last time when a packet received  */
     time_t                 t_packet_recv;
     time_t                 t_keepalive_sent;
+
+    gboolean               thread_running;
+
+    /* If proc is shut down when a thread is running, delay it until
+     * the thread is done. The thread done callback should check
+     * this attribute and if this is TRUE, the callback should
+     * call processor_done().
+     */
+    gboolean               delay_shutdown;
 };
 
 
@@ -171,5 +179,27 @@ void ccnet_processor_send_response(CcnetProcessor *processor,
                                    const char *content, int clen);
 
 void ccnet_processor_keep_alive (CcnetProcessor *processor);
+
+/*
+  The thread func should return the result back by
+     return (void *)result;
+  The result will be passed to ProcThreadDoneFunc.
+  In the done func, the caller should check whether processor->delay_shutdown
+  is TRUE. If it is, you should call processor_done().
+ */
+typedef void* (*ProcThreadFunc)(void *data);
+typedef void (*ProcThreadDoneFunc)(void *result);
+
+struct _CcnetJobManager;
+
+/*
+ * @job_mgr: the thread pool to create the worker thread.
+ *           If it's NULL, processor->session->job_mgr will be used.
+ */
+int ccnet_processor_thread_create (CcnetProcessor *processor,
+                                   struct _CcnetJobManager *job_mgr,
+                                   ProcThreadFunc func,
+                                   ProcThreadDoneFunc done_func,
+                                   void *data);
 
 #endif

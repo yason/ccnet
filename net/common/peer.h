@@ -121,7 +121,6 @@ struct _CcnetPeer
     struct evbuffer      *packet;
     
     GHashTable *processors;
-    struct list_head procs_list; /* for keep-alive */
 
     GList      *write_cbs;
 
