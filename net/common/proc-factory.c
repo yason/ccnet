@@ -103,8 +103,6 @@ GType ccnet_sync_relay_slave_proc_get_type ();
 GType ccnet_rpcserver_proc_get_type ();
 GType ccnet_echo_proc_get_type ();
 
-static int keepalive_pulse (CcnetProcFactory *factory);
-
 CcnetProcFactory *
 ccnet_proc_factory_new (CcnetSession *session)
 {
@@ -180,8 +178,8 @@ ccnet_proc_factory_new (CcnetSession *session)
 void
 ccnet_proc_factory_start (CcnetProcFactory *factory)
 {
-    factory->keepalive_timer = ccnet_timer_new (
-        (TimerCB) keepalive_pulse, factory, KEEPALIVE_PULSE);
+    /* factory->keepalive_timer = ccnet_timer_new ( */
+    /*     (TimerCB) keepalive_pulse, factory, KEEPALIVE_PULSE); */
 }
 
 static GType
@@ -324,6 +322,18 @@ ccnet_proc_factory_set_keepalive_timeout (CcnetProcFactory *factory,
     factory->no_packet_timeout = timeout;
 }
 
+/* Don't send keepalive or reclaim inactive processors. */
+
+#if 0
+
+static gint
+compare_procs (gconstpointer a, gconstpointer b)
+{
+    const CcnetProcessor *proc_a = a, *proc_b = b;
+
+    return (proc_a->t_keepalive_sent - proc_b->t_keepalive_sent);
+}
+
 /* keep processors alive by sending keepalive packets. 
 
    Three different status codes are used for this purpose:
@@ -356,6 +366,7 @@ peer_processors_keepalive (CcnetProcFactory *factory, CcnetPeer *peer)
     CcnetProcessor *processor;
     int count = 0;
     char *code, *code_msg;
+    GList *keepalive_list = NULL, *ptr;
 
     /*
      * Use list_for_each_safe since we may delete an entry when looping. 
@@ -370,7 +381,9 @@ peer_processors_keepalive (CcnetProcFactory *factory, CcnetPeer *peer)
             /* No need to call keepalive to local peer */
             continue;
         }
-        
+
+        /* The server don't send keep alive. */
+#ifndef CCNET_SERVER        
         /* a just started master processor */
         if (processor->t_packet_recv == 0) {
             g_assert (processor->start_time != 0);
@@ -392,11 +405,11 @@ peer_processors_keepalive (CcnetProcFactory *factory, CcnetPeer *peer)
 
         if (processor->t_keepalive_sent <= processor->t_packet_recv) {
             /* has not send a keepalive packet yet */
-            ccnet_processor_keep_alive (processor);
-            if (++count > MAX_PROCS_KEEPALIVE) break;
+            keepalive_list = g_list_prepend (keepalive_list, processor);
 
             continue;
         }
+#endif
 
         /* if keepalive is already sent and timeout */
         if (now - processor->t_packet_recv > no_packet_timeout2) {
@@ -412,8 +425,24 @@ peer_processors_keepalive (CcnetProcFactory *factory, CcnetPeer *peer)
             g_free (code_msg);
             continue;
         }
-
     }
+
+    /* Sort the processors that need keep alive by its last
+     * keepalive sent time, so that no processor is starved.
+     */
+    keepalive_list = g_list_sort (keepalive_list, compare_procs);
+    for (ptr = keepalive_list; ptr; ptr = ptr->next) {
+        processor = ptr->data;
+
+        if (++count > MAX_PROCS_KEEPALIVE)
+            break;
+
+        ccnet_debug ("sending keepalive, %s(%d), last sent: %d.\n",
+                     GET_PNAME(processor), PRINT_ID(processor->id),
+                     (int)processor->t_keepalive_sent);
+        ccnet_processor_keep_alive (processor);
+    }
+    g_list_free (keepalive_list);
 }
 
 static int
@@ -436,3 +465,5 @@ keepalive_pulse (CcnetProcFactory *factory)
 
     return TRUE;
 }
+
+#endif  /* 0 */
