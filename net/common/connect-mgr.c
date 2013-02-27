@@ -198,8 +198,14 @@ myHandshakeDoneCB (CcnetHandshake *handshake,
 
         /* temporally use peer, so don't need to increase the reference */
         peer = handshake->peer;
-        ccnet_debug ("[Conn] peer %s(%.10s) connection fails\n", 
-                     peer->name, peer->id);
+        if (peer->num_fails == 0) {
+            /* print error for the first time */
+            ccnet_message ("[Conn] peer %s(%.10s) connection fails\n", 
+                         peer->name, peer->id);
+        } else {
+            ccnet_debug ("[Conn] peer %s(%.10s) connection fails\n", 
+                         peer->name, peer->id);
+        }
         if (peer->net_state == PEER_CONNECTED) {
             ccnet_debug ("[Conn] But Peer %s(%.10s) is already connected me.\n",
                          peer->name, peer->id);
@@ -332,9 +338,15 @@ ccnet_conn_manager_connect_peer (CcnetConnManager *manager, CcnetPeer *peer)
     /*     return FALSE; */
     /* } */
     /* peer->last_try_time = now; */
-    
-    ccnet_debug ("[Conn] Start outgoing connect to %s(%.10s) %s:%d\n", 
-                 peer->name, peer->id, addr, port);
+
+    if (peer->num_fails == 0) {
+        /* print log for the first time */
+        ccnet_message ("[Conn] Start outgoing connect to %s(%.10s) %s:%d\n", 
+                       peer->name, peer->id, addr, port);
+    } else {
+        ccnet_debug ("[Conn] Start outgoing connect to %s(%.10s) %s:%d\n", 
+                     peer->name, peer->id, addr, port);
+    }
     io = ccnet_packet_io_new_outgoing (manager->session, addr, port);
     
     if (io == NULL) {

@@ -516,6 +516,7 @@ add_relay (CcnetProcessor *processor, int argc, char **argv)
     if (addr_port && peer_id) {
         peer = ccnet_peer_manager_get_peer (mgr, peer_id);
         if (!peer) {
+            ccnet_message("Add server %.8s %s:%d\n", peer_id, addr, port);
             peer = ccnet_peer_new (peer_id);
             g_assert (peer);
             ccnet_peer_manager_add_peer (mgr, peer);
