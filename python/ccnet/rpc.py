@@ -4,7 +4,7 @@ from ccnet.status_code import SC_CLIENT_CALL, SS_CLIENT_CALL, \
     SC_CLIENT_MORE, SS_CLIENT_MORE, SC_SERVER_RET, \
     SC_SERVER_MORE, SC_PROC_DEAD
 
-from ccnet.client import NetworkError
+from ccnet.errors import NetworkError
 
 class DeadProcError(Exception):
     def __str__(self):

@@ -1,5 +1,4 @@
-
-from ccnet.client import Client, NetworkError
+from ccnet.sync_client import SyncClient
 import Queue
 
 class ClientPool(object):
@@ -15,7 +14,7 @@ class ClientPool(object):
         self._pool = Queue.Queue(pool_size)
 
     def _create_client(self):
-        client = Client(self.conf_dir)
+        client = SyncClient(self.conf_dir)
         client.req_ids = {}
         client.connect_daemon()
 

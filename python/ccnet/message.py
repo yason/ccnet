@@ -28,8 +28,20 @@ def message_from_string(s):
     d = results.groupdict()
     return Message(d)
 
+
 def gen_inner_message_string(self_id, app, content):
     result = "%d %s %s %s %d %d %s %s\000" % (0, self_id, self_id, str(uuid.uuid1()),
                                             int(time.time()), 0,
                                             app, content)
     return result
+
+def message_to_string(msg):
+    f = '%(flags)s %(from_)s %(to)s %(id)s %(ctime)s %(rtime)s %(app)s %(body)s'
+    return f % dict(flags=msg.flags,
+                    from_=msg.from_,
+                    to=msg.to,
+                    id=msg.id,
+                    ctime=msg.ctime,
+                    rtime=msg.rtime,
+                    app=msg.app,
+                    body=msg.body)
