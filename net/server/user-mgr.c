@@ -300,6 +300,48 @@ out:
     return ret;
 }
 
+/*
+ * @uid: user's uid, list all users if * is passed in.
+ */
+static int ldap_count_users (CcnetUserManager *manager, const char *uid)
+{
+    LDAP *ld = NULL;
+    int res;
+    GString *filter;
+    char *filter_str;
+    char *attrs[2];
+    LDAPMessage *msg = NULL;
+    int count = -1;
+
+    ld = ldap_init_and_bind (manager->ldap_host,
+                             manager->user_dn,
+                             manager->password);
+    if (!ld)
+        return -1;
+
+    filter = g_string_new (NULL);
+    g_string_printf (filter, "(%s=%s)", manager->login_attr, uid);
+    filter_str = g_string_free (filter, FALSE);
+
+    attrs[0] = manager->login_attr;
+    attrs[1] = NULL;
+
+    res = ldap_search_s (ld, manager->base, LDAP_SCOPE_SUBTREE,
+                         filter_str, attrs, 0, &msg);
+    if (res != LDAP_SUCCESS) {
+        ccnet_warning ("ldap_search failed: %s.\n", ldap_err2string(res));
+        goto out;
+    }
+
+    count = ldap_count_entries (ld, msg);
+
+out:
+    ldap_msgfree (msg);
+    g_free (filter_str);
+    if (ld) ldap_unbind_s (ld);
+    return count;
+}
+
 #endif  /* HAVE_LDAP */
 
 /* -------- DB Operations -------- */
@@ -650,6 +692,11 @@ ccnet_user_manager_count_emailusers (CcnetUserManager *manager)
 {
     CcnetDB* db = manager->priv->db;
     char sql[512];
+
+#ifdef HAVE_LDAP
+    if (manager->use_ldap)
+        return (gint64) ldap_count_users (manager, "*");
+#endif
 
     snprintf (sql, 512, "SELECT COUNT(*) FROM EmailUser");
 
