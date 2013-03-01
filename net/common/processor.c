@@ -81,7 +81,8 @@ int ccnet_processor_start (CcnetProcessor *processor, int argc, char **argv)
             ccnet_processor_send_response (processor, SC_NETDOWN, SS_NETDOWN,
                                            NULL, 0);
         }
-        ccnet_processor_shutdown (processor, PROC_NETDOWN);
+        processor->failure = PROC_NETDOWN;
+        ccnet_processor_done (processor, FALSE);
         return -1;
     }
 
@@ -150,57 +151,18 @@ ccnet_processor_release_resource(CcnetProcessor *processor)
  * 1. processor thread is not running;
  * 2. processor thread was running, now it's a delayed shutdown.
  *
- * In non-delayed shutdown,
- * 1. if it's peer shutdown, detached is TRUE, no need to remove
- *    the processor from the peer.
- * 2. if it's not peer shutdown, detached is FALSE, remove it from the peer.
- *
- * In delayed shutdown,
- * 1. if it was a peer shutdown, detached is TRUE.
- * 2. if it was not a peer shutdown, detached is FALSE.
- *
- * Checking peer->in_shutdown is not reliable for delayed shutdown,
- * because the peer may already be free'd when shutdown/done is called.
+ * When ccnet_processor_done() is called while worker thread is running,
+ * the current state is saved in processor->detached, processor->was_success.
+ * After the thread is done, ccnet_processor_done() will be called again
+ * with the same state.
  */
-
-void
-ccnet_processor_shutdown (CcnetProcessor *processor, int reason)
-{
-    if (processor->thread_running) {
-        processor->delay_shutdown = TRUE;
-        return;
-    }
-
-    if (processor->state == STATE_IN_SHUTDOWN) {
-        return;
-    }
-
-    if (processor->failure == PROC_NOTSET && reason != PROC_NOTSET)
-        processor->failure = reason;
-    processor->state = STATE_IN_SHUTDOWN;
-    ccnet_debug ("[Proc] Shutdown %s(%d) of peer %s\n",
-                 GET_PNAME(processor), PRINT_ID(processor->id), 
-                 processor->peer->name);
-    CCNET_PROCESSOR_GET_CLASS (processor)->shutdown (processor);
-
-    if (reason == PROC_DONE)
-        g_signal_emit (processor, signals[DONE_SIG], 0, TRUE);
-    else
-        g_signal_emit (processor, signals[DONE_SIG], 0, FALSE);
-
-    if (!processor->detached) {
-        ccnet_peer_remove_processor (processor->peer, processor);
-    }
-    ccnet_processor_release_resource (processor);
-
-    ccnet_proc_factory_recycle (processor->session->proc_factory, processor);
-}
 
 void
 ccnet_processor_done (CcnetProcessor *processor, gboolean success)
 {
     if (processor->thread_running) {
         processor->delay_shutdown = TRUE;
+        processor->was_success = success;
         return;
     }
 
@@ -268,17 +230,20 @@ void ccnet_processor_handle_update (CcnetProcessor *processor,
         }
 
         if (memcmp(code, SC_UNKNOWN_SERVICE, 3) == 0)
-            ccnet_processor_shutdown (processor, PROC_NO_SERVICE);
+            processor->failure = PROC_NO_SERVICE;
         else if (memcmp(code, SC_PERM_ERR, 3) == 0)
-            ccnet_processor_shutdown (processor, PROC_PERM_ERR);
+            processor->failure = PROC_PERM_ERR;
         else if (memcmp(code, SC_CON_TIMEOUT, 3) == 0)
-            ccnet_processor_shutdown (processor, PROC_CON_TIMEOUT);
+            processor->failure = PROC_CON_TIMEOUT;
         else if (memcmp(code, SC_KEEPALIVE_TIMEOUT, 3) == 0)
-            ccnet_processor_shutdown (processor, PROC_TIMEOUT);
+            processor->failure = PROC_TIMEOUT;
         else if (memcmp(code, SC_NETDOWN, 3) == 0)
-            ccnet_processor_shutdown (processor, PROC_NETDOWN);
+            processor->failure = PROC_NETDOWN;
         else
-            ccnet_processor_shutdown (processor, PROC_BAD_RESP);
+            processor->failure = PROC_BAD_RESP;
+
+        ccnet_processor_done (processor, FALSE);
+
         return;
     }
 
@@ -301,7 +266,8 @@ void ccnet_processor_handle_update (CcnetProcessor *processor,
                 processor, code, code_msg, content, clen);
         }
 
-        ccnet_processor_shutdown (processor, PROC_REMOTE_DEAD);
+        processor->failure = PROC_REMOTE_DEAD;
+        ccnet_processor_done (processor, FALSE);
     } else if (memcmp (code, SC_PROC_DONE, 3) == 0) {
         ccnet_debug ("[Proc] Shutdown processor %s(%d) when master done\n",
                      GET_PNAME(processor), PRINT_ID(processor->id));
@@ -338,17 +304,20 @@ void ccnet_processor_handle_response (CcnetProcessor *processor,
         }
 
         if (memcmp(code, SC_UNKNOWN_SERVICE, 3) == 0)
-            ccnet_processor_shutdown (processor, PROC_NO_SERVICE);
+            processor->failure = PROC_NO_SERVICE;
         else if (memcmp(code, SC_PERM_ERR, 3) == 0)
-            ccnet_processor_shutdown (processor, PROC_PERM_ERR);
+            processor->failure = PROC_PERM_ERR;
         else if (memcmp(code, SC_CON_TIMEOUT, 3) == 0)
-            ccnet_processor_shutdown (processor, PROC_CON_TIMEOUT);
+            processor->failure = PROC_CON_TIMEOUT;
         else if (memcmp(code, SC_KEEPALIVE_TIMEOUT, 3) == 0)
-            ccnet_processor_shutdown (processor, PROC_TIMEOUT);
+            processor->failure = PROC_TIMEOUT;
         else if (memcmp(code, SC_NETDOWN, 3) == 0)
-            ccnet_processor_shutdown (processor, PROC_NETDOWN);
+            processor->failure = PROC_NETDOWN;
         else
-            ccnet_processor_shutdown (processor, PROC_BAD_RESP);
+            processor->failure = PROC_BAD_RESP;
+
+        ccnet_processor_done (processor, FALSE);
+
         return;
     }
 
@@ -368,7 +337,8 @@ void ccnet_processor_handle_response (CcnetProcessor *processor,
                 processor, code, code_msg, content, clen);
         }
 
-        ccnet_processor_shutdown (processor, PROC_REMOTE_DEAD);
+        processor->failure = PROC_REMOTE_DEAD;
+        ccnet_processor_done (processor, FALSE);
     } else
         CCNET_PROCESSOR_GET_CLASS (processor)->handle_response (processor,
                                                                 code, code_msg, 
@@ -476,7 +446,11 @@ processor_thread_done (void *vdata)
     ProcThreadData *tdata = vdata;
 
     tdata->proc->thread_running = FALSE;
-    tdata->done_func (tdata->result);
+
+    if (tdata->proc->delay_shutdown)
+        ccnet_processor_done (tdata->proc, tdata->proc->was_success);
+    else
+        tdata->done_func (tdata->result);
 
     g_free (tdata);
 }

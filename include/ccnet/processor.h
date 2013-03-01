@@ -49,14 +49,10 @@ struct _CcnetProcessor {
     /* Set to 1 when handling update or response */
     gboolean               is_active;
 
+    /* Internal flags for handling processor thread. */
     gboolean               thread_running;
-
-    /* If proc is shut down when a thread is running, delay it until
-     * the thread is done. The thread done callback should check
-     * this attribute and if this is TRUE, the callback should
-     * call processor_done().
-     */
     gboolean               delay_shutdown;
+    gboolean               was_success;
 };
 
 enum {
@@ -117,12 +113,7 @@ int ccnet_processor_start (CcnetProcessor *processor,
 int ccnet_processor_startl 
                  (CcnetProcessor *processor, ...) G_GNUC_NULL_TERMINATED;
 
-
-
-/* only called by child */
 void ccnet_processor_done (CcnetProcessor *processor, gboolean success);
-
-void ccnet_processor_shutdown (CcnetProcessor *processor, int reason);
 
 void ccnet_processor_handle_update (CcnetProcessor *processor, 
                                     char *code, char *code_msg,

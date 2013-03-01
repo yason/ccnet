@@ -30,6 +30,10 @@ static void handle_update (CcnetProcessor *processor,
 static void
 release_resource(CcnetProcessor *processor)
 {
+    CcnetThreadedRpcserverProcPriv *priv = GET_PRIV (processor);
+
+    g_free (priv->buf);
+
     CCNET_PROCESSOR_CLASS (ccnet_threaded_rpcserver_proc_parent_class)->release_resource (processor);
 }
 
@@ -79,12 +83,6 @@ static void
 call_function_done (void *vprocessor)
 {
     CcnetProcessor *processor = vprocessor;
-
-    if (processor->delay_shutdown) {
-        ccnet_processor_done (processor, FALSE);
-        return;
-    }
-
     CcnetThreadedRpcserverProcPriv *priv = GET_PRIV(processor);
 
     if (priv->buf) {
@@ -92,6 +90,7 @@ call_function_done (void *vprocessor)
             ccnet_processor_send_response (processor, SC_SERVER_RET, SS_SERVER_RET,
                                            priv->buf, priv->len);
             g_free (priv->buf);
+            priv->buf = NULL;
             /* ccnet_processor_done (processor, TRUE); */
             return;
         }
@@ -140,6 +139,7 @@ handle_update (CcnetProcessor *processor,
                 processor, SC_SERVER_RET, SS_SERVER_RET,
                 priv->buf + priv->off, priv->len - priv->off);
             g_free (priv->buf);
+            priv->buf = NULL;
             /* ccnet_processor_done (processor, TRUE); */
         }
         return;
@@ -148,7 +148,5 @@ handle_update (CcnetProcessor *processor,
     ccnet_processor_send_response (processor, SC_BAD_UPDATE_CODE,
                                    SS_BAD_UPDATE_CODE, NULL, 0);
     g_warning ("[rpc-server] Bad update: %s %s.\n", code, code_msg);
-    if (priv->buf)
-        g_free (priv->buf);
     ccnet_processor_done (processor, FALSE);
 }

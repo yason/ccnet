@@ -68,11 +68,13 @@ struct _CcnetProcessor {
     gboolean               thread_running;
 
     /* If proc is shut down when a thread is running, delay it until
-     * the thread is done. The thread done callback should check
-     * this attribute and if this is TRUE, the callback should
-     * call processor_done().
+     * the thread is done. The current state is saved to was_success.
+     * The thread done callback checks delay_shutdown
+     * attribute and if this is TRUE, the callback
+     * calls processor_done(processor, was_success).
      */
     gboolean               delay_shutdown;
+    gboolean               was_success;
 };
 
 
@@ -136,9 +138,6 @@ int ccnet_processor_start (CcnetProcessor *processor,
 
 int ccnet_processor_startl 
                  (CcnetProcessor *processor, ...) G_GNUC_NULL_TERMINATED;
-                             
-
-void ccnet_processor_shutdown (CcnetProcessor *processor, int reason);
 
 void ccnet_processor_done (CcnetProcessor *processor, gboolean success);
 
