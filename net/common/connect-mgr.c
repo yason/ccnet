@@ -533,8 +533,8 @@ dns_lookup (void *vdata)
 
     /* Look up the hostname. */
     err = evutil_getaddrinfo(data->peer->public_addr, NULL, &hints, &answer);
-    if (err < 0) {
-          ccnet_warning("Error while resolving '%s': %s",
+    if (err != 0) {
+          ccnet_warning("Error while resolving '%s': %s\n",
                         data->peer->public_addr, evutil_gai_strerror(err));
           return vdata;
     }
@@ -576,7 +576,7 @@ dns_lookup_cb (void *result)
     CcnetPeer *peer = data->peer;
 
     if (!data->addr_str) {
-        ccnet_warning ("DNS lookup failed for peer %s(%s).\n",
+        ccnet_warning ("DNS lookup failed for peer %.10s(%s).\n",
                        data->peer->id, data->peer->public_addr);
         g_free (data);
         return;
