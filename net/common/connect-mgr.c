@@ -3,7 +3,7 @@
 #include "common.h"
 
 #include <stdio.h>
-#include <evdns.h>
+#include <event2/util.h>
 
 #include "net.h"
 #include "packet.h"
@@ -507,83 +507,104 @@ ccnet_conn_listen_init (CcnetConnManager *manager)
                                              LISTEN_INTERVAL);
 }
 
-static void dns_lookup_cb(int result, char type, int count,
-                          int ttl, void *addresses, void *arg)
-{
+typedef struct DNSLookupData {
     CcnetPeer *peer;
-    uint32_t addr;
-    char *addr_str; 
-    const char *ptr;
-    int af;
+    char *addr_str;
+} DNSLookupData;
+
+static void *
+dns_lookup (void *vdata)
+{
+    DNSLookupData *data = vdata;
+    struct evutil_addrinfo hints;
+    struct evutil_addrinfo *answer = NULL;
+    int err;
+    void *addr;
+    char *addr_str;
     socklen_t size;
 
-    peer = (CcnetPeer *)arg;
+    /* Build the hints to tell getaddrinfo how to act. */
+    memset(&hints, 0, sizeof(hints));
+    hints.ai_family = AF_UNSPEC; /* v4 or v6 is fine. */
+    hints.ai_socktype = SOCK_STREAM;
+    hints.ai_protocol = IPPROTO_TCP; /* We want a TCP socket */
+    /* Only return addresses we can use. */
+    hints.ai_flags = EVUTIL_AI_ADDRCONFIG;
 
-    if (result != DNS_ERR_NONE) {
-        ccnet_warning("DNS look up failed: %s\n",
-                      evdns_err_to_string(result));
-        return;
+    /* Look up the hostname. */
+    err = evutil_getaddrinfo(data->peer->public_addr, NULL, &hints, &answer);
+    if (err < 0) {
+          ccnet_warning("Error while resolving '%s': %s",
+                        data->peer->public_addr, evutil_gai_strerror(err));
+          return vdata;
     }
 
-    if (count == 0) {
-        return;
-    }
-
-    /* just use the first in addresses */
-    addr = ((uint32_t *)addresses)[0];
-    if (type == DNS_IPv4_A) {
-        af = AF_INET;
+    /* just use the first answer */
+    if (answer->ai_family == AF_INET) {
         size = INET_ADDRSTRLEN;
-    } else if (type == DNS_IPv6_AAAA) {
-        af = AF_INET6;
+        addr = &((struct sockaddr_in *)(answer->ai_addr))->sin_addr;
+    } else if (answer->ai_family == AF_INET6) {
         size = INET6_ADDRSTRLEN;
+        addr = &((struct sockaddr_in6 *)(answer->ai_addr))->sin6_addr;
     } else
-        /* never go to here */
-        return;
+        goto out;
 
-    addr_str = (char *)malloc(size);
+    addr_str = (char *)calloc(size, sizeof(char));
     if (addr_str == NULL) {
         ccnet_error("Out of memory\n");
-        exit(-1);
+        goto out;
     }
-    memset(addr_str, 0, size);
 
-    ptr = inet_ntop(af, &addr, addr_str, size);
-    if (ptr == NULL) {
+    if (!inet_ntop(answer->ai_family, addr, addr_str, size)) {
         ccnet_warning("Peer %s domain name %s lookup fail\n",
-                      peer->name, peer->public_addr);
+                      data->peer->name, data->peer->public_addr);
         free(addr_str);
+        goto out;
+    }
+
+    data->addr_str = addr_str;
+
+out:
+    evutil_freeaddrinfo (answer);
+    return vdata;
+}
+
+static void
+dns_lookup_cb (void *result)
+{
+    DNSLookupData *data = result;
+    CcnetPeer *peer = data->peer;
+
+    if (!data->addr_str) {
+        ccnet_warning ("DNS lookup failed for peer %s(%s).\n",
+                       data->peer->id, data->peer->public_addr);
+        g_free (data);
         return;
     }
 
     g_free(peer->dns_addr);
-    peer->dns_addr = g_strdup (addr_str);
+    peer->dns_addr = g_strdup (data->addr_str);
     peer->dns_done = 1;
     ccnet_conn_manager_connect_peer (peer->manager->session->connMgr, peer);
-    free(addr_str);
-}
 
+    free(data->addr_str);
+    g_free (data);
+}
 
 static void
 dns_lookup_peer (CcnetPeer* peer)
 {
+    DNSLookupData *data;
+
     if (peer->dns_done)
         return;
 
-    if (peer->redirected) {
-        if (peer->redirect_addr == NULL) {
-            ccnet_warning ("peer is redirected, but redirect address is not set\n");
-            return;
-        }
-        evdns_resolve_ipv4(peer->redirect_addr, DNS_OPTIONS_ALL, dns_lookup_cb, peer);
-    } else {
-        if (peer->public_addr == NULL)
-            return;
-        evdns_resolve_ipv4(peer->public_addr, DNS_OPTIONS_ALL, dns_lookup_cb, peer);
-    }
-/* #ifndef WIN32 */
-/*     evdns_resolve_ipv6(peer->public_addr, DNS_OPTIONS_ALL, dns_lookup_cb, peer); */
-/* #endif */
+    data = g_new0 (DNSLookupData, 1);
+    data->peer = peer;
+    ccnet_job_manager_schedule_job (peer->manager->session->job_mgr,
+                                    dns_lookup,
+                                    dns_lookup_cb,
+                                    data);
 }
 
 void

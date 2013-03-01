@@ -111,7 +111,7 @@ handle_update (CcnetProcessor *processor,
                char *content, int clen)
 {
     CcnetThreadedRpcserverProcPriv *priv = GET_PRIV (processor);
-    CcnetServerSession *session = CCNET_SERVER_SESSION (processor->session);
+    CcnetSession *session = processor->session;
 
     if (memcmp (code, SC_CLIENT_CALL, 3) == 0) {
         priv->call_buf = g_memdup (content, clen);

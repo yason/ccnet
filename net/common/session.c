@@ -27,6 +27,8 @@
 #define DEBUG_FLAG CCNET_DEBUG_OTHER
 #include "log.h"
 
+#define THREAD_POOL_SIZE 50
+
 static void ccnet_service_free (CcnetService *service);
 
 
@@ -53,6 +55,7 @@ ccnet_session_init (CcnetSession *session)
     session->connMgr = ccnet_conn_manager_new (session);
     session->msg_mgr = ccnet_message_manager_new (session);
     session->perm_mgr = ccnet_perm_manager_new (session);
+    session->job_mgr = ccnet_job_manager_new (THREAD_POOL_SIZE);
 }
 
 static int load_rsakey(CcnetSession *session)

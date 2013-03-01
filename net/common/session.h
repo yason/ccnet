@@ -12,6 +12,8 @@
 #include "processor.h"
 #include "ccnet-db.h"
 
+#include "job-mgr.h"
+
 #include "ccnet-object.h"
 
 #define SESSION_CONFIG_FILENAME   "ccnet.conf"
@@ -62,6 +64,8 @@ struct CcnetSession
     struct _CcnetProcFactory   *proc_factory;
 
     struct _CcnetPermManager   *perm_mgr;
+
+    struct _CcnetJobManager    *job_mgr;
 
     GHashTable                 *service_hash;
 
