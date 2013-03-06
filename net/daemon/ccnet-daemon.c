@@ -195,6 +195,8 @@ main (int argc, char **argv)
         exit (1);
     }
 
+    ccnet_message ("starting ccnet "PACKAGE_VERSION"\n");
+
     srand (time(NULL));
 
     session = (CcnetSession *)ccnet_daemon_session_new ();
