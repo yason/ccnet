@@ -525,7 +525,7 @@ dns_lookup (void *vdata)
 
     /* Build the hints to tell getaddrinfo how to act. */
     memset(&hints, 0, sizeof(hints));
-    hints.ai_family = AF_UNSPEC; /* v4 or v6 is fine. */
+    hints.ai_family = AF_INET; /* only use IPv4 now. */
     hints.ai_socktype = SOCK_STREAM;
     hints.ai_protocol = IPPROTO_TCP; /* We want a TCP socket */
     /* Only return addresses we can use. */
