@@ -4,6 +4,8 @@
 
 import datetime
 import re
+import uuid
+import time
 
 MESSAGE_PATTERN = re.compile(r'(?P<flags>[\d]+) (?P<from>[^ ]+) (?P<to>[^ ]+) (?P<id>[^ ]+) (?P<ctime>[^ ]+) (?P<rtime>[^ ]+) (?P<app>[^ ]+) (?P<body>.*)')
 
@@ -25,3 +27,9 @@ def message_from_string(s):
 
     d = results.groupdict()
     return Message(d)
+
+def gen_inner_message_string(self_id, app, content):
+    result = "%d %s %s %s %d %d %s %s\000" % (0, self_id, self_id, str(uuid.uuid1()),
+                                            int(time.time()), 0,
+                                            app, content)
+    return result

@@ -12,7 +12,7 @@ from ccnet.packet import CCNET_HEADER_LENGTH, CCNET_MSG_RESPONSE
 
 from ccnet.status_code import SC_PROC_DONE, SS_PROC_DONE
 
-from ccnet.message import message_from_string
+from ccnet.message import message_from_string, gen_inner_message_string
 
 class NetworkError(Exception):
     def __init__(self, msg):
@@ -131,6 +131,7 @@ class Client(object):
 
         self._connfd = None
         self._req_id = 1000
+        self.mq_req_id = -1
 
     def __del__(self):
         '''Destructor of the client class. We close the socket here, if
@@ -218,6 +219,26 @@ class Client(object):
             raise RuntimeError('Failed to send-cmd: %s %s' % (resp.code, resp.code_msg))
 
         self.send_update(req_id, SC_PROC_DONE, SS_PROC_DONE, '')
+
+    def prepare_send_message(self):
+        request = 'mq-server'
+        mq_req_id = self.get_request_id()
+        self.send_request(mq_req_id, request)
+        resp = self.read_response()
+        if resp.code != '200':
+            raise RuntimeError('bad response: %s %s' % (resp.code, resp.code_msg))
+        self.mq_req_id = mq_req_id
+    
+    def send_message(self, msg_type, content):
+        if self.mq_req_id == -1:
+            self.prepare_send_message()
+
+        msg = gen_inner_message_string(self.peerid, msg_type, content)
+        self.send_update(self.mq_req_id, "300", '', msg)
+        resp = self.read_response()
+        if resp.code != '200':
+            self.mq_req_id = -1
+            raise RuntimeError('bad response: %s %s' % (resp.code, resp.code_msg))
 
     def prepare_recv_message(self, msg_type):
         request = 'mq-server %s' % msg_type
