@@ -1,5 +1,5 @@
-import gevent
 import logging
+import thread
 
 from ccnet.client import Client, parse_update, parse_response
 
@@ -176,4 +176,5 @@ class AsyncClient(Client):
     def main_loop(self):
         while True:
             pkt = read_packet(self._connfd)
-            gevent.spawn(self.handle_packet, pkt)
+            # Would spawn a new greenlet after gevent.monkey.patch_all()
+            thread.start_new_thread(self.handle_packet, args=(pkt,))
