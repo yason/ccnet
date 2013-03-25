@@ -715,12 +715,17 @@ ccnet_user_manager_update_emailuser (CcnetUserManager *manager,
 #ifdef HAVE_LDAP
     if (!manager->use_ldap || is_staff) {
 #endif
-        hash_password (passwd, hashed_passwd);
+        if (g_strcmp0 (passwd, "!") == 0) { /* Don't update unusable password. */
+            snprintf (sql, 512, "UPDATE EmailUser SET is_staff='%d', "
+                  "is_active='%d' WHERE id='%d'", is_staff, is_active, id);
+        } else {
+            hash_password (passwd, hashed_passwd);
 
-        snprintf (sql, 512, "UPDATE EmailUser SET passwd='%s', is_staff='%d', "
-                  "is_active='%d' WHERE id='%d'", hashed_passwd, is_staff,
-                  is_active, id);
-
+            snprintf (sql, 512, "UPDATE EmailUser SET passwd='%s', "
+                      "is_staff='%d', is_active='%d' WHERE id='%d'",
+                      hashed_passwd, is_staff, is_active, id);
+        }
+        
         return ccnet_db_query (db, sql);
 #ifdef HAVE_LDAP
     }
