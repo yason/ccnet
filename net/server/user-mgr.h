@@ -33,6 +33,9 @@ struct _CcnetUserManager
     /* LDAP related */
     gboolean        use_ldap;
     char           *ldap_host;
+#ifdef WIN32
+    gboolean        use_ssl;
+#endif
     char           *base;       /* base DN from where all users can be reached */
     char           *user_dn;    /* DN of the admin user */
     char           *password;   /* password for admin user */

@@ -118,6 +118,10 @@ static int try_load_ldap_settings (CcnetUserManager *manager)
 
     manager->use_ldap = TRUE;
 
+#ifdef WIN32
+    manager->use_ssl = g_key_file_get_boolean (config, "LDAP", "USE_SSL", NULL);
+#endif
+
     manager->base = g_key_file_get_string (config, "LDAP", "BASE", NULL);
     if (!manager->base) {
         ccnet_warning ("LDAP: BASE not found in config file.\n");
@@ -142,6 +146,9 @@ static int try_load_ldap_settings (CcnetUserManager *manager)
 }
 
 static LDAP *ldap_init_and_bind (const char *host,
+#ifdef WIN32
+                                 gboolean use_ssl,
+#endif
                                  const char *user_dn,
                                  const char *password)
 {
@@ -156,9 +163,17 @@ static LDAP *ldap_init_and_bind (const char *host,
         return NULL;
     }
 #else
-    ld = ldap_init (host, LDAP_PORT);
+    char *host_copy = g_strdup (host);
+    if (!use_ssl)
+        ld = ldap_init (host_copy, LDAP_PORT);
+    else
+        ld = ldap_sslinit (host_copy, LDAP_SSL_PORT, 1);
+    g_free (host_copy);
+    if (!ld) {
+        ccnet_warning ("ldap_init failed: %ul.\n", LdapGetLastError());
+        return NULL;
+    }
 #endif
-
 
     /* set the LDAP version to be 3 */
     res = ldap_set_option (ld, LDAP_OPT_PROTOCOL_VERSION, &desired_version);
@@ -168,7 +183,15 @@ static LDAP *ldap_init_and_bind (const char *host,
     }
 
     if (user_dn) {
+#ifndef WIN32
         res = ldap_bind_s (ld, user_dn, password, LDAP_AUTH_SIMPLE);
+#else
+        char *dn_copy = g_strdup(user_dn);
+        char *password_copy = g_strdup(password);
+        res = ldap_bind_s (ld, dn_copy, password_copy, LDAP_AUTH_SIMPLE);
+        g_free (dn_copy);
+        g_free (password_copy);
+#endif
         if (res != LDAP_SUCCESS ) {
             ccnet_warning ("ldap_bind failed: %s.\n", ldap_err2string(res));
             ldap_unbind_s (ld);
@@ -195,6 +218,9 @@ static int ldap_verify_user_password (CcnetUserManager *manager,
     /* First search for the DN with the given uid. */
 
     ld = ldap_init_and_bind (manager->ldap_host,
+#ifdef WIN32
+                             manager->use_ssl,
+#endif
                              manager->user_dn,
                              manager->password);
     if (!ld)
@@ -228,7 +254,11 @@ static int ldap_verify_user_password (CcnetUserManager *manager,
 
     ldap_unbind_s (ld);
 
-    ld = ldap_init_and_bind (manager->ldap_host, dn, password);
+    ld = ldap_init_and_bind (manager->ldap_host,
+#ifdef WIN32
+                             manager->use_ssl,
+#endif
+                             dn, password);
     if (!ld) {
         ccnet_warning ("Password check for %s failed.\n", uid);
         ret = -1;
@@ -257,6 +287,9 @@ static GList *ldap_list_users (CcnetUserManager *manager, const char *uid,
     LDAPMessage *msg = NULL, *entry;
 
     ld = ldap_init_and_bind (manager->ldap_host,
+#ifdef WIN32
+                             manager->use_ssl,
+#endif
                              manager->user_dn,
                              manager->password);
     if (!ld)
@@ -333,6 +366,9 @@ static int ldap_count_users (CcnetUserManager *manager, const char *uid)
     int count = -1;
 
     ld = ldap_init_and_bind (manager->ldap_host,
+#ifdef WIN32
+                             manager->use_ssl,
+#endif
                              manager->user_dn,
                              manager->password);
     if (!ld)
