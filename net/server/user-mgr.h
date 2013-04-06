@@ -59,6 +59,9 @@ void ccnet_user_manager_free (CcnetUserManager *manager);
 
 void ccnet_user_manager_start (CcnetUserManager *manager);
 
+void
+ccnet_user_manager_set_max_users (CcnetUserManager *manager, gint64 max_users);
+
 int
 ccnet_user_manager_add_emailuser (CcnetUserManager *manager,
                                   const char *email,

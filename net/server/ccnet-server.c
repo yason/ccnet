@@ -8,6 +8,7 @@
 #include <evdns.h>
 
 #include "server-session.h"
+#include "user-mgr.h"
 #include "rpc-service.h"
 #include "log.h"
 
@@ -87,7 +88,7 @@ on_ccnet_exit(void)
 }
 
 
-static const char *short_options = "hvdc:D:f:P:";
+static const char *short_options = "hvdc:D:f:P:M:";
 static struct option long_options[] = {
     { "help", no_argument, NULL, 'h', }, 
     { "version", no_argument, NULL, 'v', }, 
@@ -96,6 +97,7 @@ static struct option long_options[] = {
     { "debug", required_argument, NULL, 'D' },
     { "daemon", no_argument, NULL, 'd' },
     { "pidfile", required_argument, NULL, 'P' },
+    { "max-users", required_argument, NULL, 'M' },
     { NULL, 0, NULL, 0, },
 };
 
@@ -119,7 +121,9 @@ static void usage()
 "    -f LOG_FILE\n"
 "        Log file path\n"
 "    -P PIDFILE\n"
-"        Specify the file to store pid\n",
+"        Specify the file to store pid\n"
+"    -M MAX_USERS\n"
+"        Specify the max users for login\n",
         stdout);
 }
 
@@ -131,6 +135,7 @@ main (int argc, char **argv)
     char *log_file = 0;
     const char *debug_str = 0;
     int daemon_mode = 0;
+    int max_users = 0;
     const char *log_level_str = "debug";
 
     config_dir = DEFAULT_CONFIG_DIR;
@@ -162,6 +167,9 @@ main (int argc, char **argv)
             break;
         case 'P':
             pidfile = optarg;
+            break;
+        case 'M':
+            max_users = atoi(optarg);
             break;
         default:
             fprintf (stderr, "unknown option \"-%c\"\n", (char)c);
@@ -221,6 +229,7 @@ main (int argc, char **argv)
 
     event_init ();
     evdns_init ();
+    ccnet_user_manager_set_max_users (((struct CcnetServerSession *)session)->user_mgr, max_users);
     if (ccnet_session_prepare(session, config_dir) < 0) {
         fputs ("Error: failed to start ccnet session, "
                "see log file for the detail.\n", stderr);
