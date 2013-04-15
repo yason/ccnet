@@ -236,7 +236,8 @@ out:
 /*
  * @uid: user's uid, list all users if * is passed in.
  */
-static GList *ldap_list_users (CcnetUserManager *manager, const char *uid)
+static GList *ldap_list_users (CcnetUserManager *manager, const char *uid,
+                               int start, int limit)
 {
     LDAP *ld = NULL;
     GList *ret = NULL;
@@ -267,14 +268,23 @@ static GList *ldap_list_users (CcnetUserManager *manager, const char *uid)
         goto out;
     }
 
+    int i = 0;
+    if (start == -1)
+        start = 0;
+
     for (entry = ldap_first_entry (ld, msg);
          entry != NULL;
-         entry = ldap_next_entry (ld, entry))
+         entry = ldap_next_entry (ld, entry), ++i)
     {
         char *attr;
         char **vals;
         BerElement *ber;
         CcnetEmailUser *user;
+
+        if (i < start)
+            continue;
+        if (limit >= 0 && i >= start + limit)
+            break;
 
         attr = ldap_first_attribute (ld, entry, &ber);
         vals = ldap_get_values (ld, entry, attr);
@@ -586,7 +596,7 @@ ccnet_user_manager_get_emailuser (CcnetUserManager *manager,
             g_object_unref (emailuser);
         }
 
-        users = ldap_list_users (manager, email);
+        users = ldap_list_users (manager, email, -1, -1);
         if (!users)
             return NULL;
         emailuser = users->data;
@@ -666,8 +676,11 @@ ccnet_user_manager_get_emailusers (CcnetUserManager *manager, int start, int lim
     /* Assuming admin user is in LDAP database too.
      * is_staff is not set here.
      */
-    if (manager->use_ldap)
-        return ldap_list_users (manager, "*");
+    if (manager->use_ldap) {
+        GList *users;
+        users = ldap_list_users (manager, "*", start, limit);
+        return g_list_reverse (users);
+    }
 #endif
 
     if (start == -1 && limit == -1)
