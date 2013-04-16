@@ -47,8 +47,8 @@ static int try_load_ldap_settings (CcnetUserManager *manager);
 
 struct CcnetUserManagerPriv {
     CcnetDB    *db;
-    gint64      max_users;
-    gint64      cur_users;
+    int         max_users;
+    int         cur_users;
 };
 
 
@@ -96,9 +96,8 @@ ccnet_user_manager_prepare (CcnetUserManager *manager)
     manager->priv->cur_users = ccnet_user_manager_count_emailusers (manager);
     if (manager->priv->max_users != 0
         && manager->priv->cur_users > manager->priv->max_users) {
-        ccnet_warning ("The number of user went over the limit, max %"
-                      G_GINT64_FORMAT", current %"G_GINT64_FORMAT"\n",
-                      manager->priv->max_users, manager->priv->cur_users);
+        ccnet_warning ("The number of users exceeds limit, max %d, current %d\n",
+                       manager->priv->max_users, manager->priv->cur_users);
         return -1;
     }
     return 0;
@@ -550,8 +549,14 @@ ccnet_user_manager_add_emailuser (CcnetUserManager *manager,
     if (manager->use_ldap)
         return 0;
 #endif
-    if (!manager->priv->max_users && manager->priv->cur_users >= manager->priv->max_users)
+
+    if (manager->priv->max_users &&
+        manager->priv->cur_users >= manager->priv->max_users) {
+        ccnet_warning ("User number exceeds limit. Users %d, limit %d.\n",
+                       manager->priv->cur_users, manager->priv->max_users);
         return -1;
+    }
+
     hash_password (passwd, hashed_passwd);
 
     snprintf (sql, 512, "INSERT INTO EmailUser(email, passwd, is_staff, "

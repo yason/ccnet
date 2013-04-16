@@ -64,21 +64,18 @@ fi
 compile_cli=yes
 compile_tools=yes
 compile_server=no
+compile_mysql=no
 
 if test "$bwin32" = true; then
    compile_client=yes
    compile_cli=no
    compile_tools=no
-   compile_server=no
-
 fi
 
 if test "$bmac" = true; then
    compile_client=yes
    compile_cli=no
    compile_tools=no
-   compile_server=no
-
 fi
 
 #if test "$blinux" = true || test "$bwin32" = true ; then
@@ -92,6 +89,10 @@ fi
 
 AC_ARG_ENABLE(server, AC_HELP_STRING([--enable-server], [enable server]),
    [compile_server=$enableval],[compile_server="no"])
+
+# default compile mysql, only for servers.
+AC_ARG_ENABLE(mysql, AC_HELP_STRING([--enable-mysql], [enable mysql]),
+   [compile_mysql=$enableval],[compile_mysql="yes"])
 
 AC_ARG_ENABLE(ldap, AC_HELP_STRING([--enable-ldap], [enable LDAP]),
    [compile_ldap=$enableval],[compile_ldap="no"])
@@ -282,36 +283,38 @@ if test x${compile_python} = xyes; then
 fi
 
 
-# Check mysql client library and libzdb if compile seafile server
+# Check libzdb if compile seafile server
 if test "${compile_server}" = "yes"; then
    PKG_CHECK_MODULES(ZDB, [zdb >= $ZDB_REQUIRED])
    AC_SUBST(ZDB_CFLAGS)
    AC_SUBST(ZDB_LIBS)
 
-   if test "$bwin32" = true; then
-      MYSQL_LIBS=`mysql_config.pl --libs_r`
-      MYSQL_CFLAGS=`mysql_config.pl --include`
-   else
-      MYSQL_LIBS=`mysql_config --libs_r`
-      MYSQL_CFLAGS=`mysql_config --include`
+   # only compile with mysql when compiling server
+   if test "${compile_mysql}" = "yes"; then
+      if test "$bwin32" = true; then
+         MYSQL_LIBS=`mysql_config.pl --libs_r`
+         MYSQL_CFLAGS=`mysql_config.pl --include`
+      else
+         MYSQL_LIBS=`mysql_config --libs_r`
+         MYSQL_CFLAGS=`mysql_config --include`
+      fi
+
+      # On CentOS, libmysqlclient is in /usr/lib64/mysql/, not /usr/lib, so we
+      # need to adjust CPPFLAGS and LDFLAGS before check it
+      saved_CPPFLAGS=$CPPFLAGS
+      saved_LDFLAGS=$LDFLAGS
+      CPPFLAGS="$MYSQL_CFLAGS $CPPFLAGS"
+      LDFLAGS="$MYSQL_LIBS $LDFLAGS"
+
+      AC_CHECK_LIB(mysqlclient, mysql_init, [echo "found library mysqlclient"],
+         AC_MSG_ERROR([*** Unable to find mysql client library]), )
+
+      CPPFLAGS=$saved_CPPFLAGS
+      LDFLAGS=$saved_LDFLAGS
+
+      AC_SUBST(MYSQL_LIBS)
+      AC_SUBST(MYSQL_CFLAGS)
    fi
-
-   # On CentOS, libmysqlclient is in /usr/lib64/mysql/, not /usr/lib, so we
-   # need to adjust CPPFLAGS and LDFLAGS before check it
-   saved_CPPFLAGS=$CPPFLAGS
-   saved_LDFLAGS=$LDFLAGS
-   CPPFLAGS="$MYSQL_CFLAGS $CPPFLAGS"
-   LDFLAGS="$MYSQL_LIBS $LDFLAGS"
-
-   if test "$bwin32" != true; then
-   AC_CHECK_LIB(mysqlclient, mysql_init, [echo "found library mysqlclient"],
-      AC_MSG_ERROR([*** Unable to find mysql client library]), )
-   fi
-   CPPFLAGS=$saved_CPPFLAGS
-   LDFLAGS=$saved_LDFLAGS
-
-   AC_SUBST(MYSQL_LIBS)
-   AC_SUBST(MYSQL_CFLAGS)
 fi
 
 if test "${compile_ldap}" = "yes"; then
