@@ -33,6 +33,9 @@ typedef void (*RegisterServiceCB) (gboolean success);
 void ccnet_register_service (CcnetClient *client,
                              const char *service, const char *group,
                              GType proc_type, RegisterServiceCB cb);
+gboolean ccnet_register_service_sync (CcnetClient *client,
+                                      const char *service,
+                                      const char *group);
 CcnetClient *ccnet_init (const char *confdir);
 
 void ccnet_send_command (CcnetClient *client, const char *command,

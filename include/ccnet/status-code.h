@@ -22,8 +22,6 @@
 
 #define SC_OK "200"
 #define SS_OK "OK"
-#define SC_SERV_EXISTED "210"
-#define SS_SERV_EXISTED "The service existed"
 #define SC_PERM_CHECKING "250"
 #define SS_PERM_CHECKING "Permission Checking"
 
@@ -60,5 +58,7 @@
 #define SS_KEEPALIVE_TIMEOUT "keepalive timeout"
 #define SC_NETDOWN "515"
 #define SS_NETDOWN "peer down"
+#define SC_SERV_EXISTED "516"
+#define SS_SERV_EXISTED "The service existed"
 
 #endif

@@ -42,6 +42,24 @@ ccnet_register_service (CcnetClient *client,
     ccnet_send_command (client, buf, cmdrsp_cb, cb);
 }
 
+gboolean
+ccnet_register_service_sync (CcnetClient *client,
+                             const char *service,
+                             const char *group)
+{
+    char buf[512];
+    GError *error = NULL;    
+
+    snprintf (buf, 512, "register-service %s %s", service, group);
+    ccnet_client_send_cmd (client, buf, &error);
+    if (error) {
+        ccnet_warning ("Bad response for register service %s: %d %s",
+                       service, error->code, error->message);
+        return FALSE;
+    }
+    return TRUE;
+}
+
 static void read_cb (int fd, short event, void *vclient)
 {
     CcnetClient *client = vclient;
