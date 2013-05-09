@@ -189,7 +189,7 @@ static void set_peer_address_from_socket(CcnetPeer *peer, CcnetPacketIO *io)
     struct sockaddr_in addr;
     socklen_t len = sizeof(struct sockaddr_in);
     int socket = io->socket;
-    getsockname (socket, (struct sockaddr *)&addr, &len);
+    getpeername (socket, (struct sockaddr *)&addr, &len);
     char *p = inet_ntoa (addr.sin_addr);
     peer->addr_str = strdup(p);
 }
