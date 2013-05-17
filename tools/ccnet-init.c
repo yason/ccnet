@@ -32,22 +32,23 @@ enum {
 
 /* Number of bits in the RSA/DSA key.  This value can be set on the command line. */
 #define DEFAULT_BITS        2048
-guint32 bits = 0;
+static guint32 bits = 0;
 
-int quiet = 0;
+static int quiet = 0;
 
-char *identity_file_peer;
+static char *identity_file_peer = NULL;
 
-RSA *peer_privkey, *peer_pubkey;
+static RSA *peer_privkey = NULL;
+static RSA *peer_pubkey = NULL;
 
-char *user_name;
-char *peer_name;
-char *peer_id;
-char *host_str;
-char *port_str;
+static char *user_name = NULL;
+static char *peer_name = NULL;
+static char *peer_id = NULL;
+static char *host_str = NULL;
+static char *port_str = NULL;
 
 /* argv0 */
-char *program_name;
+static char *program_name = NULL;
 
 
 static void make_configure_file (const char *config_file);
@@ -227,7 +228,15 @@ make_configure_file (const char *config_file)
 
     fprintf (fp, "\n");
     fprintf (fp, "[Client]\n");
-    fprintf (fp, "PORT = 13419\n");
+
+    /* Use differnet ports for ccnet-daemon and ccnet-server */
+    if (port_str != NULL) {
+        /* ccnet-server */
+        fprintf (fp, "PORT = 13418\n");
+    } else {
+        /* ccnet-daemon */
+        fprintf (fp, "PORT = 13419\n");
+    }
 
     fclose (fp);
 
