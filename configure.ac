@@ -86,7 +86,6 @@ if test "$compile_client" = yes; then
    compile_gui=yes
 fi
 
-
 AC_ARG_ENABLE(server, AC_HELP_STRING([--enable-server], [enable server]),
    [compile_server=$enableval],[compile_server="no"])
 
@@ -94,13 +93,15 @@ AC_ARG_ENABLE(server, AC_HELP_STRING([--enable-server], [enable server]),
 AC_ARG_ENABLE(mysql, AC_HELP_STRING([--enable-mysql], [enable mysql]),
    [compile_mysql=$enableval],[compile_mysql="yes"])
 
+AC_ARG_ENABLE(pgsql, AC_HELP_STRING([--enable-pgsql], [enable pgsql]),
+   [compile_pgsql=$enableval],[compile_pgsql="no"])
+
 AC_ARG_ENABLE(ldap, AC_HELP_STRING([--enable-ldap], [enable LDAP]),
    [compile_ldap=$enableval],[compile_ldap="no"])
 
 AC_ARG_ENABLE(cluster, AC_HELP_STRING([--enable-cluster],
    [enable cluster]), [compile_cluster=$enableval],
    [compile_cluster="no"])
-
 
 AC_ARG_ENABLE(python,
               AC_HELP_STRING([--enable-python],[build ccnet python binding]),
@@ -315,6 +316,25 @@ if test "${compile_server}" = "yes"; then
       AC_SUBST(MYSQL_LIBS)
       AC_SUBST(MYSQL_CFLAGS)
    fi
+
+   # check postgresql if compile_pgsql is set
+   if test "${compile_pgsql}" = "yes"; then
+     saved_CPPFLAGS=$CPPFLAGS
+     saved_LDFLAGS=$LDFLAGS
+     PGSQL_CFLAGS="-I`pg_config --includedir` $CPPFLAGS"
+     PGSQL_LIBS="-L`pg_config --libdir` $LDFLAGS"
+
+     CPPFLAGS="$PGSQL_CFLAGS $CPPFLAGS"
+     LDFLAGS="$PGSQL_LIBS $LDFLAGS"
+
+     AC_CHECK_HEADERS([libpq-fe.h], [], [compile_pgsql="no"])
+
+     CPPFLAGS=$saved_CPPFLAGS
+     LDFLAGS=$saved_LDFLAGS
+
+     AC_SUBST(PGSQL_LIBS)
+     AC_SUBST(PGSQL_CFLAGS)
+   fi
 fi
 
 if test "${compile_ldap}" = "yes"; then
@@ -377,4 +397,5 @@ fi
 if test x${compile_demo} = xyes; then
    echo    "demo"
 fi
+
 echo

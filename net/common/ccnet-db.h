@@ -9,10 +9,12 @@
 
 #define DB_SQLITE "sqlite"
 #define DB_MYSQL "mysql"
+#define DB_PGSQL "pgsql"
 
 enum {
     CCNET_DB_TYPE_SQLITE,
     CCNET_DB_TYPE_MYSQL,
+    CCNET_DB_TYPE_PGSQL,
 };
 
 
@@ -23,6 +25,13 @@ typedef gboolean (*CcnetDBRowFunc) (CcnetDBRow *, void *);
 
 CcnetDB *
 ccnet_db_new_mysql (const char *host,
+                    const char *user,
+                    const char *passwd,
+                    const char *db,
+                    const char *unix_socket);
+
+CcnetDB *
+ccnet_db_new_pgsql (const char *host,
                     const char *user,
                     const char *passwd,
                     const char *db,
@@ -64,6 +73,9 @@ ccnet_db_get_int64 (CcnetDB *db, const char *sql);
 
 char *
 ccnet_db_get_string (CcnetDB *db, const char *sql);
+
+gboolean
+pgsql_index_exists (CcnetDB *db, const char *index_name);
 
 #else
 

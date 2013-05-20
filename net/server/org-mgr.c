@@ -67,6 +67,7 @@ open_db (CcnetOrgManager *manager)
         if (!db)
             return -1;
         break;
+    case CCNET_DB_TYPE_PGSQL:
     case CCNET_DB_TYPE_MYSQL:
         db = manager->session->db;
         break;
@@ -151,6 +152,37 @@ static int check_db_table (CcnetDB *db)
             "OrgGroup (org_id, group_id)";
         if (ccnet_db_query (db, sql) < 0)
             return -1;
+    } else if (db_type == CCNET_DB_TYPE_PGSQL) {
+        sql = "CREATE TABLE IF NOT EXISTS Organization (org_id SERIAL"
+            " PRIMARY KEY, org_name VARCHAR(255),"
+            " url_prefix VARCHAR(255), creator VARCHAR(255), ctime BIGINT,"
+            " UNIQUE (url_prefix))";
+        if (ccnet_db_query (db, sql) < 0)
+            return -1;
+        
+        sql = "CREATE TABLE IF NOT EXISTS OrgUser (org_id INTEGER, "
+            "email VARCHAR(255), is_staff INTEGER NOT NULL, "
+            "UNIQUE (org_id, email))";
+        if (ccnet_db_query (db, sql) < 0)
+            return -1;
+
+        if (!pgsql_index_exists (db, "orguser_email_idx")) {
+            sql = "CREATE INDEX orguser_email_idx ON OrgUser (email)";
+            if (ccnet_db_query (db, sql) < 0)
+                return -1;
+        }
+
+        sql = "CREATE TABLE IF NOT EXISTS OrgGroup (org_id INTEGER, "
+            "group_id INTEGER, "
+            "UNIQUE (org_id, group_id))";
+        if (ccnet_db_query (db, sql) < 0)
+            return -1;
+
+        if (!pgsql_index_exists (db, "orggroup_groupid_idx")) {
+            sql = "CREATE INDEX orggroup_groupid_idx ON OrgGroup (group_id)";
+            if (ccnet_db_query (db, sql) < 0)
+                return -1;
+        }
     }
 
     return 0;
@@ -259,8 +291,9 @@ ccnet_org_manager_get_all_orgs (CcnetOrgManager *mgr,
     char sql[512];
     GList *ret = NULL;
 
-    snprintf (sql, sizeof(sql), "SELECT * FROM Organization LIMIT %d, %d",
-              start, limit);
+    snprintf (sql, sizeof(sql),
+              "SELECT * FROM Organization ORDER BY org_id LIMIT %d OFFSET %d",
+              limit, start);
     if (ccnet_db_foreach_selected_row (db, sql, get_all_orgs_cb, &ret) < 0) {
         return NULL;
     }
@@ -441,7 +474,7 @@ ccnet_org_manager_get_org_emailusers (CcnetOrgManager *mgr,
 
     snprintf (sql, sizeof(sql), "SELECT email FROM OrgUser WHERE org_id ="
               " (SELECT org_id FROM Organization WHERE url_prefix = '%s')"
-              " LIMIT %d, %d", url_prefix, start, limit);
+              " ORDER BY email LIMIT %d OFFSET %d", url_prefix, limit, start);
     
     ccnet_db_foreach_selected_row (db, sql, get_org_emailusers, &ret);
 
