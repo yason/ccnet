@@ -510,7 +510,7 @@ open_sqlite_db (CcnetUserManager *manager)
 static int
 open_db (CcnetUserManager *manager)
 {
-    CcnetDB *db;
+    CcnetDB *db = NULL;
 
     switch (ccnet_db_type(manager->session->db)) {
     /* To be compatible with the db file layout of 0.9.1 version,
@@ -519,14 +519,15 @@ open_db (CcnetUserManager *manager)
      */
     case CCNET_DB_TYPE_SQLITE:
         db = open_sqlite_db (manager);
-        if (!db)
-            return -1;
         break;
     case CCNET_DB_TYPE_PGSQL:
     case CCNET_DB_TYPE_MYSQL:
         db = manager->session->db;
         break;
     }
+
+    if (!db)
+        return -1;
 
     manager->priv->db = db;
     return check_db_table (db);

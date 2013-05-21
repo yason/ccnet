@@ -59,19 +59,20 @@ open_sqlite_db (CcnetOrgManager *manager)
 static int
 open_db (CcnetOrgManager *manager)
 {
-    CcnetDB *db;
+    CcnetDB *db = NULL;
 
     switch (ccnet_db_type(manager->session->db)) {
     case CCNET_DB_TYPE_SQLITE:
         db = open_sqlite_db (manager);
-        if (!db)
-            return -1;
         break;
     case CCNET_DB_TYPE_PGSQL:
     case CCNET_DB_TYPE_MYSQL:
         db = manager->session->db;
         break;
     }
+
+    if (!db)
+        return -1;
     
     manager->priv->db = db;
     return check_db_table (db);

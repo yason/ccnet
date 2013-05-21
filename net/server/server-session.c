@@ -211,7 +211,11 @@ load_database_config (CcnetSession *session)
     } else if (strncasecmp (engine, DB_PGSQL, sizeof(DB_PGSQL)) == 0) {
         ccnet_debug ("Use database PostgreSQL\n");
         ret = init_pgsql_database (session);
+    } else {
+        ccnet_warning ("Unknown database type: %s.\n", engine);
+        ret = -1;
     }
+
     return ret;
 }
 
