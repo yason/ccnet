@@ -176,5 +176,5 @@ class AsyncClient(Client):
     def main_loop(self):
         while True:
             pkt = read_packet(self._connfd)
-            # Would spawn a new greenlet after gevent.monkey.patch_all()
-            thread.start_new_thread(self.handle_packet, args=(pkt,))
+            import gevent
+            gevent.spawn(self.handle_packet, pkt)
