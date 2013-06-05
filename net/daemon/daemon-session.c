@@ -61,12 +61,16 @@ daemon_session_prepare (CcnetSession *session)
     /* setting of encrypt_channel */
     char *encrypt_channel;
 
+    /* Default to encrypt channel */
     encrypt_channel = ccnet_session_config_get_string (session,
                                                        "encrypt_channel");
-    if (g_strcmp0(encrypt_channel, "on") == 0)
+    if (!encrypt_channel) {
         session->encrypt_channel = 1;
-    else
+        ccnet_session_config_set_string (session, "encrypt_channel", "on");
+    } else if (g_strcmp0(encrypt_channel, "off") == 0)
         session->encrypt_channel = 0;
+    else
+        session->encrypt_channel = 1;
  
     g_free (encrypt_channel);
 
