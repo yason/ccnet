@@ -84,3 +84,11 @@ class SyncClient(Client):
         if resp.code != '200':
             self.mq_req_id = -1
             raise RuntimeError('bad response: %s %s' % (resp.code, resp.code_msg))
+
+    def register_service_sync(self, service, group):
+        '''Mainly used by a program to register a dummy service to ensure only
+        single instance of that program is running
+
+        '''
+        cmd = 'register-service %s %s' % (service, group)
+        self.send_cmd(cmd)
