@@ -65,8 +65,4 @@ int sock_pton (const char *addr_str, uint16_t port,
 evutil_socket_t udp_client (const char *host, const char *serv,
                 struct sockaddr **saptr, socklen_t *lenp);
 
-int mcast_set_loop(evutil_socket_t sockfd, int onoff);
-
-evutil_socket_t create_multicast_sock (struct sockaddr *sasend, socklen_t salen);
-
 #endif

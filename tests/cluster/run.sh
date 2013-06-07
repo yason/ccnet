@@ -13,7 +13,7 @@ outer_conf3=${testdir}/outer-conf3
 while [ $# -ge 1 ]; do
   case $1 in
     "1" ) 
-      gnome-terminal -e "${ccnet} -c ${conf1} -D All -f - --no-multicast"
+      gnome-terminal -e "${ccnet} -c ${conf1} -D All -f - "
       ;;
     "2" )
       gnome-terminal -e "${ccnet_cserver} -c ${outer_conf2} -C ${conf2} -D All -f - --redirect"

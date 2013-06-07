@@ -16,8 +16,8 @@ peer3=e19d1070b6d9ae7bf453d124ff4e775076553906
 
 
 ${ccnet_server} -c ${conf2} &
-${ccnet} -c ${conf1} --no-multicast &
-${ccnet} -c ${conf3} --no-multicast -D all -f - &
+${ccnet} -c ${conf1} &
+${ccnet} -c ${conf3} -D all -f - &
 
 sleep 5
 

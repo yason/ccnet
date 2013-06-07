@@ -52,7 +52,6 @@ static struct option long_options[] = {
     { "logfile", required_argument, NULL, 'f' },
     { "debug", required_argument, NULL, 'D' },
     { "daemon", no_argument, NULL, 'd' },
-    { "no-multicast", no_argument, NULL, 'M' },
     { NULL, 0, NULL, 0, },
 };
 
@@ -73,8 +72,6 @@ static void usage()
 "             Peer,Group,Processor,Requirement,Routing,Netio,\n"
 "             Message,Connection,File,Other\n"
 "        or ALL to enable all debug flags\n"
-"    -M\n"
-"        disable multicasting for peer discovery in local network\n"
 "    -f LOG_FILE\n"
 "        Log file path\n",
         stdout);
@@ -85,7 +82,6 @@ int
 main (int argc, char **argv)
 {
     int c;
-    /* int disable_multicast = 0; */
     char *config_dir;
     char *log_file = 0;
     const char *debug_str = 0;
@@ -119,9 +115,6 @@ main (int argc, char **argv)
             break;
         case 'd':
             daemon_mode = 1;
-            break;
-        case 'M':
-            /* disable_multicast = 1; */
             break;
         default:
             usage();
