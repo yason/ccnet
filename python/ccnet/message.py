@@ -15,8 +15,8 @@ class Message(object):
         self.from_ = d['from']
         self.to = d['to']
         self.id = d['id']
-        self.ctime = datetime.datetime.fromtimestamp(float(d['ctime']))
-        self.rtime = datetime.datetime.fromtimestamp(float(d['rtime']))
+        self.ctime = float(d['ctime'])
+        self.rtime = float(d['rtime'])
         self.app = d['app']
         self.body = d['body']
 
