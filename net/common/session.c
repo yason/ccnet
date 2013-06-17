@@ -184,7 +184,7 @@ ccnet_session_free (CcnetSession *session)
 
 
 int
-ccnet_session_prepare (CcnetSession *session, const char *config_dir_r)
+ccnet_session_prepare (CcnetSession *session, const char *config_dir_r, gboolean test_config)
 {
     char *misc_path;
     int ret;
@@ -220,14 +220,17 @@ ccnet_session_prepare (CcnetSession *session, const char *config_dir_r)
 
     g_free (misc_path);
 
-
-    /* Open localhost, if failed, then the program will exists. This is used
-     * to prevent two instance of ccnet on the same port.
-     */
-    listen_on_localhost (session);
-
-    /* refresh pubinfo on every startup */
-    save_pubinfo (session);
+    if (test_config) {
+        return 0;
+    } else {
+        /* Open localhost, if failed, then the program will exists. This is used
+         * to prevent two instance of ccnet on the same port.
+         */
+        listen_on_localhost (session);
+        
+        /* refresh pubinfo on every startup */
+        save_pubinfo (session);
+    }
 
     return 0;
 }

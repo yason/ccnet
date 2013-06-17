@@ -102,7 +102,7 @@ void ccnet_session_start (CcnetSession *session);
 void ccnet_session_on_exit (CcnetSession *session);
 void ccnet_session_save (CcnetSession *session);
 
-int ccnet_session_prepare (CcnetSession *session, const char *config_dir_r);
+int ccnet_session_prepare (CcnetSession *session, const char *config_dir_r, gboolean test_config);
 
 void ccnet_session_save_config (CcnetSession *session);
 

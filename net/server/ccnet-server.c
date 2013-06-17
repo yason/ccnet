@@ -88,7 +88,7 @@ on_ccnet_exit(void)
 }
 
 
-static const char *short_options = "hvdc:D:f:P:M:";
+static const char *short_options = "hvdtc:D:f:P:M:";
 static struct option long_options[] = {
     { "help", no_argument, NULL, 'h', }, 
     { "version", no_argument, NULL, 'v', }, 
@@ -98,6 +98,7 @@ static struct option long_options[] = {
     { "daemon", no_argument, NULL, 'd' },
     { "pidfile", required_argument, NULL, 'P' },
     { "max-users", required_argument, NULL, 'M' },
+    { "test-config", required_argument, NULL, 't' },
     { NULL, 0, NULL, 0, },
 };
 
@@ -123,8 +124,39 @@ static void usage()
 "    -P PIDFILE\n"
 "        Specify the file to store pid\n"
 "    -M MAX_USERS\n"
-"        Specify the max users for login\n",
+"        Specify the max users for login\n"
+"    -t\n"
+"        test ccnet configuration and exit\n",
         stdout);
+}
+
+int test_ccnet_config(const char *config_dir, int max_users)
+{
+    g_type_init ();
+
+    config_dir = ccnet_expand_path (config_dir);
+
+    if (ccnet_log_init ("-", "debug") < 0) {
+        fprintf (stderr, "ccnet_log_init error: %s\n", strerror(errno));
+        return -1;
+    }
+
+    srand (time(NULL));
+
+    session = (CcnetSession *)ccnet_server_session_new ();
+    if (!session) {
+        fprintf (stderr, "Error: failed to create ccnet session\n");
+        return -1;
+    }
+
+    event_init ();
+    evdns_init ();
+    ccnet_user_manager_set_max_users (((struct CcnetServerSession *)session)->user_mgr, max_users);
+    if (ccnet_session_prepare(session, config_dir, TRUE) < 0) {
+        return -1;
+    }
+
+    return 0;
 }
 
 int
@@ -137,6 +169,7 @@ main (int argc, char **argv)
     int daemon_mode = 0;
     int max_users = 0;
     const char *log_level_str = "debug";
+    gboolean test_config = FALSE;
 
     config_dir = DEFAULT_CONFIG_DIR;
 
@@ -171,6 +204,9 @@ main (int argc, char **argv)
         case 'M':
             max_users = atoi(optarg);
             break;
+        case 't':
+            test_config = TRUE;
+            break;
         default:
             fprintf (stderr, "unknown option \"-%c\"\n", (char)c);
             usage();
@@ -185,6 +221,11 @@ main (int argc, char **argv)
     if (config_dir == NULL) {
         fprintf (stderr, "Missing config dir\n");
         exit (1);
+    }
+
+    if (test_config) {
+        /* test ccnet configuration and exit */
+        return test_ccnet_config (config_dir, max_users);
     }
 
 #ifndef WIN32
@@ -230,7 +271,7 @@ main (int argc, char **argv)
     event_init ();
     evdns_init ();
     ccnet_user_manager_set_max_users (((struct CcnetServerSession *)session)->user_mgr, max_users);
-    if (ccnet_session_prepare(session, config_dir) < 0) {
+    if (ccnet_session_prepare(session, config_dir, FALSE) < 0) {
         fputs ("Error: failed to start ccnet session, "
                "see log file for the detail.\n", stderr);
         return -1;
