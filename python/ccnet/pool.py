@@ -3,7 +3,7 @@ import Queue
 
 class ClientPool(object):
     """ccnet client pool."""
-    
+
     def __init__(self, conf_dir, pool_size=5):
         """
         :param conf_dir: the ccnet configuration directory
@@ -28,4 +28,8 @@ class ClientPool(object):
         return client
 
     def return_client(self, client):
-        self._pool.put(client, False)
+        try:
+            self._pool.put(client, False)
+        except Queue.Full:
+            pass
+
