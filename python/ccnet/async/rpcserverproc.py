@@ -1,9 +1,10 @@
 from pysearpc import searpc_server
 
-from ccnet.processor import Processor
 from ccnet.status_code import SC_OK, SS_OK
 from ccnet.status_code import SC_SERVER_RET, SS_SERVER_RET, SC_SERVER_MORE, SS_SERVER_MORE, \
     SC_CLIENT_CALL, SC_CLIENT_MORE, SC_CLIENT_CALL_MORE
+
+from .processor import Processor
 
 class RpcServerProc(Processor):
     name = 'rpcserver-proc'

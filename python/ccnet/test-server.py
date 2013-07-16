@@ -1,11 +1,9 @@
-from gevent import monkey
-monkey.patch_all()
-
 import os
 import logging
+import libevent
 
 from pysearpc import searpc_server
-from ccnet import AsyncClient, RpcServerProc
+from ccnet.async import AsyncClient, RpcServerProc
 
 RPC_SERVICE_NAME = 'test-rpcserver'
 CCNET_CONF_DIR = os.path.expanduser('~/.ccnet')
@@ -33,7 +31,8 @@ def register_rpc_functions(session):
 
 def main():
     init_logging()
-    session = AsyncClient(CCNET_CONF_DIR)
+    evbase = libevent.Base()
+    session = AsyncClient(evbase, CCNET_CONF_DIR)
     session.connect_daemon()
     register_rpc_functions(session)
     session.main_loop()

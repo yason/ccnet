@@ -1,11 +1,12 @@
 import logging
-import thread
+import libevent
 
 from ccnet.client import Client, parse_update, parse_response
 
-from ccnet.packet import response_to_packet, write_packet, read_packet
+from ccnet.packet import response_to_packet, parse_header, Packet
 from ccnet.packet import to_response_id, to_master_id, to_slave_id,  to_packet_id
-from ccnet.packet import CCNET_MSG_REQUEST, CCNET_MSG_UPDATE, CCNET_MSG_RESPONSE
+from ccnet.packet import CCNET_MSG_REQUEST, CCNET_MSG_UPDATE, CCNET_MSG_RESPONSE, \
+    CCNET_HEADER_LENGTH, CCNET_MAX_PACKET_LENGTH
 
 from ccnet.status_code import SC_PROC_DONE, SC_PROC_DEAD, SS_PROC_DEAD, \
     SC_UNKNOWN_SERVICE, SC_PROC_KEEPALIVE, SS_PROC_KEEPALIVE, SC_PERM_ERR
@@ -13,17 +14,33 @@ from ccnet.status_code import SC_PROC_DONE, SC_PROC_DEAD, SS_PROC_DEAD, \
 from ccnet.status_code import PROC_NO_SERVICE, PROC_PERM_ERR, \
     PROC_BAD_RESP, PROC_REMOTE_DEAD
 
-from ccnet.processor import Processor
-from ccnet.sendcmdproc import SendCmdProc
-from ccnet.mqclientproc import MqClientProc
+from ccnet.errors import NetworkError
+
+from .processor import Processor
+from .sendcmdproc import SendCmdProc
+from .mqclientproc import MqClientProc
+
+
+__all__ = [
+    'AsyncClient',
+]
+
+def debug_print(msg):
+    print msg
 
 class AsyncClient(Client):
     '''Async mode client'''
-    def __init__(self, config_dir):
+    def __init__(self, config_dir, event_base):
         Client.__init__(self, config_dir)
         self.proc_types = {}
         self.procs = {}
         self.register_processors()
+        self._bev = None
+
+        self._evbase = event_base
+
+    def get_event_base(self):
+        return self._evbase
 
     def add_processor(self, proc):
         self.procs[proc.id] = proc
@@ -35,10 +52,16 @@ class AsyncClient(Client):
     def get_proc(self, id):
         return self.procs.get(id, None)
 
+    def write_packet(self, pkt):
+        outbuf = self._bev.output
+        
+        outbuf.add(pkt.header.to_string())
+        outbuf.add(pkt.body)
+
     def send_response(self, id, code, code_msg, content=''):
         id = to_response_id(id)
         pkt = response_to_packet(id, code, code_msg, content)
-        write_packet(self._connfd, pkt)
+        self.write_packet(pkt)
 
     def handle_packet(self, pkt):
         ptype = pkt.header.ptype
@@ -156,7 +179,7 @@ class AsyncClient(Client):
         assert Processor in proc_type.mro()
 
         self.proc_types[proc_name] = proc_type
-        
+
     def register_processors(self):
         self.register_processor("send-cmd", SendCmdProc)
         self.register_processor("mq-client", MqClientProc)
@@ -173,8 +196,53 @@ class AsyncClient(Client):
         proc.start()
         proc.send_cmd(cmd)
 
+    def _read_cb(self, bev, cb_data):
+        dummy = bev, cb_data
+        
+        inbuf = self._bev.input
+        while (True):
+            raw = inbuf.copyout(CCNET_HEADER_LENGTH)
+            header = parse_header(raw)
+            if len(inbuf) < CCNET_HEADER_LENGTH + header.length:
+                break
+
+            inbuf.drain(CCNET_HEADER_LENGTH)
+            data = inbuf.copyout(header.length)
+            pkt = Packet(header, data)
+            
+            self.handle_packet(pkt)
+
+            inbuf.drain(header.length)
+
+            if len(inbuf) < CCNET_HEADER_LENGTH:
+                break
+
+    def _event_db(self, bev, what, cb_data):
+        dummy = bev, cb_data
+        logging.warning('libevent error: what = %s' % what)
+        if what & libevent.BEV_EVENT_EOF or \
+           what & libevent.BEV_EVENT_ERROR or \
+           what & libevent.BEV_EVENT_READING or \
+           what & libevent.BEV_EVENT_WRITING:
+            raise NetworkError('libevent error: what = %s' % what)
+
+    def base_loop(self):
+        '''Create an event base -> register socket events -> loop'''
+        self._bev = libevent.BufferEvent(self._evbase,
+                                         self._connfd.fileno())
+
+        self._bev.set_watermark(libevent.EV_READ,
+                                CCNET_HEADER_LENGTH, # low wartermark
+                                CCNET_MAX_PACKET_LENGTH * 2) # highmark
+
+        self._bev.set_callbacks(self._read_cb, # read callback
+                                None,          # write callback
+                                self._event_db) # event callback
+
+        self._bev.enable(libevent.EV_READ | libevent.EV_WRITE)
+        
+        self._evbase.loop()
+
     def main_loop(self):
-        while True:
-            pkt = read_packet(self._connfd)
-            import gevent
-            gevent.spawn(self.handle_packet, pkt)
+        self.base_loop()
+

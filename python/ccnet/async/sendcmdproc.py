@@ -1,5 +1,5 @@
 import logging
-from ccnet.processor import Processor
+from .processor import Processor
 
 INIT = 0
 REQUET_SENT = 1

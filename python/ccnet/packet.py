@@ -48,6 +48,8 @@ CCNET_HEADER_FORMAT = '>BBHI'
 # Number of bytes for the header 
 CCNET_HEADER_LENGTH = struct.calcsize(CCNET_HEADER_FORMAT)
 
+CCNET_MAX_PACKET_LENGTH = 65535
+
 class PacketHeader(object):
     def __init__(self, ver, ptype, length, id):
         self.ver = ver
@@ -68,7 +70,11 @@ class Packet(object):
         self.body = body
 
 def parse_header(buf):
-    ver, ptype, length, id = struct.unpack(CCNET_HEADER_FORMAT, buf)
+    try:
+        ver, ptype, length, id = struct.unpack(CCNET_HEADER_FORMAT, buf)
+    except struct.error, e:
+        raise NetworkError('error when unpack packet header: %s' % e)
+    
     return PacketHeader(ver, ptype, length, id)
 
 def format_response(code, code_msg, content):

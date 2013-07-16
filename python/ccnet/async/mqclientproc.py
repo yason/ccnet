@@ -1,6 +1,5 @@
 import logging
-
-from ccnet.processor import Processor
+from .processor import Processor
 from ccnet.message import message_from_string, message_to_string
 
 INIT = 0
