@@ -10,4 +10,4 @@ ccnet_asyncdir = ${ccnetdir}/async
 ccnet_async_PYTHON = async/__init__.py \
 	async/async_client.py async/processor.py \
 	async/rpcserverproc.py async/sendcmdproc.py \
-	async/mqclientproc.py
+	async/mqclientproc.py async/timer.py
