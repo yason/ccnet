@@ -20,8 +20,12 @@ def init_logging():
 
     logging.basicConfig(**kw)
 
+i = 0
 def register_rpc_functions(session):
     def str_mul(a, b):
+        global i
+        i = i + 1
+        print '[%s] a = %s, b = %s' % (i, a, b)
         return a * b
 
     searpc_server.create_service(RPC_SERVICE_NAME)
@@ -32,7 +36,7 @@ def register_rpc_functions(session):
 def main():
     init_logging()
     evbase = libevent.Base()
-    session = AsyncClient(evbase, CCNET_CONF_DIR)
+    session = AsyncClient(CCNET_CONF_DIR, evbase)
     session.connect_daemon()
     register_rpc_functions(session)
     session.main_loop()
