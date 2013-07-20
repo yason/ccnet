@@ -4,6 +4,7 @@ import os
 import socket
 import ConfigParser
 import logging
+import fcntl
 
 from ccnet.packet import to_request_id, to_update_id
 from ccnet.packet import request_to_packet, update_to_packet
@@ -88,6 +89,10 @@ class Client(object):
             self._connfd.connect(('127.0.0.1', self.port))
         except:
             raise NetworkError("Can't connect to daemon")
+
+        fd = self._connfd.fileno()
+        old_flags = fcntl.fcntl(fd, fcntl.F_GETFD)
+        fcntl.fcntl(fd, fcntl.F_SETFD, old_flags | fcntl.FD_CLOEXEC)
 
     def is_connected(self):
         return self._connfd != None

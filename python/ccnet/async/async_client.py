@@ -54,7 +54,7 @@ class AsyncClient(Client):
 
     def write_packet(self, pkt):
         outbuf = self._bev.output
-        
+
         outbuf.add(pkt.header.to_string())
         outbuf.add(pkt.body)
 
@@ -198,7 +198,7 @@ class AsyncClient(Client):
 
     def _read_cb(self, bev, cb_data):
         dummy = bev, cb_data
-        
+
         inbuf = self._bev.input
         while (True):
             raw = inbuf.copyout(CCNET_HEADER_LENGTH)
@@ -209,7 +209,7 @@ class AsyncClient(Client):
             inbuf.drain(CCNET_HEADER_LENGTH)
             data = inbuf.copyout(header.length)
             pkt = Packet(header, data)
-            
+
             self.handle_packet(pkt)
 
             inbuf.drain(header.length)
@@ -217,13 +217,15 @@ class AsyncClient(Client):
             if len(inbuf) < CCNET_HEADER_LENGTH:
                 break
 
-    def _event_db(self, bev, what, cb_data):
+    def _event_cb(self, bev, what, cb_data):
         dummy = bev, cb_data
         logging.warning('libevent error: what = %s' % what)
         if what & libevent.BEV_EVENT_EOF or \
            what & libevent.BEV_EVENT_ERROR or \
            what & libevent.BEV_EVENT_READING or \
            what & libevent.BEV_EVENT_WRITING:
+            if self._bev is not None:
+                self._bev = None
             raise NetworkError('libevent error: what = %s' % what)
 
     def base_loop(self):
@@ -237,10 +239,10 @@ class AsyncClient(Client):
 
         self._bev.set_callbacks(self._read_cb, # read callback
                                 None,          # write callback
-                                self._event_db) # event callback
+                                self._event_cb) # event callback
 
         self._bev.enable(libevent.EV_READ | libevent.EV_WRITE)
-        
+
         self._evbase.loop()
 
     def main_loop(self):
