@@ -7,8 +7,6 @@ AM_CPPFLAGS = @GLIB2_CFLAGS@ @GOBJECT_CFLAGS@ \
 	-I$(top_builddir)/include \
 	-I$(top_builddir)/lib \
 	@SEARPC_CFLAGS@ \
-	@MYSQL_CFLAGS@ \
-	@PGSQL_CFLAGS@ \
 	@ZDB_CFLAGS@ \
 	-Wall
 
