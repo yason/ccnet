@@ -129,6 +129,7 @@ ccnet_user_manager_set_max_users (CcnetUserManager *manager, gint64 max_users)
 
 #ifdef HAVE_LDAP
 
+
 static int try_load_ldap_settings (CcnetUserManager *manager)
 {
     GKeyFile *config = manager->session->keyf;
@@ -143,11 +144,14 @@ static int try_load_ldap_settings (CcnetUserManager *manager)
     manager->use_ssl = g_key_file_get_boolean (config, "LDAP", "USE_SSL", NULL);
 #endif
 
-    manager->base = g_key_file_get_string (config, "LDAP", "BASE", NULL);
-    if (!manager->base) {
+    char *base_list = g_key_file_get_string (config, "LDAP", "BASE", NULL);
+    if (!base_list) {
         ccnet_warning ("LDAP: BASE not found in config file.\n");
         return -1;
     }
+    manager->base_list = g_strsplit (base_list, ";", -1);
+
+    manager->filter = g_key_file_get_string (config, "LDAP", "FILTER", NULL);
 
     manager->user_dn = g_key_file_get_string (config, "LDAP", "USER_DN", NULL);
     if (manager->user_dn) {
@@ -248,28 +252,42 @@ static int ldap_verify_user_password (CcnetUserManager *manager,
         return -1;
 
     filter = g_string_new (NULL);
-    g_string_printf (filter, "(%s=%s)", manager->login_attr, uid);
+    if (!manager->filter)
+        g_string_printf (filter, "(%s=%s)", manager->login_attr, uid);
+    else
+        g_string_printf (filter, "(&(%s=%s) (%s))",
+                         manager->login_attr, uid, manager->filter);
     filter_str = g_string_free (filter, FALSE);
 
     attrs[0] = manager->login_attr;
     attrs[1] = NULL;
 
-    res = ldap_search_s (ld, manager->base, LDAP_SCOPE_SUBTREE,
-                         filter_str, attrs, 0, &msg);
-    if (res != LDAP_SUCCESS) {
-        ccnet_warning ("ldap_search failed: %s.\n", ldap_err2string(res));
+    char **base;
+    for (base = manager->base_list; *base; base++) {
+        res = ldap_search_s (ld, *base, LDAP_SCOPE_SUBTREE,
+                             filter_str, attrs, 0, &msg);
+        if (res != LDAP_SUCCESS) {
+            ccnet_warning ("ldap_search failed: %s.\n", ldap_err2string(res));
+            ret = -1;
+            ldap_msgfree (msg);
+            goto out;
+        }
+
+        entry = ldap_first_entry (ld, msg);
+        if (entry) {
+            dn = ldap_get_dn (ld, entry);
+            ldap_msgfree (msg);
+            break;
+        }
+
+        ldap_msgfree (msg);
+    }
+
+    if (!dn) {
+        ccnet_warning ("Can't find user %s in LDAP.\n", uid);
         ret = -1;
         goto out;
     }
-
-    entry = ldap_first_entry (ld, msg);
-    if (!entry) {
-        ccnet_warning ("user with uid %s not found in LDAP.\n", uid);
-        ret = -1;
-        goto out;
-    }
-
-    dn = ldap_get_dn (ld, entry);
 
     /* Then bind the DN with password. */
 
@@ -286,7 +304,6 @@ static int ldap_verify_user_password (CcnetUserManager *manager,
     }
 
 out:
-    ldap_msgfree (msg);
     ldap_memfree (dn);
     g_free (filter_str);
     if (ld) ldap_unbind_s (ld);
@@ -317,57 +334,67 @@ static GList *ldap_list_users (CcnetUserManager *manager, const char *uid,
         return NULL;
 
     filter = g_string_new (NULL);
-    g_string_printf (filter, "(%s=%s)", manager->login_attr, uid);
+    if (!manager->filter)
+        g_string_printf (filter, "(%s=%s)", manager->login_attr, uid);
+    else
+        g_string_printf (filter, "(&(%s=%s) (%s))",
+                         manager->login_attr, uid, manager->filter);
     filter_str = g_string_free (filter, FALSE);
 
     attrs[0] = manager->login_attr;
     attrs[1] = NULL;
 
-    res = ldap_search_s (ld, manager->base, LDAP_SCOPE_SUBTREE,
-                         filter_str, attrs, 0, &msg);
-    if (res != LDAP_SUCCESS) {
-        ccnet_warning ("ldap_search failed: %s.\n", ldap_err2string(res));
-        ret = NULL;
-        goto out;
-    }
-
     int i = 0;
     if (start == -1)
         start = 0;
 
-    for (entry = ldap_first_entry (ld, msg);
-         entry != NULL;
-         entry = ldap_next_entry (ld, entry), ++i)
-    {
-        char *attr;
-        char **vals;
-        BerElement *ber;
-        CcnetEmailUser *user;
+    char **base;
+    for (base = manager->base_list; *base; ++base) {
+        res = ldap_search_s (ld, *base, LDAP_SCOPE_SUBTREE,
+                             filter_str, attrs, 0, &msg);
+        if (res != LDAP_SUCCESS) {
+            ccnet_warning ("ldap_search failed: %s.\n", ldap_err2string(res));
+            ret = NULL;
+            ldap_msgfree (msg);
+            goto out;
+        }
 
-        if (i < start)
-            continue;
-        if (limit >= 0 && i >= start + limit)
-            break;
+        for (entry = ldap_first_entry (ld, msg);
+             entry != NULL;
+             entry = ldap_next_entry (ld, entry), ++i) {
+            char *attr;
+            char **vals;
+            BerElement *ber;
+            CcnetEmailUser *user;
 
-        attr = ldap_first_attribute (ld, entry, &ber);
-        vals = ldap_get_values (ld, entry, attr);
+            if (i < start)
+                continue;
+            if (limit >= 0 && i >= start + limit) {
+                ldap_msgfree (msg);
+                goto out;
+            }
 
-        user = g_object_new (CCNET_TYPE_EMAIL_USER,
-                             "id", 0,
-                             "email", vals[0],
-                             "is_staff", FALSE,
-                             "is_active", TRUE,
-                             "ctime", (gint64)0,
-                             NULL);
-        ret = g_list_prepend (ret, user);
+            attr = ldap_first_attribute (ld, entry, &ber);
+            vals = ldap_get_values (ld, entry, attr);
 
-        ldap_memfree (attr);
-        ldap_value_free (vals);
-        ber_free (ber, 0);
+            user = g_object_new (CCNET_TYPE_EMAIL_USER,
+                                 "id", 0,
+                                 "email", vals[0],
+                                 "is_staff", FALSE,
+                                 "is_active", TRUE,
+                                 "ctime", (gint64)0,
+                                 NULL);
+            ret = g_list_prepend (ret, user);
+
+            ldap_memfree (attr);
+            ldap_value_free (vals);
+            ber_free (ber, 0);
+        }
+
+        ldap_msgfree (msg);
     }
 
 out:
-    ldap_msgfree (msg);
     g_free (filter_str);
     if (ld) ldap_unbind_s (ld);
     return ret;
@@ -384,7 +411,6 @@ static int ldap_count_users (CcnetUserManager *manager, const char *uid)
     char *filter_str;
     char *attrs[2];
     LDAPMessage *msg = NULL;
-    int count = -1;
 
     ld = ldap_init_and_bind (manager->ldap_host,
 #ifdef WIN32
@@ -396,23 +422,33 @@ static int ldap_count_users (CcnetUserManager *manager, const char *uid)
         return -1;
 
     filter = g_string_new (NULL);
-    g_string_printf (filter, "(%s=%s)", manager->login_attr, uid);
+    if (!manager->filter)
+        g_string_printf (filter, "(%s=%s)", manager->login_attr, uid);
+    else
+        g_string_printf (filter, "(&(%s=%s) (%s))",
+                         manager->login_attr, uid, manager->filter);
     filter_str = g_string_free (filter, FALSE);
 
     attrs[0] = manager->login_attr;
     attrs[1] = NULL;
 
-    res = ldap_search_s (ld, manager->base, LDAP_SCOPE_SUBTREE,
-                         filter_str, attrs, 0, &msg);
-    if (res != LDAP_SUCCESS) {
-        ccnet_warning ("ldap_search failed: %s.\n", ldap_err2string(res));
-        goto out;
+    char **base;
+    int count = 0;
+    for (base = manager->base_list; *base; ++base) {
+        res = ldap_search_s (ld, *base, LDAP_SCOPE_SUBTREE,
+                             filter_str, attrs, 0, &msg);
+        if (res != LDAP_SUCCESS) {
+            ccnet_warning ("ldap_search failed: %s.\n", ldap_err2string(res));
+            ldap_msgfree (msg);
+            count = -1;
+            goto out;
+        }
+
+        count += ldap_count_entries (ld, msg);
+        ldap_msgfree (msg);
     }
 
-    count = ldap_count_entries (ld, msg);
-
 out:
-    ldap_msgfree (msg);
     g_free (filter_str);
     if (ld) ldap_unbind_s (ld);
     return count;

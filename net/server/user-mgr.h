@@ -36,7 +36,8 @@ struct _CcnetUserManager
 #ifdef WIN32
     gboolean        use_ssl;
 #endif
-    char           *base;       /* base DN from where all users can be reached */
+    char           **base_list;  /* base DN from where all users can be reached */
+    char           *filter;     /* Additional search filter */
     char           *user_dn;    /* DN of the admin user */
     char           *password;   /* password for admin user */
     char           *login_attr;  /* attribute name used for login */
