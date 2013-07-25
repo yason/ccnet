@@ -11,6 +11,9 @@
 #include "rpc-service.h"
 #include "log.h"
 
+#ifndef SEAFILE_CLIENT_VERSION
+#define SEAFILE_CLIENT_VERSION PACKAGE_VERSION
+#endif
 
 CcnetSession  *session;
 
@@ -162,7 +165,10 @@ main (int argc, char **argv)
         exit (1);
     }
 
-    ccnet_message ("starting ccnet "PACKAGE_VERSION"\n");
+    ccnet_message ("starting ccnet client "SEAFILE_CLIENT_VERSION"\n");
+#if defined(CCNET_SOURCE_COMMIT_ID)
+    ccnet_message ("ccnet source code version "CCNET_SOURCE_COMMIT_ID"\n");
+#endif
 
     srand (time(NULL));
 
