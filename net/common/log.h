@@ -42,13 +42,11 @@ void ccnet_debug_impl (CcnetDebugFlags flag, const gchar *format, ...);
 #define ccnet_debug(format, ...)
 
 #ifdef DEBUG_FLAG
-#ifdef ENABLE_DEBUG
 
 #undef ccnet_debug
 #define ccnet_debug(fmt, ...)  \
     ccnet_debug_impl (DEBUG_FLAG, "%.15s(%d): " fmt, __FILE__, __LINE__, ##__VA_ARGS__)
 
-#endif  /* ENABLE_DEBUG */
 #endif  /* DEBUG_FLAG */
 
 

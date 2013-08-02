@@ -107,6 +107,12 @@ read_peer_id (CcnetHandshake *handshake, ccnet_packet *packet)
         /* we are the master */
         ccnet_debug ("[Conn] Outgoing: Read peer %s id %.8s\n",
                      handshake->peer->name, id);
+        if (g_strcmp0 (handshake->peer->id, handshake->id) != 0) {
+            ccnet_warning ("[Conn] Received peer id does not match.\n");
+            ccnet_handshake_done (handshake, FALSE);
+            return;
+        }
+
         send_ack (handshake);
         ccnet_handshake_done (handshake, TRUE);
     } else

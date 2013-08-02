@@ -81,7 +81,7 @@ canReadWrapper (struct bufferevent *e, void *user_data)
             c->schedule_free = 0;
             c->handling = 0;
             ccnet_packet_io_free (c);
-            break;
+            return;
         }
 
         evbuffer_drain (e->input, len + CCNET_PACKET_LENGTH_HEADER);
