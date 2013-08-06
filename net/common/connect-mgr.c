@@ -272,19 +272,18 @@ myHandshakeDoneCB (CcnetHandshake *handshake,
             g_object_unref (peer);
             return;
         }
+
+        if (peer->net_state == PEER_CONNECTED) {
+            ccnet_message ("[Conn] Peer %s (%.10s) is already connected."
+                           "But a new handshake comes in. Reconnect this peer.\n",
+                           peer->name, peer->id);
+            ccnet_peer_shutdown_no_delay (peer);
+        }
+
         set_peer_address_from_socket(peer, io);
         peer->last_up = time(NULL);
     }
     /* hold a reference on the peer */
-
-    if (peer->net_state == PEER_CONNECTED) {
-        ccnet_message ("[Conn] Peer %s (%.10s) is already connected. "
-                       "Discarding this handshake.\n", 
-                       peer->name, peer->id);
-        ccnet_packet_io_free (io);
-        g_object_unref (peer);
-        return;
-    }
 
     ccnet_message ("[Conn] Peer %s (%.10s) connected\n",
                    peer->name, peer->id);

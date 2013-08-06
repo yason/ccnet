@@ -185,10 +185,6 @@ ccnet_processor_done (CcnetProcessor *processor, gboolean success)
         }
     }
 
-    /* When we emit the done signal, the corresponding handler may
-     * shutdown the peer, we should remove this processor from the
-     * peers processor list, otherwise this processor will be freed
-     * twice. */
     g_signal_emit (processor, signals[DONE_SIG], 0, success);
 
     if (!processor->detached) {

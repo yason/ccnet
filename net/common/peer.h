@@ -138,6 +138,8 @@ void        ccnet_peer_free (CcnetPeer *peer);
 
 void        ccnet_peer_shutdown (CcnetPeer *peer);
 
+void        ccnet_peer_shutdown_no_delay (CcnetPeer *peer);
+
 int         ccnet_peer_get_request_id (CcnetPeer *peer);
 
 void        ccnet_peer_add_processor (CcnetPeer *peer, 

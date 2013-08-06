@@ -435,6 +435,7 @@ static void
 _peer_shutdown (CcnetPeer *peer)
 {
     g_assert (!peer->in_processor_call);
+    g_assert (!peer->in_shutdown);
     peer->in_shutdown = 1;
 
     if (peer->net_state == PEER_CONNECTED) {
@@ -491,6 +492,15 @@ ccnet_peer_shutdown (CcnetPeer *peer)
     schedule_shutdown (peer);
 }
 
+void
+ccnet_peer_shutdown_no_delay (CcnetPeer *peer)
+{
+    if (!peer->shutdown_scheduled) {
+        peer->shutdown_scheduled = 1;
+        _peer_shutdown (peer);
+        peer->shutdown_scheduled = 0;
+    }
+}
 
 static void
 create_remote_processor (CcnetPeer *peer, CcnetPeer *remote_peer,
