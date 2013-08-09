@@ -466,7 +466,7 @@ static int check_db_table (CcnetDB *db)
     if (db_type == CCNET_DB_TYPE_MYSQL) {
         sql = "CREATE TABLE IF NOT EXISTS EmailUser ("
             "id INTEGER NOT NULL PRIMARY KEY AUTO_INCREMENT, "
-            "email VARCHAR(255), passwd CHAR(41), "
+            "email VARCHAR(255), passwd CHAR(64), "
             "is_staff BOOL NOT NULL, is_active BOOL NOT NULL, "
             "ctime BIGINT, UNIQUE INDEX (email))"
             "ENGINE=INNODB";
@@ -504,7 +504,7 @@ static int check_db_table (CcnetDB *db)
     } else if (db_type == CCNET_DB_TYPE_PGSQL) {
         sql = "CREATE TABLE IF NOT EXISTS EmailUser ("
             "id SERIAL PRIMARY KEY, "
-            "email VARCHAR(255), passwd CHAR(41), "
+            "email VARCHAR(255), passwd VARCHAR(64), "
             "is_staff INTEGER NOT NULL, is_active INTEGER NOT NULL, "
             "ctime BIGINT, UNIQUE (email))";
         if (ccnet_db_query (db, sql) < 0)
