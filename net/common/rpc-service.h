@@ -80,6 +80,14 @@ ccnet_rpc_set_config (const char *key, const char *value, GError **error);
 int
 ccnet_rpc_upload_profile (const char *relay_id, GError **error);
 
+char *
+ccnet_rpc_pubkey_encrypt (const char *msg_base64,
+                          const char *peer_id,
+                          GError **error);
+
+char *
+ccnet_rpc_privkey_decrypt (const char *msg_base64, GError **error);
+
 #ifdef CCNET_SERVER
 
 GList *

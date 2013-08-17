@@ -106,6 +106,14 @@ int ccnet_verify_message (SearpcClient *client,
                           const char *sig_base64,
                           const char *peer_id);
 
+char *
+ccnet_pubkey_encrypt (SearpcClient *client,
+                      const char *msg_base64,
+                      const char *peer_id);
+
+char *
+ccnet_privkey_decrypt (SearpcClient *client, const char *msg_base64);
+
 char *ccnet_get_config (SearpcClient *client, const char *key);
 int ccnet_set_config (SearpcClient *client, const char *key, const char *value);
 

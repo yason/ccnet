@@ -160,6 +160,8 @@ void ccnet_processor_handle_update (CcnetProcessor *processor,
             processor->failure = PROC_NO_SERVICE;
         else if (memcmp(code, SC_PERM_ERR, 3) == 0)
             processor->failure = PROC_PERM_ERR;
+        else if (memcmp(code, SC_NETDOWN, 3) == 0)
+            processor->failure = PROC_REMOTE_DEAD;
         else
             processor->failure = PROC_BAD_RESP;
 
@@ -205,6 +207,8 @@ void ccnet_processor_handle_response (CcnetProcessor *processor,
             processor->failure = PROC_NO_SERVICE;
         else if (memcmp(code, SC_PERM_ERR, 3) == 0)
             processor->failure = PROC_PERM_ERR;
+        else if (memcmp(code, SC_NETDOWN, 3) == 0)
+            processor->failure = PROC_REMOTE_DEAD;
         else
             processor->failure = PROC_BAD_RESP;
 

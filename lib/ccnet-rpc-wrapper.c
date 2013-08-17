@@ -251,6 +251,27 @@ ccnet_verify_message (SearpcClient *client,
         3, "string", message, "string", sig_base64, "string", peer_id);
 }
 
+char *
+ccnet_pubkey_encrypt (SearpcClient *client,
+                      const char *msg_base64,
+                      const char *peer_id)
+{
+    if (!msg_base64 || !peer_id)
+        return NULL;
+
+    return searpc_client_call__string (client, "pubkey_encrypt", NULL, 2,
+                                       "string", msg_base64, "string", peer_id);
+}
+
+char *
+ccnet_privkey_decrypt (SearpcClient *client, const char *msg_base64)
+{
+    if (!msg_base64)
+        return NULL;
+
+    return searpc_client_call__string (client, "privkey_decrypt", NULL, 1,
+                                       "string", msg_base64);
+}
 
 char *
 ccnet_get_config (SearpcClient *client, const char *key)

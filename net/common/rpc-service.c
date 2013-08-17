@@ -29,6 +29,8 @@
 #define DEBUG_FLAG CCNET_DEBUG_OTHER
 #include "log.h"
 
+#include "rsa.h"
+
 #define CCNET_ERR_INTERNAL 500
 
 extern CcnetSession *session;
@@ -135,6 +137,17 @@ ccnet_start_rpc(CcnetSession *session)
                                      "set_config",
                                      searpc_signature_int__string_string());
 
+    /* RSA encrypt a message with peer's public key. */
+    searpc_server_register_function ("ccnet-rpcserver",
+                                     ccnet_rpc_pubkey_encrypt,
+                                     "pubkey_encrypt",
+                                     searpc_signature_string__string_string());
+
+    /* RSA decrypt a message with my private key. */
+    searpc_server_register_function ("ccnet-rpcserver",
+                                     ccnet_rpc_privkey_decrypt,
+                                     "privkey_decrypt",
+                                     searpc_signature_string__string());
 
 #ifdef CCNET_SERVER
 
@@ -564,6 +577,60 @@ ccnet_rpc_set_config (const char *key, const char *value, GError **error)
     return ccnet_session_config_set_string (session, key, value);
 }
 
+char *
+ccnet_rpc_pubkey_encrypt (const char *msg_base64, const char *peer_id, GError **error)
+{
+    unsigned char *msg;
+    gsize msg_len;
+    CcnetPeer *peer;
+    unsigned char *enc_msg;
+    int enc_msg_len;
+    char *ret;
+
+    peer = ccnet_peer_manager_get_peer (session->peer_mgr, peer_id);
+    if (!peer) {
+        g_warning ("Cannot find peer %s.\n", peer_id);
+        return NULL;
+    }
+
+    msg = g_base64_decode (msg_base64, &msg_len);
+
+    enc_msg = public_key_encrypt (peer->pubkey, msg, (int)msg_len, &enc_msg_len);
+
+    ret = g_base64_encode (enc_msg, enc_msg_len);
+
+    g_free (msg);
+    g_free (enc_msg);
+    g_object_unref (peer);
+    return ret;
+}
+
+char *
+ccnet_rpc_privkey_decrypt (const char *msg_base64, GError **error)
+{
+    unsigned char *msg;
+    gsize msg_len;
+    unsigned char *dec_msg;
+    int dec_msg_len;
+    char *ret;
+
+    msg = g_base64_decode (msg_base64, &msg_len);
+
+    dec_msg = private_key_decrypt (session->privkey, msg, (int)msg_len, &dec_msg_len);
+
+    if (dec_msg_len < 0) {
+        g_warning ("Failed to decrypt message with RSA priv key.\n");
+        g_set_error (error, CCNET_DOMAIN, CCNET_ERR_INTERNAL, "Failed to decrypt");
+        g_free (msg);
+        return NULL;
+    }
+
+    ret = g_base64_encode (dec_msg, dec_msg_len);
+
+    g_free (msg);
+    g_free (dec_msg);
+    return ret;
+}
 
 #ifdef CCNET_SERVER
 
