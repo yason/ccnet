@@ -964,6 +964,45 @@ ccnet_user_manager_count_emailusers (CcnetUserManager *manager)
     return ccnet_db_get_int64 (db, sql);
 }
 
+GList*
+ccnet_user_manager_filter_emailusers_by_emails(CcnetUserManager *manager,
+                                               const char *emails)
+{
+    CcnetDB *db = manager->priv->db;
+    char *copy = g_strdup (emails), *saveptr;
+    GList *ret = NULL;
+
+#ifdef HAVE_LDAP
+	/* todo */    
+    return NULL;                           
+#endif
+
+    GString *sql = g_string_new(NULL);
+
+    g_string_append (sql, "SELECT * FROM EmailUser WHERE Email IN (");
+    char *name = strtok_r (copy, ", ", &saveptr);
+    while (name != NULL) {
+        g_string_append_printf (sql, "'%s',", name);
+        name = strtok_r (NULL, ", ", &saveptr);
+    }
+    g_string_erase (sql, sql->len-1, 1); /* remove last "," */
+    g_string_append (sql, ")");
+
+    if (ccnet_db_foreach_selected_row (db, sql->str, get_emailusers_cb,
+        &ret) < 0) {
+        while (ret != NULL) {
+            g_object_unref (ret->data);
+            ret = g_list_delete_link (ret, ret);
+        }
+        return NULL;
+    }
+
+    g_free (copy);
+    g_string_free (sql, TRUE);
+    
+    return g_list_reverse (ret);
+}
+
 int
 ccnet_user_manager_update_emailuser (CcnetUserManager *manager,
                                      int id, const char* passwd,
