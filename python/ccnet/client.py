@@ -73,7 +73,10 @@ class Client(object):
 
         '''
         if self.is_connected():
-            self._connfd.close()
+            try:
+                self._connfd.close()
+            except:
+                pass
 
     def parse_config(self):
         self.config = ConfigParser.ConfigParser()
