@@ -290,7 +290,11 @@ class CcnetThreadedRpcClient(RpcClientBase):
     @searpc_func("int", ["int", "string"])
     def is_group_user(self, group_id, user):
         pass
-        
+
+    @searpc_func("int", ["int", "string"])
+    def set_group_creator(self, group_id, user_name):
+        pass
+
     @searpc_func("int", ["int", "string", "string"])
     def group_share_repo(self, group_id, user_name, repo_id):
         pass

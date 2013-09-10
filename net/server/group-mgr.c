@@ -715,3 +715,26 @@ ccnet_group_manager_get_all_groups (CcnetGroupManager *mgr,
 
     return g_list_reverse (ret);
 }
+
+int
+ccnet_group_manager_set_group_creator (CcnetGroupManager *mgr,
+                                       int group_id,
+                                       const char *user_name)
+{
+    CcnetDB *db = mgr->priv->db;
+    char sql[512];
+
+    if (ccnet_db_type(db) == CCNET_DB_TYPE_PGSQL) {
+        snprintf (sql, sizeof(sql), "UPDATE \"Group\" SET creator_name = '%s' "
+                  "WHERE group_id = %d", user_name, group_id);
+    } else {
+        snprintf (sql, sizeof(sql), "UPDATE `Group` SET creator_name = '%s' "
+                  "WHERE group_id = %d", user_name, group_id);
+    }
+    
+    ccnet_db_query (db, sql);
+
+    return 0;
+    
+}
+

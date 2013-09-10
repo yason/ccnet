@@ -262,6 +262,10 @@ ccnet_start_rpc(CcnetSession *session)
                                      ccnet_rpc_is_group_user,
                                      "is_group_user",
                                      searpc_signature_int__int_string());
+    searpc_server_register_function ("ccnet-threaded-rpcserver",
+                                     ccnet_rpc_set_group_creator,
+                                     "set_group_creator",
+                                     searpc_signature_int__int_string());
 
     searpc_server_register_function ("ccnet-threaded-rpcserver",
                                      ccnet_rpc_create_org,
@@ -1116,6 +1120,20 @@ ccnet_rpc_is_group_user (int group_id, const char *user, GError **error)
     }
 
     return ccnet_group_manager_is_group_user (group_mgr, group_id, user);
+}
+
+int
+ccnet_rpc_set_group_creator (int group_id, const char *user_name,
+                             GError **error)
+{
+    CcnetGroupManager *group_mgr = ((CcnetServerSession *)session)->group_mgr;
+    if (!user_name || group_id < 0) {
+        g_set_error (error, CCNET_DOMAIN, CCNET_ERR_INTERNAL, "Bad arguments");
+        return -1;
+    }
+
+    return ccnet_group_manager_set_group_creator (group_mgr, group_id,
+                                                  user_name);
 }
 
 int

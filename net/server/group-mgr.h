@@ -98,5 +98,10 @@ GList*
 ccnet_group_manager_get_all_groups (CcnetGroupManager *mgr,
                                     int start, int limit, GError **error);
 
+int
+ccnet_group_manager_set_group_creator (CcnetGroupManager *mgr,
+                                       int group_id,
+                                       const char *user_name);
+
 #endif /* GROUP_MGR_H */
 
