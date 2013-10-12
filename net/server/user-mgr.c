@@ -948,6 +948,38 @@ ccnet_user_manager_get_emailusers (CcnetUserManager *manager, int start, int lim
     return g_list_reverse (ret);
 }
 
+GList*
+ccnet_user_manager_search_emailusers (CcnetUserManager *manager,
+                                      const char *email_patt,
+                                      int start, int limit)
+{
+    CcnetDB *db = manager->priv->db;
+    GList *ret = NULL;
+    char sql[256];
+
+#ifdef HAVE_LDAP
+    ;                           /* todo */
+#endif
+
+    if (start == -1 && limit == -1)
+        snprintf (sql, 256, "SELECT * FROM EmailUser WHERE Email LIKE '%s' "
+        "ORDER BY id", email_patt);
+    else
+        snprintf (sql, 256, "SELECT * FROM EmailUser WHERE Email LIKE '%s' "
+        "ORDER BY id LIMIT %d OFFSET %d", email_patt, limit, start);
+    
+    if (ccnet_db_foreach_selected_row (db, sql, get_emailusers_cb, &ret) < 0) {
+        while (ret != NULL) {
+            g_object_unref (ret->data);
+            ret = g_list_delete_link (ret, ret);
+        }
+        return NULL;
+    }
+
+    return g_list_reverse (ret);
+}
+
+
 gint64
 ccnet_user_manager_count_emailusers (CcnetUserManager *manager)
 {
