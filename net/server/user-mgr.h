@@ -95,6 +95,10 @@ ccnet_user_manager_search_emailusers (CcnetUserManager *manager,
 gint64
 ccnet_user_manager_count_emailusers (CcnetUserManager *manager);
 
+GList*
+ccnet_user_manager_filter_emailusers_by_emails(CcnetUserManager *manager,
+                                               const char *emails);
+
 int
 ccnet_user_manager_update_emailuser (CcnetUserManager *manager,
                                      int id, const char* encry_passwd,

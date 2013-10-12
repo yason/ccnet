@@ -120,6 +120,14 @@ ccnet_rpc_search_emailusers (const char *email_patt, int start, int limit,
 gint64
 ccnet_rpc_count_emailusers (GError **error);
 
+/**
+ * Select multiple users according to the given emails.
+ *
+ * @emails: emails seperated by ",", e.g., "foo@foo.com, bar@bar.com"
+ */
+GList*
+ccnet_rpc_filter_emailusers_by_emails (const char *emails, GError **error);
+
 int
 ccnet_rpc_update_emailuser (int id, const char* passwd, int is_staff, int is_active,
                             GError **error);
