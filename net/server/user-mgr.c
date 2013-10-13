@@ -377,13 +377,15 @@ static GList *ldap_list_users (CcnetUserManager *manager, const char *uid,
             attr = ldap_first_attribute (ld, entry, &ber);
             vals = ldap_get_values (ld, entry, attr);
 
+            char *email_l = g_ascii_strdown (vals[0], -1);
             user = g_object_new (CCNET_TYPE_EMAIL_USER,
                                  "id", 0,
-                                 "email", vals[0],
+                                 "email", email_l,
                                  "is_staff", FALSE,
                                  "is_active", TRUE,
                                  "ctime", (gint64)0,
                                  NULL);
+            g_free (email_l);
             ret = g_list_prepend (ret, user);
 
             ldap_memfree (attr);
@@ -791,13 +793,16 @@ get_emailuser_cb (CcnetDBRow *row, void *data)
     int is_staff = ccnet_db_row_get_column_int (row, 2);
     int is_active = ccnet_db_row_get_column_int (row, 3);
     gint64 ctime = ccnet_db_row_get_column_int64 (row, 4);
+
+    char *email_l = g_ascii_strdown (email, -1);
     *p_emailuser = g_object_new (CCNET_TYPE_EMAIL_USER,
                               "id", id,
-                              "email", email,
+                              "email", email_l,
                               "is_staff", is_staff,
                               "is_active", is_active,
                               "ctime", ctime,
                               NULL);
+    g_free (email_l);
 
     return FALSE;
 }
@@ -900,13 +905,16 @@ get_emailusers_cb (CcnetDBRow *row, void *data)
     int is_staff = ccnet_db_row_get_column_int (row, 3);
     int is_active = ccnet_db_row_get_column_int (row, 4);
     gint64 ctime = ccnet_db_row_get_column_int64 (row, 5);
+
+    char *email_l = g_ascii_strdown (email, -1);
     emailuser = g_object_new (CCNET_TYPE_EMAIL_USER,
                               "id", id,
-                              "email", email,
+                              "email", email_l,
                               "is_staff", is_staff,
                               "is_active", is_active,
                               "ctime", ctime,
                               NULL);
+    g_free (email_l);
 
     *plist = g_list_prepend (*plist, emailuser);
 

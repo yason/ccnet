@@ -159,37 +159,40 @@ create_group_common (CcnetGroupManager *mgr,
     CcnetDB *db = mgr->priv->db;
     gint64 now = get_current_time();
     char sql[512];
+    int group_id = -1;
+
+    char *user_name_l = g_ascii_strdown (user_name, -1);
     
     if (ccnet_db_type(db) == CCNET_DB_TYPE_PGSQL)
         snprintf (sql, sizeof(sql), "INSERT INTO \"Group\"(group_name, "
                   "creator_name, timestamp) VALUES('%s', '%s', "
-                  "%"G_GINT64_FORMAT")", group_name, user_name, now);
+                  "%"G_GINT64_FORMAT")", group_name, user_name_l, now);
     else
         snprintf (sql, sizeof(sql), "INSERT INTO `Group`(`group_name`, "
                   "`creator_name`, `timestamp`) VALUES('%s', '%s', "
-                  "%"G_GINT64_FORMAT")", group_name, user_name, now);
+                  "%"G_GINT64_FORMAT")", group_name, user_name_l, now);
 
     if (ccnet_db_query (db, sql) < 0) {
         g_set_error (error, CCNET_DOMAIN, 0, "Failed to create group");
-        return -1;
+        goto out;
     }
 
     if (ccnet_db_type(db) == CCNET_DB_TYPE_PGSQL)
         snprintf (sql, sizeof(sql),"SELECT group_id FROM \"Group\" WHERE "
                   "group_name = '%s' AND creator_name = '%s' AND"
-                  " timestamp = %"G_GINT64_FORMAT"", group_name, user_name, now);
+                  " timestamp = %"G_GINT64_FORMAT"", group_name, user_name_l, now);
     else
         snprintf (sql, sizeof(sql),"SELECT `group_id` FROM `Group` WHERE "
                   "`group_name` = '%s' AND `creator_name` = '%s' AND"
-                  " `timestamp` = %"G_GINT64_FORMAT"", group_name, user_name, now);
-    int group_id = ccnet_db_get_int (db, sql);
+                  " `timestamp` = %"G_GINT64_FORMAT"", group_name, user_name_l, now);
+    group_id = ccnet_db_get_int (db, sql);
     if (group_id < 0) {
         g_set_error (error, CCNET_DOMAIN, 0, "Failed to create group");
-        return -1;
+        goto out;
     }
     
     snprintf (sql, sizeof(sql), "INSERT INTO GroupUser VALUES (%d, '%s', %d)",
-              group_id, user_name, 1);
+              group_id, user_name_l, 1);
     if (ccnet_db_query (db, sql) < 0) {
         if (ccnet_db_type(db) == CCNET_DB_TYPE_PGSQL)
             snprintf (sql, sizeof(sql), "DELETE FROM \"Group\" WHERE group_id=%d",
@@ -199,9 +202,12 @@ create_group_common (CcnetGroupManager *mgr,
                       group_id);
         ccnet_db_query (db, sql);
         g_set_error (error, CCNET_DOMAIN, 0, "Failed to create group");
-        return -1;
+        group_id = -1;
+        goto out;
     }
-    
+
+out:
+    g_free (user_name_l);
     return group_id;
 }
 
@@ -400,9 +406,11 @@ int ccnet_group_manager_add_member (CcnetGroupManager *mgr,
     /*     g_set_error (error, CCNET_DOMAIN, 0, "Group is full"); */
     /*     return -1; */
     /* } */
-    
+
+    char *member_name_l = g_ascii_strdown (member_name, -1);
     snprintf (sql, sizeof(sql), "INSERT INTO GroupUser VALUES (%d, '%s', %d)",
               group_id, member_name, 0);
+    g_free (member_name_l);
     if (ccnet_db_query (db, sql) < 0) {
         g_set_error (error, CCNET_DOMAIN, 0, "Failed to add member to group");
         return -1;
@@ -552,12 +560,14 @@ get_ccnetgroup_cb (CcnetDBRow *row, void *data)
     creator = (const char *)ccnet_db_row_get_column_text (row, 2);
     ts = ccnet_db_row_get_column_int64 (row, 3);
 
+    char *creator_l = g_ascii_strdown (creator, -1);
     *p_group = g_object_new (CCNET_TYPE_GROUP,
                              "id", group_id,
                              "group_name", group_name,
-                             "creator_name", creator,
+                             "creator_name", creator_l,
                              "timestamp", ts,
                              NULL);
+    g_free (creator_l);
 
     return FALSE;
 }
@@ -593,11 +603,13 @@ get_ccnet_groupuser_cb (CcnetDBRow *row, void *data)
     const char *user = (const char *)ccnet_db_row_get_column_text (row, 1);
     int is_staff = ccnet_db_row_get_column_int (row, 2);
 
+    char *user_l = g_ascii_strdown (user, -1);
     group_user = g_object_new (CCNET_TYPE_GROUP_USER,
                                "group_id", group_id,
-                               "user_name", user,
+                               "user_name", user_l,
                                "is_staff", is_staff,
                                NULL);
+    g_free (user_l);
     if (group_user != NULL) {
         *plist = g_list_prepend (*plist, group_user);
     }
@@ -669,13 +681,15 @@ get_all_ccnetgroups_cb (CcnetDBRow *row, void *data)
     creator = (const char *)ccnet_db_row_get_column_text (row, 2);
     ts = ccnet_db_row_get_column_int64 (row, 3);
 
+    char *creator_l = g_ascii_strdown (creator, -1);
     CcnetGroup *group = g_object_new (CCNET_TYPE_GROUP,
                                       "id", group_id,
                                       "group_name", group_name,
-                                      "creator_name", creator,
+                                      "creator_name", creator_l,
                                       "timestamp", ts,
                                       NULL);
-    
+    g_free (creator_l);
+
     *plist = g_list_prepend (*plist, group);
     
     return TRUE;
