@@ -215,6 +215,10 @@ class CcnetThreadedRpcClient(RpcClientBase):
     def update_emailuser(self, user_id, password, is_staff, is_active):
         pass
 
+    @searpc_func("objlist", [])
+    def get_superusers(self):
+        pass
+
     @searpc_func("int", ["string", "string"])
     def add_binding(self, email, peer_id):
         pass

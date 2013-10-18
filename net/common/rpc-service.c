@@ -197,6 +197,10 @@ ccnet_start_rpc(CcnetSession *session)
                                      ccnet_rpc_update_emailuser,
                                      "update_emailuser",
                                      searpc_signature_int__int_string_int_int());
+    searpc_server_register_function ("ccnet-threaded-rpcserver",
+                                     ccnet_rpc_get_superusers,
+                                     "get_superusers",
+                                     searpc_signature_objlist__void());
 
     /* RSA sign a message with my private key. */
     searpc_server_register_function ("ccnet-rpcserver",
@@ -823,6 +827,14 @@ ccnet_rpc_update_emailuser (int id, const char* passwd, int is_staff, int is_act
     return ccnet_user_manager_update_emailuser(user_mgr, id, passwd, is_staff, is_active);
 }
 
+GList*
+ccnet_rpc_get_superusers (GError **error)
+{
+    CcnetUserManager *user_mgr = 
+        ((CcnetServerSession *)session)->user_mgr;
+
+    return ccnet_user_manager_get_superusers(user_mgr);
+}
 
 char *
 ccnet_rpc_sign_message (const char *message, GError **error)

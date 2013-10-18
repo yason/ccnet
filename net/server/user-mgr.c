@@ -1073,3 +1073,23 @@ ccnet_user_manager_update_emailuser (CcnetUserManager *manager,
 
     return 0;
 }
+
+GList*
+ccnet_user_manager_get_superusers(CcnetUserManager *manager)
+{
+    CcnetDB* db = manager->priv->db;
+    GList *ret = NULL;
+    char sql[512];
+
+    snprintf (sql, 512, "SELECT * FROM EmailUser WHERE is_staff = 1;");
+
+    if (ccnet_db_foreach_selected_row (db, sql, get_emailusers_cb, &ret) < 0) {
+        while (ret != NULL) {
+            g_object_unref (ret->data);
+            ret = g_list_delete_link (ret, ret);
+        }
+        return NULL;
+    }
+
+    return g_list_reverse (ret);
+}

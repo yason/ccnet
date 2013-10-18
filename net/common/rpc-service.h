@@ -132,6 +132,9 @@ int
 ccnet_rpc_update_emailuser (int id, const char* passwd, int is_staff, int is_active,
                             GError **error);
 
+GList*
+ccnet_rpc_get_superusers (GError **error);
+
 int
 ccnet_rpc_add_binding (const char *email, const char *peer_id, GError **error);
 

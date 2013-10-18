@@ -103,7 +103,10 @@ int
 ccnet_user_manager_update_emailuser (CcnetUserManager *manager,
                                      int id, const char* encry_passwd,
                                      int is_staff, int is_active);
-                                     
+
+GList*
+ccnet_user_manager_get_superusers(CcnetUserManager *manager);
+
 int
 ccnet_user_manager_add_binding (CcnetUserManager *manager, const char *email,
                                 const char *peer_id);
