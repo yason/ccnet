@@ -966,7 +966,7 @@ ccnet_user_manager_search_emailusers (CcnetUserManager *manager,
     char sql[256];
 
 #ifdef HAVE_LDAP
-    ;                           /* todo */
+    return NULL;                           /* todo */
 #endif
 
     if (start == -1 && limit == -1)
