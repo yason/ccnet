@@ -966,7 +966,8 @@ ccnet_user_manager_search_emailusers (CcnetUserManager *manager,
     char sql[256];
 
 #ifdef HAVE_LDAP
-    return NULL;                           /* todo */
+    if (manager->use_ldap)
+        return NULL;                           /* todo */
 #endif
 
     if (start == -1 && limit == -1)
@@ -1013,8 +1014,8 @@ ccnet_user_manager_filter_emailusers_by_emails(CcnetUserManager *manager,
     GList *ret = NULL;
 
 #ifdef HAVE_LDAP
-	/* todo */    
-    return NULL;                           
+    if (manager->use_ldap)
+        return NULL;            /* todo */
 #endif
 
     GString *sql = g_string_new(NULL);
