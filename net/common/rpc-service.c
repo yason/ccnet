@@ -814,6 +814,9 @@ ccnet_rpc_filter_emailusers_by_emails (const char *emails, GError **error)
    CcnetUserManager *user_mgr = 
         ((CcnetServerSession *)session)->user_mgr;
 
+   if (!emails || g_strcmp0 (emails, "") == 0)
+       return NULL;
+
    return ccnet_user_manager_filter_emailusers_by_emails (user_mgr, emails);
 }
 
