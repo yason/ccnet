@@ -121,11 +121,15 @@ static int init_sqlite_database (CcnetSession *session)
     return 0;
 }
 
+#define MYSQL_DEFAULT_PORT "3306"
+
 static int init_mysql_database (CcnetSession *session)
 {
-    char *host, *user, *passwd, *db, *unix_socket;
+    char *host, *port, *user, *passwd, *db, *unix_socket;
+    gboolean use_ssl = FALSE;
 
     host = ccnet_key_file_get_string (session->keyf, "Database", "HOST");
+    port = ccnet_key_file_get_string (session->keyf, "Database", "PORT");
     user = ccnet_key_file_get_string (session->keyf, "Database", "USER");
     passwd = ccnet_key_file_get_string (session->keyf, "Database", "PASSWD");
     db = ccnet_key_file_get_string (session->keyf, "Database", "DB");
@@ -133,6 +137,9 @@ static int init_mysql_database (CcnetSession *session)
     if (!host) {
         g_warning ("DB host not set in config.\n");
         return -1;
+    }
+    if (!port) {
+        port = g_strdup (MYSQL_DEFAULT_PORT);
     }
     if (!user) {
         g_warning ("DB user not set in config.\n");
@@ -148,12 +155,20 @@ static int init_mysql_database (CcnetSession *session)
     }
     unix_socket = ccnet_key_file_get_string (session->keyf,
                                              "Database", "UNIX_SOCKET");
+    use_ssl = g_key_file_get_boolean (session->keyf, "Database", "USE_SSL", NULL);
 
-    session->db = ccnet_db_new_mysql (host, user, passwd, db, unix_socket);
+    session->db = ccnet_db_new_mysql (host, port, user, passwd, db, unix_socket, use_ssl);
     if (!session->db) {
         g_warning ("Failed to open database.\n");
         return -1;
     }
+
+    g_free (host);
+    g_free (port);
+    g_free (user);
+    g_free (passwd);
+    g_free (db);
+    g_free (unix_socket);
 
    return 0;
 }

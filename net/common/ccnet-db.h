@@ -25,10 +25,12 @@ typedef gboolean (*CcnetDBRowFunc) (CcnetDBRow *, void *);
 
 CcnetDB *
 ccnet_db_new_mysql (const char *host,
+                    const char *port,
                     const char *user,
                     const char *passwd,
                     const char *db,
-                    const char *unix_socket);
+                    const char *unix_socket,
+                    gboolean use_ssl);
 
 CcnetDB *
 ccnet_db_new_pgsql (const char *host,
