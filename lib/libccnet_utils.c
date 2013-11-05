@@ -40,7 +40,6 @@
 
 #include <glib.h>
 #include <glib/gstdio.h>
-#include <json-glib/json-glib.h>
 #include <searpc-utils.h>
 
 #ifdef WIN32

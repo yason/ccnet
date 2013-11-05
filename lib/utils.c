@@ -39,7 +39,6 @@
 
 #include <glib.h>
 #include <glib/gstdio.h>
-#include <json-glib/json-glib.h>
 #include <searpc-utils.h>
 
 extern int inet_pton(int af, const char *src, void *dst);
@@ -918,109 +917,6 @@ get_current_time()
     g_get_current_time (&tv);
     t = tv.tv_sec * (gint64)1000000 + tv.tv_usec;
     return t;
-}
-
-gchar *
-key_value_list_to_json(const char *first, ...)
-{
-    gchar *ret;
-    va_list args;
-
-    va_start (args, first);
-    ret = key_value_list_to_json_v (first, args);
-    va_end (args);
-
-    return ret;
-}
-
-gchar *
-key_value_list_to_json_v(const char *first, va_list args)
-{
-    if (!first)
-        return NULL;
-
-    JsonNode *root = json_node_new (JSON_NODE_OBJECT);
-    JsonGenerator *generator = json_generator_new ();
-    JsonObject *jobj = json_object_new ();
-    const char *key = first, *value;
-    gchar *data;
-
-    while (key) {
-        value = va_arg(args, char *);
-        json_object_set_string_member (jobj, key, value);
-
-        key = va_arg(args, char *);
-    }
-
-    json_node_take_object (root, jobj);
-    json_generator_set_root (generator, root);
-    g_object_set (generator, "pretty", FALSE, NULL);
-
-    data = json_generator_to_data (generator, NULL);
-    json_node_free (root);
-    g_object_unref (generator);
-    return data;
-}
-
-/* format char:
-     i   integer (gint64)
-     s   string (const char *)
- */
-gchar *
-json_printf(const char *format, ...)
-{
-    gchar *ret;
-    va_list args;
-
-    va_start (args, format);
-    ret = json_vprintf (format, args);
-    va_end (args);
-
-    return ret;
-}
-
-gchar *
-json_vprintf(const char *format, va_list args)
-{
-    if (!format)
-        return NULL;
-
-    JsonObject *jobj = json_object_new ();
-    const char *key = format, *strv;
-    gint64 intv;
-    gchar *data;
-    const char *p;
-
-    for (p=format; *p; p++) {
-        key = va_arg(args, char *);
-        switch (*p) {
-        case 's':
-            strv = va_arg(args, char *);
-            json_object_set_string_or_null_member (jobj, key, strv);
-            break;
-        case 'i':
-            intv = va_arg(args, gint64);
-            json_object_set_int_member (jobj, key, intv);
-            break;
-        default:
-            g_warning ("unknown format %c\n", *p);
-            json_object_unref (jobj);
-            return NULL;
-        }
-    }
-
-    JsonNode *root = json_node_new (JSON_NODE_OBJECT);
-    JsonGenerator *generator = json_generator_new ();
-
-    json_node_take_object (root, jobj);
-    json_generator_set_root (generator, root);
-    g_object_set (generator, "pretty", FALSE, NULL);
-
-    data = json_generator_to_data (generator, NULL);
-
-    json_node_free (root);
-    g_object_unref (generator);
-    return data;
 }
 
 #ifdef WIN32
