@@ -6,6 +6,7 @@ AM_CFLAGS = -DPKGDATADIR=\"$(pkgdatadir)\" \
 	-I$(top_srcdir)/lib  \
 	-I$(top_builddir)/lib  \
 	@GLIB2_CFLAGS@ \
+	@SEARPC_CFLAGS@ \
 	-Wall
 
 
@@ -20,7 +21,7 @@ proc_srcs = processors/echo-proc.c
 ccnet_demo_server_SOURCES = ccnet-demo-server.c $(proc_srcs)
 
 ccnet_demo_server_LDADD = $(top_builddir)/lib/libccnet.la \
-	 @GLIB2_LIBS@  @GOBJECT_LIBS@
+	 @GLIB2_LIBS@  @GOBJECT_LIBS@ @SEARPC_LIBS@
 
 ccnet_demo_server_LDFLAGS = @STATIC_COMPILE@ @CONSOLE@
 
