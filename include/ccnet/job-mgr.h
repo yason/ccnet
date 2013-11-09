@@ -9,7 +9,6 @@
 #define JOB_MGR_H
 
 #include <glib.h>
-#include <pthread.h>
 
 struct _CcnetSession;
 
@@ -28,9 +27,7 @@ typedef void (*JobDoneCallback)(void *result);
 struct _CcnetJobManager {
     GHashTable      *jobs;
 
-#ifndef WIN32
     GThreadPool     *thread_pool;
-#endif
 
     int              next_job_id;
 };
