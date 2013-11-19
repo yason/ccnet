@@ -34,6 +34,7 @@ public class EmailUser : Object {
     public bool is_staff { get; set; }
     public bool is_active { get; set; }
     public int64 ctime { get; set; }
+    public string source { get; set; }
 }
 
 public class Group : Object {

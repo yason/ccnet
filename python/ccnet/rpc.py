@@ -195,8 +195,8 @@ class CcnetThreadedRpcClient(RpcClientBase):
     def get_emailuser_by_id(self, user_id):
         pass
 
-    @searpc_func("objlist", ["int", "int"])
-    def get_emailusers(self, start, limit):
+    @searpc_func("objlist", ["string", "int", "int"])
+    def get_emailusers(self, source, start, limit):
         pass
 
     @searpc_func("objlist", ["string", "int", "int"])
