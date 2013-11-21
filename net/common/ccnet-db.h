@@ -30,7 +30,8 @@ ccnet_db_new_mysql (const char *host,
                     const char *passwd,
                     const char *db,
                     const char *unix_socket,
-                    gboolean use_ssl);
+                    gboolean use_ssl,
+                    const char *charset);
 
 CcnetDB *
 ccnet_db_new_pgsql (const char *host,
