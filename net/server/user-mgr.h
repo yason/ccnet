@@ -84,8 +84,12 @@ ccnet_user_manager_get_emailuser (CcnetUserManager *manager, const char *email);
 CcnetEmailUser*
 ccnet_user_manager_get_emailuser_by_id (CcnetUserManager *manager, int id);
 
+/*
+ * @source: "DB" or "LDAP".
+ */
 GList*
-ccnet_user_manager_get_emailusers (CcnetUserManager *manager, int start, int limit);
+ccnet_user_manager_get_emailusers (CcnetUserManager *manager, const char *source,
+                                   int start, int limit);
 
 GList*
 ccnet_user_manager_search_emailusers (CcnetUserManager *manager,

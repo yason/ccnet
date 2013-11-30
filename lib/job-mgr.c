@@ -26,8 +26,6 @@ struct _CcnetJob {
     CcnetJobManager *manager;
 
     int             id;
-    gboolean        thread_running;
-    pthread_t       tid;
     ccnet_pipe_t    pipefd[2];
 
     JobThreadFunc   thread_func;
@@ -42,34 +40,17 @@ struct _CcnetJob {
 void
 ccnet_job_manager_remove_job (CcnetJobManager *mgr, int job_id);
 
-#ifdef WIN32
-static void*
-job_thread_wrapper (void *vdata)
-{
-    CcnetJob *job = vdata;
-    
-    job->result = job->thread_func (job->data);
-    if (pipewriten (job->pipefd[1], "a", 1) != 1) {
-        g_warning ("[Job Manager] write to pipe error: %s\n", strerror(errno));
-    }
-
-    return NULL;
-}
-#else
 static void
 job_thread_wrapper (void *vdata, void *unused)
 {
     CcnetJob *job = vdata;
 
-    job->tid = pthread_self ();
-    job->thread_running = TRUE;
     
     job->result = job->thread_func (job->data);
     if (pipewriten (job->pipefd[1], "a", 1) != 1) {
         g_warning ("[Job Manager] write to pipe error: %s\n", strerror(errno));
     }
 }
-#endif  /* WIN32 */
 
 static void
 job_done_cb (int fd, short event, void *vdata)
@@ -97,18 +78,7 @@ job_thread_create (CcnetJob *job)
         return -1;
     }
 
-#ifdef WIN32
-    if (pthread_create (&job->tid, NULL, job_thread_wrapper, job) != 0) {
-        g_warning ("thread creation error: %s\n",
-                   strerror(errno));
-        return -1;
-    }
-    job->thread_running = TRUE;
-
-    pthread_detach (job->tid);
-#else
     g_thread_pool_push (job->manager->thread_pool, job, NULL);
-#endif  /* WIN32 */
 
 #ifndef UNIT_TEST
     event_once (job->pipefd[0], EV_READ, job_done_cb, job, NULL);
@@ -140,14 +110,12 @@ ccnet_job_manager_new (int max_threads)
     mgr = g_new0 (CcnetJobManager, 1);
     mgr->jobs = g_hash_table_new_full (g_direct_hash, g_direct_equal,
                                        NULL, (GDestroyNotify)ccnet_job_free);
-#ifndef WIN32
     mgr->thread_pool = g_thread_pool_new (job_thread_wrapper,
                                           NULL,
                                           max_threads,
                                           FALSE,
                                           NULL);
     /* g_thread_pool_set_max_unused_threads (MAX_IDLE_THREADS); */
-#endif
 
     return mgr;
 }
@@ -156,9 +124,7 @@ void
 ccnet_job_manager_free (CcnetJobManager *mgr)
 {
     g_hash_table_destroy (mgr->jobs);
-#ifndef WIN32
     g_thread_pool_free (mgr->thread_pool, TRUE, FALSE);
-#endif
     g_free (mgr);
 }
 

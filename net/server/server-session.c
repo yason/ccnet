@@ -125,7 +125,7 @@ static int init_sqlite_database (CcnetSession *session)
 
 static int init_mysql_database (CcnetSession *session)
 {
-    char *host, *port, *user, *passwd, *db, *unix_socket;
+    char *host, *port, *user, *passwd, *db, *unix_socket, *charset;
     gboolean use_ssl = FALSE;
 
     host = ccnet_key_file_get_string (session->keyf, "Database", "HOST");
@@ -156,8 +156,10 @@ static int init_mysql_database (CcnetSession *session)
     unix_socket = ccnet_key_file_get_string (session->keyf,
                                              "Database", "UNIX_SOCKET");
     use_ssl = g_key_file_get_boolean (session->keyf, "Database", "USE_SSL", NULL);
+    charset = ccnet_key_file_get_string (session->keyf,
+                                         "Database", "CONNECTION_CHARSET");
 
-    session->db = ccnet_db_new_mysql (host, port, user, passwd, db, unix_socket, use_ssl);
+    session->db = ccnet_db_new_mysql (host, port, user, passwd, db, unix_socket, use_ssl, charset);
     if (!session->db) {
         g_warning ("Failed to open database.\n");
         return -1;
@@ -169,8 +171,9 @@ static int init_mysql_database (CcnetSession *session)
     g_free (passwd);
     g_free (db);
     g_free (unix_socket);
+    g_free (charset);
 
-   return 0;
+    return 0;
 }
 
 static int init_pgsql_database (CcnetSession *session)

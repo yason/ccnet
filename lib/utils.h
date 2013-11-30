@@ -320,4 +320,8 @@ char* ccnet_object_type_from_id (const char *object_id);
 
 gint64 ccnet_calc_directory_size (const char *path, GError **error);
 
+#ifdef WIN32
+char * strtok_r(char *s, const char *delim, char **save_ptr);
+#endif
+
 #endif

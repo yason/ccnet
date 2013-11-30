@@ -110,7 +110,7 @@ GObject*
 ccnet_rpc_get_emailuser_by_id (int id, GError **error);
 
 GList*
-ccnet_rpc_get_emailusers (int start, int limit, GError **error);
+ccnet_rpc_get_emailusers (const char *source, int start, int limit, GError **error);
 
 GList*
 ccnet_rpc_search_emailusers (const char *email_patt, int start, int limit,

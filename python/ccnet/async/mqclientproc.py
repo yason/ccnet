@@ -37,7 +37,7 @@ class MqClientProc(Processor):
                 return
 
             if code[0] == '3' and code[2] == '0':
-                msg = message_from_string(content)
+                msg = message_from_string(content[:-1])
                 if self.callback:
                     self.callback(msg)
 
