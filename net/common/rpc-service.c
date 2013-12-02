@@ -243,6 +243,10 @@ ccnet_start_rpc(CcnetSession *session)
                                      "group_unset_admin",
                                      searpc_signature_int__int_string());
     searpc_server_register_function ("ccnet-threaded-rpcserver",
+                                     ccnet_rpc_set_group_name,
+                                     "set_group_name",
+                                     searpc_signature_int__int_string());
+    searpc_server_register_function ("ccnet-threaded-rpcserver",
                                      ccnet_rpc_quit_group,
                                      "quit_group",
                                      searpc_signature_int__int_string());
@@ -1020,6 +1024,25 @@ ccnet_rpc_group_unset_admin (int group_id, const char *member_name,
 
     ret = ccnet_group_manager_unset_admin (group_mgr, group_id, member_name,
                                            error);
+    return ret;
+}
+
+int
+ccnet_rpc_set_group_name (int group_id, const char *group_name,
+                          GError **error)
+{
+    CcnetGroupManager *group_mgr = 
+        ((CcnetServerSession *)session)->group_mgr;
+    int ret;
+
+    if (group_id <= 0 || !group_name) {
+        g_set_error (error, CCNET_DOMAIN, CCNET_ERR_INTERNAL,
+                     "Bad arguments");
+        return -1;
+    }
+
+    ret = ccnet_group_manager_set_group_name (group_mgr, group_id, group_name,
+                                              error);
     return ret;
 }
 

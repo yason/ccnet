@@ -190,6 +190,10 @@ ccnet_rpc_group_unset_admin (int group_id, const char *member_name,
                            GError **error);
 
 int
+ccnet_rpc_set_group_name (int group_id, const char *group_name,
+                          GError **error);
+
+int
 ccnet_rpc_quit_group (int group_id, const char *user_name, GError **error);
 
 GList *

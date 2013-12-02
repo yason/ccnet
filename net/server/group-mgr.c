@@ -486,6 +486,21 @@ int ccnet_group_manager_unset_admin (CcnetGroupManager *mgr,
     return 0;
 }
 
+int ccnet_group_manager_set_group_name (CcnetGroupManager *mgr,
+                                        int group_id,
+                                        const char *group_name,
+                                        GError **error)
+{
+    CcnetDB *db = mgr->priv->db;
+    char sql[512];
+
+    snprintf (sql, sizeof(sql), "UPDATE `Group` SET group_name = '%s' "
+              "WHERE group_id = %d", group_name, group_id);
+    ccnet_db_query (db, sql);
+
+    return 0;
+}
+
 int ccnet_group_manager_quit_group (CcnetGroupManager *mgr,
                                     int group_id,
                                     const char *user_name,
