@@ -43,6 +43,8 @@ struct _CcnetUserManager
     char           *login_attr;  /* attribute name used for login */
 #endif
 
+    int passwd_hash_iter;
+
     CcnetUserManagerPriv *priv;
 };
 
@@ -105,7 +107,7 @@ ccnet_user_manager_filter_emailusers_by_emails(CcnetUserManager *manager,
 
 int
 ccnet_user_manager_update_emailuser (CcnetUserManager *manager,
-                                     int id, const char* encry_passwd,
+                                     int id, const char* passwd,
                                      int is_staff, int is_active);
 
 GList*

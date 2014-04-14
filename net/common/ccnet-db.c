@@ -424,3 +424,25 @@ pgsql_index_exists (CcnetDB *db, const char *index_name)
               index_name);
     return ccnet_db_check_for_existence (db, sql);
 }
+
+char *
+ccnet_db_escape_string (CcnetDB *db, const char *from)
+{
+    const char *p = from;
+    char *to, *q;
+
+    to = g_malloc0 (2*strlen(from)+1);
+    q = to;
+
+    while (*p != '\0') {
+        if (*p == '\'' || *p == '\\' || *p == '"') {
+            *q = *p;
+            *(++q) = *p;
+        } else
+            *q = *p;
+        ++p;
+        ++q;
+    }
+
+    return to;
+}
