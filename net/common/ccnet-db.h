@@ -80,6 +80,9 @@ ccnet_db_get_string (CcnetDB *db, const char *sql);
 gboolean
 pgsql_index_exists (CcnetDB *db, const char *index_name);
 
+char *
+ccnet_db_escape_string (CcnetDB *db, const char *from);
+
 #else
 
 #define CcnetDB sqlite3

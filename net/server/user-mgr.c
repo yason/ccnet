@@ -622,8 +622,9 @@ ccnet_user_manager_add_emailuser (CcnetUserManager *manager,
         return -1;
     }
 
+    char *esc_email = ccnet_db_escape_string (db, email);
     /* convert email to lower case for case insensitive lookup. */
-    char *email_down = g_ascii_strdown (email, strlen(email));
+    char *email_down = g_ascii_strdown (esc_email, strlen(esc_email));
 
     hash_password_salted (passwd, hashed_passwd);
 
@@ -632,6 +633,7 @@ ccnet_user_manager_add_emailuser (CcnetUserManager *manager,
               "%"G_GINT64_FORMAT")", email_down, hashed_passwd, is_staff,
               is_active, now);
     g_free (email_down);
+    g_free (esc_email);
 
     ret = ccnet_db_query (db, sql);
     if (ret < 0)
@@ -649,9 +651,12 @@ ccnet_user_manager_remove_emailuser (CcnetUserManager *manager,
     char sql[512];
     int ret;
 
+    char *esc_email = ccnet_db_escape_string (db, email);
+
     snprintf (sql, 512,
               "DELETE FROM EmailUser WHERE email='%s'",
-              email);
+              esc_email);
+    g_free (esc_email);
 
     ret = ccnet_db_query (db, sql);
     if (ret < 0)
@@ -698,7 +703,7 @@ ccnet_user_manager_validate_emailuser (CcnetUserManager *manager,
 {
     CcnetDB *db = manager->priv->db;
     char sql[1024];
-    char *email_down;
+    char *email_down, *esc_email;
     char *stored_passwd = NULL;
 
 #ifdef HAVE_LDAP
@@ -708,9 +713,11 @@ ccnet_user_manager_validate_emailuser (CcnetUserManager *manager,
     }
 #endif
 
+    esc_email = ccnet_db_escape_string (db, email);
     snprintf (sql, sizeof(sql),
               "SELECT passwd FROM EmailUser WHERE email='%s'",
-              email);
+              esc_email);
+    g_free (esc_email);
     if (ccnet_db_foreach_selected_row (db, sql,
                                        get_password, &stored_passwd) > 0) {
         if (validate_passwd (passwd, stored_passwd)) {
@@ -722,10 +729,12 @@ ccnet_user_manager_validate_emailuser (CcnetUserManager *manager,
         }
     }
 
-    email_down = g_ascii_strdown (email, strlen(email));
+    esc_email = ccnet_db_escape_string (db, email);
+    email_down = g_ascii_strdown (esc_email, strlen(esc_email));
     snprintf (sql, sizeof(sql),
               "SELECT passwd FROM EmailUser WHERE email='%s'",
               email_down);
+    g_free (esc_email);
     g_free (email_down);
     if (ccnet_db_foreach_selected_row (db, sql,
                                        get_password, &stored_passwd) > 0) {
@@ -773,20 +782,25 @@ ccnet_user_manager_get_emailuser (CcnetUserManager *manager,
     CcnetDB *db = manager->priv->db;
     char sql[512];
     CcnetEmailUser *emailuser = NULL;
-    char *email_down;
+    char *email_down, *esc_email;
+
+    esc_email = ccnet_db_escape_string (db, email);
 
     snprintf (sql, sizeof(sql),
               "SELECT id, email, is_staff, is_active, ctime"
               " FROM EmailUser WHERE email='%s'",
-              email);
+              esc_email);
+    g_free (esc_email);
     if (ccnet_db_foreach_selected_row (db, sql, get_emailuser_cb, &emailuser) > 0)
         return emailuser;
 
-    email_down = g_ascii_strdown (email, strlen(email));
+    esc_email = ccnet_db_escape_string (db, email);
+    email_down = g_ascii_strdown (esc_email, strlen(esc_email));
     snprintf (sql, sizeof(sql),
               "SELECT id, email, is_staff, is_active, ctime"
               " FROM EmailUser WHERE email='%s'",
               email_down);
+    g_free (esc_email);
     g_free (email_down);
     if (ccnet_db_foreach_selected_row (db, sql, get_emailuser_cb, &emailuser) > 0)
         return emailuser;
@@ -925,12 +939,16 @@ ccnet_user_manager_search_emailusers (CcnetUserManager *manager,
     }
 #endif
 
+    char *esc_email_patt = ccnet_db_escape_string (db, email_patt);
+
     if (start == -1 && limit == -1)
         snprintf (sql, 256, "SELECT * FROM EmailUser WHERE Email LIKE '%s' "
-        "ORDER BY id", email_patt);
+        "ORDER BY id", esc_email_patt);
     else
         snprintf (sql, 256, "SELECT * FROM EmailUser WHERE Email LIKE '%s' "
-        "ORDER BY id LIMIT %d OFFSET %d", email_patt, limit, start);
+        "ORDER BY id LIMIT %d OFFSET %d", esc_email_patt, limit, start);
+
+    g_free (esc_email_patt);
     
     if (ccnet_db_foreach_selected_row (db, sql, get_emailusers_cb, &ret) < 0) {
         while (ret != NULL) {
