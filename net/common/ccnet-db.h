@@ -83,6 +83,28 @@ pgsql_index_exists (CcnetDB *db, const char *index_name);
 char *
 ccnet_db_escape_string (CcnetDB *db, const char *from);
 
+/* Prepared statements */
+
+int
+ccnet_db_statement_query (CcnetDB *db, const char *sql, int n, ...);
+
+gboolean
+ccnet_db_statement_exists (CcnetDB *db, const char *sql, int n, ...);
+
+int
+ccnet_db_statement_foreach_row (CcnetDB *db, const char *sql,
+                                CcnetDBRowFunc callback, void *data,
+                                int n, ...);
+
+int
+ccnet_db_statement_get_int (CcnetDB *db, const char *sql, int n, ...);
+
+gint64
+ccnet_db_statement_get_int64 (CcnetDB *db, const char *sql, int n, ...);
+
+char *
+ccnet_db_statement_get_string (CcnetDB *db, const char *sql, int n, ...);
+
 #else
 
 #define CcnetDB sqlite3
