@@ -712,26 +712,22 @@ update_user_passwd (CcnetUserManager *manager,
                     const char *email, const char *passwd)
 {
     CcnetDB *db = manager->priv->db;
-    GString *sql = g_string_new ("");
     char *db_passwd = NULL;
     int ret;
 
     hash_password_pbkdf2_sha256 (passwd, manager->passwd_hash_iter,
                                  &db_passwd);
 
-    char *esc_email = ccnet_db_escape_string (db, email);
     /* convert email to lower case for case insensitive lookup. */
-    char *email_down = g_ascii_strdown (esc_email, strlen(esc_email));
+    char *email_down = g_ascii_strdown (email, strlen(email));
 
-    g_string_printf (sql, "UPDATE EmailUser SET passwd='%s' WHERE email='%s'",
-                     db_passwd, email);
+    ret = ccnet_db_statement_query (db,
+                                    "UPDATE EmailUser SET passwd=? WHERE email=?",
+                                    2, "string", db_passwd, "string", email_down);
 
     g_free (db_passwd);
-    g_free (esc_email);
     g_free (email_down);
 
-    ret = ccnet_db_query (db, sql->str);
-    g_string_free (sql, TRUE);
     if (ret < 0)
         return ret;
 
@@ -746,7 +742,6 @@ ccnet_user_manager_add_emailuser (CcnetUserManager *manager,
 {
     CcnetDB *db = manager->priv->db;
     gint64 now = get_current_time();
-    GString *sql = g_string_new ("");
     char *db_passwd = NULL;
     int ret;
 
@@ -760,21 +755,18 @@ ccnet_user_manager_add_emailuser (CcnetUserManager *manager,
     hash_password_pbkdf2_sha256 (passwd, manager->passwd_hash_iter,
                                  &db_passwd);
 
-    char *esc_email = ccnet_db_escape_string (db, email);
     /* convert email to lower case for case insensitive lookup. */
-    char *email_down = g_ascii_strdown (esc_email, strlen(esc_email));
+    char *email_down = g_ascii_strdown (email, strlen(email));
 
-    g_string_printf (sql, "INSERT INTO EmailUser(email, passwd, is_staff, "
-                     "is_active, ctime) VALUES ('%s', '%s', '%d', '%d', "
-                     "%"G_GINT64_FORMAT")", email_down, db_passwd, is_staff,
-                     is_active, now);
+    ret = ccnet_db_statement_query (db,
+                                    "INSERT INTO EmailUser(email, passwd, is_staff, "
+                                    "is_active, ctime) VALUES (?, ?, ?, ?, ?)",
+                                    5, "string", email_down, "string", db_passwd,
+                                    "int", is_staff, "int", is_active, "int64", now);
 
     g_free (db_passwd);
-    g_free (esc_email);
     g_free (email_down);
 
-    ret = ccnet_db_query (db, sql->str);
-    g_string_free (sql, TRUE);
     if (ret < 0)
         return ret;
 
@@ -787,16 +779,12 @@ ccnet_user_manager_remove_emailuser (CcnetUserManager *manager,
                                      const char *email)
 {
     CcnetDB *db = manager->priv->db;
-    char sql[512];
     int ret;
 
-    char *esc_email = ccnet_db_escape_string (db, email);
-    snprintf (sql, 512,
-              "DELETE FROM EmailUser WHERE email='%s'",
-              esc_email);
-    g_free (esc_email);
+    ret = ccnet_db_statement_query (db,
+                                    "DELETE FROM EmailUser WHERE email=?",
+                                    1, "string", email);
 
-    ret = ccnet_db_query (db, sql);
     if (ret < 0)
         return ret;
 
@@ -819,8 +807,8 @@ ccnet_user_manager_validate_emailuser (CcnetUserManager *manager,
                                        const char *passwd)
 {
     CcnetDB *db = manager->priv->db;
-    char sql[1024];
-    char *esc_email, *email_down;
+    char *sql;
+    char *email_down;
     char *stored_passwd = NULL;
     gboolean need_upgrade = FALSE;
 
@@ -831,13 +819,10 @@ ccnet_user_manager_validate_emailuser (CcnetUserManager *manager,
     }
 #endif
 
-    esc_email = ccnet_db_escape_string (db, email);
-    snprintf (sql, sizeof(sql),
-              "SELECT passwd FROM EmailUser WHERE email='%s'",
-              esc_email);
-    g_free (esc_email);
-    if (ccnet_db_foreach_selected_row (db, sql,
-                                       get_password, &stored_passwd) > 0) {
+    sql = "SELECT passwd FROM EmailUser WHERE email=?";
+    if (ccnet_db_statement_foreach_row (db, sql,
+                                        get_password, &stored_passwd,
+                                        1, "string", email) > 0) {
         if (validate_passwd (passwd, stored_passwd, &need_upgrade)) {
             if (need_upgrade)
                 update_user_passwd (manager, email, passwd);
@@ -849,15 +834,11 @@ ccnet_user_manager_validate_emailuser (CcnetUserManager *manager,
         }
     }
 
-    esc_email = ccnet_db_escape_string (db, email);
-    email_down = g_ascii_strdown (esc_email, strlen(esc_email));
-    snprintf (sql, sizeof(sql),
-              "SELECT passwd FROM EmailUser WHERE email='%s'",
-              email_down);
-    g_free (esc_email);
-    g_free (email_down);
-    if (ccnet_db_foreach_selected_row (db, sql,
-                                       get_password, &stored_passwd) > 0) {
+    email_down = g_ascii_strdown (email, strlen(email));
+    if (ccnet_db_statement_foreach_row (db, sql,
+                                        get_password, &stored_passwd,
+                                        1, "string", email_down) > 0) {
+        g_free (email_down);
         if (validate_passwd (passwd, stored_passwd, &need_upgrade)) {
             if (need_upgrade)
                 update_user_passwd (manager, email, passwd);
@@ -868,6 +849,7 @@ ccnet_user_manager_validate_emailuser (CcnetUserManager *manager,
             return -1;
         }
     }
+    g_free (email_down);
 
     return -1;
 }
@@ -902,29 +884,23 @@ ccnet_user_manager_get_emailuser (CcnetUserManager *manager,
                                   const char *email)
 {
     CcnetDB *db = manager->priv->db;
-    char sql[512];
+    char *sql;
     CcnetEmailUser *emailuser = NULL;
-    char *esc_email, *email_down;
+    char *email_down;
 
-    esc_email = ccnet_db_escape_string (db, email);
-    snprintf (sql, sizeof(sql),
-              "SELECT id, email, is_staff, is_active, ctime"
-              " FROM EmailUser WHERE email='%s'",
-              esc_email);
-    g_free (esc_email);
-    if (ccnet_db_foreach_selected_row (db, sql, get_emailuser_cb, &emailuser) > 0)
+    sql = "SELECT id, email, is_staff, is_active, ctime"
+        " FROM EmailUser WHERE email=?";
+    if (ccnet_db_statement_foreach_row (db, sql, get_emailuser_cb, &emailuser,
+                                        1, "string", email) > 0)
         return emailuser;
 
-    esc_email = ccnet_db_escape_string (db, email);
-    email_down = g_ascii_strdown (esc_email, strlen(esc_email));
-    snprintf (sql, sizeof(sql),
-              "SELECT id, email, is_staff, is_active, ctime"
-              " FROM EmailUser WHERE email='%s'",
-              email_down);
-    g_free (esc_email);
+    email_down = g_ascii_strdown (email, strlen(email));
+    if (ccnet_db_statement_foreach_row (db, sql, get_emailuser_cb, &emailuser,
+                                        1, "string", email_down) > 0) {
+        g_free (email_down);
+        return emailuser;
+    }
     g_free (email_down);
-    if (ccnet_db_foreach_selected_row (db, sql, get_emailuser_cb, &emailuser) > 0)
-        return emailuser;
 
 #ifdef HAVE_LDAP
     if (manager->use_ldap) {
@@ -951,13 +927,13 @@ CcnetEmailUser*
 ccnet_user_manager_get_emailuser_by_id (CcnetUserManager *manager, int id)
 {
     CcnetDB *db = manager->priv->db;
-    char sql[512];
+    char *sql;
     CcnetEmailUser *emailuser = NULL;
 
-    snprintf (sql, sizeof(sql),
-              "SELECT id, email, is_staff, is_active, ctime"
-              " FROM EmailUser WHERE id='%d'", id);
-    if (ccnet_db_foreach_selected_row (db, sql, get_emailuser_cb, &emailuser) < 0)
+    sql = "SELECT id, email, is_staff, is_active, ctime"
+        " FROM EmailUser WHERE id=?";
+    if (ccnet_db_statement_foreach_row (db, sql, get_emailuser_cb, &emailuser,
+                                        1, "int", id) < 0)
         return NULL;
 
     return emailuser;
@@ -999,7 +975,6 @@ ccnet_user_manager_get_emailusers (CcnetUserManager *manager,
 {
     CcnetDB *db = manager->priv->db;
     GList *ret = NULL;
-    char sql[256];
 
 #ifdef HAVE_LDAP
     if (manager->use_ldap && g_strcmp0 (source, "LDAP") == 0) {
@@ -1012,13 +987,19 @@ ccnet_user_manager_get_emailusers (CcnetUserManager *manager,
     if (g_strcmp0 (source, "DB") != 0)
         return NULL;
 
+    int rc;
     if (start == -1 && limit == -1)
-        snprintf (sql, 256, "SELECT * FROM EmailUser");
+        rc = ccnet_db_statement_foreach_row (db, "SELECT * FROM EmailUser",
+                                             get_emailusers_cb, &ret,
+                                             0);
     else
-        snprintf (sql, 256, "SELECT * FROM EmailUser ORDER BY id LIMIT %d OFFSET %d",
-                  limit, start);
+        rc = ccnet_db_statement_foreach_row (db,
+                                             "SELECT * FROM EmailUser ORDER BY id "
+                                             "LIMIT ? OFFSET ?",
+                                             get_emailusers_cb, &ret,
+                                             2, "int", limit, "int", start);
 
-    if (ccnet_db_foreach_selected_row (db, sql, get_emailusers_cb, &ret) < 0) {
+    if (rc < 0) {
         while (ret != NULL) {
             g_object_unref (ret->data);
             ret = g_list_delete_link (ret, ret);
@@ -1050,7 +1031,6 @@ ccnet_user_manager_search_emailusers (CcnetUserManager *manager,
 {
     CcnetDB *db = manager->priv->db;
     GList *ret = NULL;
-    char sql[256];
 
 #ifdef HAVE_LDAP
     if (manager->use_ldap) {
@@ -1060,16 +1040,22 @@ ccnet_user_manager_search_emailusers (CcnetUserManager *manager,
     }
 #endif
 
-    char *esc_email_patt = ccnet_db_escape_string (db, email_patt);
+    int rc;
     if (start == -1 && limit == -1)
-        snprintf (sql, 256, "SELECT * FROM EmailUser WHERE Email LIKE '%s' "
-        "ORDER BY id", email_patt);
+        rc = ccnet_db_statement_foreach_row (db,
+                                             "SELECT * FROM EmailUser WHERE Email LIKE ? "
+                                             "ORDER BY id",
+                                             get_emailusers_cb, &ret,
+                                             1, "string", email_patt);
     else
-        snprintf (sql, 256, "SELECT * FROM EmailUser WHERE Email LIKE '%s' "
-        "ORDER BY id LIMIT %d OFFSET %d", email_patt, limit, start);
-    g_free (esc_email_patt);
+        rc = ccnet_db_statement_foreach_row (db,
+                                             "SELECT * FROM EmailUser WHERE Email LIKE ? "
+                                             "ORDER BY id LIMIT ? OFFSET ?",
+                                             get_emailusers_cb, &ret,
+                                             3, "string", email_patt,
+                                             "int", limit, "int", start);
     
-    if (ccnet_db_foreach_selected_row (db, sql, get_emailusers_cb, &ret) < 0) {
+    if (rc < 0) {
         while (ret != NULL) {
             g_object_unref (ret->data);
             ret = g_list_delete_link (ret, ret);
@@ -1106,6 +1092,7 @@ ccnet_user_manager_count_emailusers (CcnetUserManager *manager)
     return count;
 }
 
+#if 0
 GList*
 ccnet_user_manager_filter_emailusers_by_emails(CcnetUserManager *manager,
                                                const char *emails)
@@ -1144,6 +1131,7 @@ ccnet_user_manager_filter_emailusers_by_emails(CcnetUserManager *manager,
     
     return g_list_reverse (ret);
 }
+#endif
 
 int
 ccnet_user_manager_update_emailuser (CcnetUserManager *manager,
@@ -1151,21 +1139,22 @@ ccnet_user_manager_update_emailuser (CcnetUserManager *manager,
                                      int is_staff, int is_active)
 {
     CcnetDB* db = manager->priv->db;
-    char sql[512];
     char *db_passwd = NULL;
 
-    if (g_strcmp0 (passwd, "!") == 0) { /* Don't update unusable password. */
-        snprintf (sql, 512, "UPDATE EmailUser SET is_staff='%d', "
-                  "is_active='%d' WHERE id='%d'", is_staff, is_active, id);
+    if (g_strcmp0 (passwd, "!") == 0) {
+        /* Don't update passwd if it starts with '!' */
+        return ccnet_db_statement_query  (db, "UPDATE EmailUser SET is_staff=?, "
+                                          "is_active=? WHERE id=?",
+                                          3, "int", is_staff, "int", is_active,
+                                          "int", id);
     } else {
         hash_password_pbkdf2_sha256 (passwd, manager->passwd_hash_iter, &db_passwd);
 
-        snprintf (sql, 512, "UPDATE EmailUser SET passwd='%s', "
-                  "is_staff='%d', is_active='%d' WHERE id='%d'",
-                  db_passwd, is_staff, is_active, id);
+        return ccnet_db_statement_query (db, "UPDATE EmailUser SET passwd=?, "
+                                         "is_staff=?, is_active=? WHERE id=?",
+                                         4, "string", db_passwd, "int", is_staff,
+                                         "int", is_active, "int", id);
     }
-        
-    return ccnet_db_query (db, sql);
 }
 
 GList*

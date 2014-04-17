@@ -190,10 +190,6 @@ ccnet_start_rpc(CcnetSession *session)
                                      "count_emailusers",
                                      searpc_signature_int64__void());
     searpc_server_register_function ("ccnet-threaded-rpcserver",
-                                     ccnet_rpc_filter_emailusers_by_emails,
-                                     "filter_emailusers_by_emails",
-                                     searpc_signature_objlist__string());
-    searpc_server_register_function ("ccnet-threaded-rpcserver",
                                      ccnet_rpc_update_emailuser,
                                      "update_emailuser",
                                      searpc_signature_int__int_string_int_int());
@@ -812,6 +808,7 @@ ccnet_rpc_count_emailusers (GError **error)
    return ccnet_user_manager_count_emailusers (user_mgr);
 }
 
+#if 0
 GList*
 ccnet_rpc_filter_emailusers_by_emails (const char *emails, GError **error)
 {
@@ -823,6 +820,7 @@ ccnet_rpc_filter_emailusers_by_emails (const char *emails, GError **error)
 
    return ccnet_user_manager_filter_emailusers_by_emails (user_mgr, emails);
 }
+#endif
 
 int
 ccnet_rpc_update_emailuser (int id, const char* passwd, int is_staff, int is_active,

@@ -197,31 +197,32 @@ int ccnet_org_manager_create_org (CcnetOrgManager *mgr,
 {
     CcnetDB *db = mgr->priv->db;
     gint64 now = get_current_time();
-    char sql[512];
+    int rc;
 
-    snprintf (sql, sizeof(sql), "INSERT INTO Organization(org_name, url_prefix,"
-              " creator, ctime) VALUES ('%s', '%s', '%s', %"G_GINT64_FORMAT")",
-              org_name, url_prefix, creator, now);
+    rc = ccnet_db_statement_query (db,
+                                   "INSERT INTO Organization(org_name, url_prefix,"
+                                   " creator, ctime) VALUES (?, ?, ?, ?)",
+                                   4, "string", org_name, "string", url_prefix,
+                                   "string", creator, "int64", now);
     
-    if (ccnet_db_query (db, sql) < 0) {
+    if (rc < 0) {
         g_set_error (error, CCNET_DOMAIN, 0, "Failed to create organization");
         return -1;
     }
 
-    snprintf (sql, sizeof(sql), "SELECT org_id FROM Organization WHERE "
-              "url_prefix = '%s'", url_prefix);
-    int org_id = ccnet_db_get_int (db, sql);
+    int org_id = ccnet_db_statement_get_int (db,
+                                             "SELECT org_id FROM Organization WHERE "
+                                             "url_prefix = ?", 1, "string", url_prefix);
     if (org_id < 0) {
         g_set_error (error, CCNET_DOMAIN, 0, "Failed to create organization");
         return -1;
     }
 
-    snprintf (sql, sizeof(sql), "INSERT INTO OrgUser values (%d, '%s', %d)",
-              org_id, creator, 1);
-    if (ccnet_db_query (db, sql) < 0) {
-        snprintf (sql, sizeof(sql), "DELETE FROM Organization WHERE org_id=%d",
-                  org_id);
-        ccnet_db_query (db, sql);
+    rc = ccnet_db_statement_query (db, "INSERT INTO OrgUser values (?, ?, ?)",
+                                   3, "int", org_id, "string", creator, "int", 1);
+    if (rc < 0) {
+        ccnet_db_statement_query (db, "DELETE FROM Organization WHERE org_id=?",
+                                  1, "int", org_id);
         g_set_error (error, CCNET_DOMAIN, 0, "Failed to create organization");
         return -1;
     }
@@ -235,19 +236,15 @@ ccnet_org_manager_remove_org (CcnetOrgManager *mgr,
                               GError **error)
 {
     CcnetDB *db = mgr->priv->db;
-    char sql[512];
 
-    snprintf (sql, sizeof(sql), "DELETE FROM Organization WHERE org_id = %d",
-              org_id);
-    ccnet_db_query (db, sql);
+    ccnet_db_statement_query (db, "DELETE FROM Organization WHERE org_id = ?",
+                              1, "int", org_id);
 
-    snprintf (sql, sizeof(sql), "DELETE FROM OrgUser WHERE org_id = %d",
-              org_id);
-    ccnet_db_query (db, sql);
+    ccnet_db_statement_query (db, "DELETE FROM OrgUser WHERE org_id = %d",
+                              1, "int", org_id);
 
-    snprintf (sql, sizeof(sql), "DELETE FROM OrgGroup WHERE org_id = %d",
-              org_id);
-    ccnet_db_query (db, sql);
+    ccnet_db_statement_query (db, "DELETE FROM OrgGroup WHERE org_id = %d",
+                              1, "int", org_id);
 
     return 0;
 }
@@ -289,13 +286,12 @@ ccnet_org_manager_get_all_orgs (CcnetOrgManager *mgr,
                                 int limit)
 {
     CcnetDB *db = mgr->priv->db;
-    char sql[512];
+    char *sql;
     GList *ret = NULL;
 
-    snprintf (sql, sizeof(sql),
-              "SELECT * FROM Organization ORDER BY org_id LIMIT %d OFFSET %d",
-              limit, start);
-    if (ccnet_db_foreach_selected_row (db, sql, get_all_orgs_cb, &ret) < 0) {
+    sql = "SELECT * FROM Organization ORDER BY org_id LIMIT ? OFFSET ?";
+    if (ccnet_db_statement_foreach_row (db, sql, get_all_orgs_cb, &ret,
+                                        2, "int", limit, "int", start) < 0) {
         return NULL;
     }
 
@@ -334,13 +330,14 @@ ccnet_org_manager_get_org_by_url_prefix (CcnetOrgManager *mgr,
                                          GError **error)
 {
     CcnetDB *db = mgr->priv->db;
-    char sql[512];
+    char *sql;
     CcnetOrganization *org = NULL;
 
-    snprintf (sql, sizeof(sql), "SELECT org_id, org_name, url_prefix, creator,"
-              " ctime FROM Organization WHERE url_prefix = '%s'", url_prefix);    
+    sql = "SELECT org_id, org_name, url_prefix, creator,"
+        " ctime FROM Organization WHERE url_prefix = ?";
 
-    if (ccnet_db_foreach_selected_row (db, sql, get_org_cb, &org) < 0) {
+    if (ccnet_db_statement_foreach_row (db, sql, get_org_cb, &org,
+                                        1, "string", url_prefix) < 0) {
         return NULL;
     }
 
@@ -353,13 +350,14 @@ ccnet_org_manager_get_org_by_id (CcnetOrgManager *mgr,
                                  GError **error)
 {
     CcnetDB *db = mgr->priv->db;
-    char sql[256];
+    char *sql;
     CcnetOrganization *org = NULL;
 
-    snprintf (sql, sizeof(sql), "SELECT org_id, org_name, url_prefix, creator,"
-              " ctime FROM Organization WHERE org_id = '%d'", org_id);    
+    sql = "SELECT org_id, org_name, url_prefix, creator,"
+        " ctime FROM Organization WHERE org_id = ?";
 
-    if (ccnet_db_foreach_selected_row (db, sql, get_org_cb, &org) < 0) {
+    if (ccnet_db_statement_foreach_row (db, sql, get_org_cb, &org,
+                                        1, "int", org_id) < 0) {
         return NULL;
     }
 
@@ -374,12 +372,10 @@ ccnet_org_manager_add_org_user (CcnetOrgManager *mgr,
                                 GError **error)
 {
     CcnetDB *db = mgr->priv->db;
-    char sql[512];
 
-    snprintf (sql, sizeof(sql), "INSERT INTO OrgUser values (%d, '%s', %d)",
-              org_id, email, is_staff);
-
-    return ccnet_db_query (db, sql);
+    return ccnet_db_statement_query (db, "INSERT INTO OrgUser values (?, ?, ?)",
+                                     3, "int", org_id, "string", email,
+                                     "int", is_staff);
 }
 
 int
@@ -389,12 +385,9 @@ ccnet_org_manager_remove_org_user (CcnetOrgManager *mgr,
                                    GError **error)
 {
     CcnetDB *db = mgr->priv->db;
-    char sql[512];
 
-    snprintf (sql, sizeof(sql), "DELETE FROM OrgUser WHERE org_id=%d AND "
-              "email='%s'", org_id, email);
-
-    return ccnet_db_query (db, sql);
+    return ccnet_db_statement_query (db, "DELETE FROM OrgUser WHERE org_id=? AND "
+                                     "email=?", 2, "int", org_id, "string", email);
 }
 
 static gboolean
@@ -438,15 +431,15 @@ ccnet_org_manager_get_orgs_by_user (CcnetOrgManager *mgr,
                                    GError **error)
 {
     CcnetDB *db = mgr->priv->db;
-    char sql[512];
+    char *sql;
     GList *ret = NULL;
 
-    snprintf (sql, sizeof(sql), "SELECT t1.org_id, email, is_staff, org_name,"
-              " url_prefix, creator, ctime FROM OrgUser t1, Organization t2"
-              " WHERE t1.org_id = t2.org_id AND email = '%s'", email);
+    sql = "SELECT t1.org_id, email, is_staff, org_name,"
+        " url_prefix, creator, ctime FROM OrgUser t1, Organization t2"
+        " WHERE t1.org_id = t2.org_id AND email = ?";
 
-    if (ccnet_db_foreach_selected_row (db, sql, get_orgs_by_user_cb,
-                                       &ret) < 0) {
+    if (ccnet_db_statement_foreach_row (db, sql, get_orgs_by_user_cb, &ret,
+                                        1, "string", email) < 0) {
         g_list_free (ret);
         return NULL;
     }
@@ -470,14 +463,16 @@ ccnet_org_manager_get_org_emailusers (CcnetOrgManager *mgr,
                                       int start, int limit)
 {
     CcnetDB *db = mgr->priv->db;
-    char sql[512];
+    char *sql;
     GList *ret = NULL;
 
-    snprintf (sql, sizeof(sql), "SELECT email FROM OrgUser WHERE org_id ="
-              " (SELECT org_id FROM Organization WHERE url_prefix = '%s')"
-              " ORDER BY email LIMIT %d OFFSET %d", url_prefix, limit, start);
+    sql = "SELECT email FROM OrgUser WHERE org_id ="
+        " (SELECT org_id FROM Organization WHERE url_prefix = ?)"
+        " ORDER BY email LIMIT ? OFFSET ?";
     
-    ccnet_db_foreach_selected_row (db, sql, get_org_emailusers, &ret);
+    ccnet_db_statement_foreach_row (db, sql, get_org_emailusers, &ret,
+                                    3, "string", url_prefix, "int", limit,
+                                    "int", start);
 
     return g_list_reverse (ret);
 }
@@ -489,12 +484,9 @@ ccnet_org_manager_add_org_group (CcnetOrgManager *mgr,
                                  GError **error)
 {
     CcnetDB *db = mgr->priv->db;
-    char sql[512];
 
-    snprintf (sql, sizeof(sql), "INSERT INTO OrgGroup VALUES (%d, %d)",
-              org_id, group_id);
-    
-    return ccnet_db_query (db, sql);
+    return ccnet_db_statement_query (db, "INSERT INTO OrgGroup VALUES (?, ?)",
+                                     2, "int", org_id, "int", group_id);
 }
 
 int
@@ -504,12 +496,10 @@ ccnet_org_manager_remove_org_group (CcnetOrgManager *mgr,
                                     GError **error)
 {
     CcnetDB *db = mgr->priv->db;
-    char sql[512];
 
-    snprintf (sql, sizeof(sql), "DELETE FROM OrgGroup WHERE org_id=%d"
-              " AND group_id=%d", org_id, group_id);
-    
-    return ccnet_db_query (db, sql);
+    return ccnet_db_statement_query (db, "DELETE FROM OrgGroup WHERE org_id=?"
+                                     " AND group_id=?",
+                                     2, "int", org_id, "string", group_id);
 }
 
 int
@@ -518,12 +508,9 @@ ccnet_org_manager_is_org_group (CcnetOrgManager *mgr,
                                 GError **error)
 {
     CcnetDB *db = mgr->priv->db;
-    char sql[256];
 
-    snprintf (sql, sizeof(sql), "SELECT group_id FROM OrgGroup "
-              "WHERE group_id = %d", group_id);
-
-    return ccnet_db_check_for_existence (db, sql);    
+    return ccnet_db_statement_exists (db, "SELECT group_id FROM OrgGroup "
+                                      "WHERE group_id = ?", 1, "int", group_id);
 }
 
 int
@@ -532,11 +519,10 @@ ccnet_org_manager_get_org_id_by_group (CcnetOrgManager *mgr,
                                        GError **error)
 {
     CcnetDB *db = mgr->priv->db;
-    char sql[256];
+    char *sql;
 
-    snprintf (sql, sizeof(sql), "SELECT org_id FROM OrgGroup "
-              "WHERE group_id = %d", group_id);
-    return ccnet_db_get_int (db, sql);
+    sql = "SELECT org_id FROM OrgGroup WHERE group_id = ?";
+    return ccnet_db_statement_get_int (db, sql, 1, "int", group_id);
 }
 
 static gboolean
@@ -558,18 +544,25 @@ ccnet_org_manager_get_org_groups (CcnetOrgManager *mgr,
                                   int limit)
 {
     CcnetDB *db = mgr->priv->db;
-    char sql[512];
     GList *ret = NULL;
+    int rc;
 
     if (limit == -1) {
-        snprintf (sql, sizeof(sql), "SELECT group_id FROM OrgGroup WHERE "
-                  "org_id = %d", org_id);
+        rc = ccnet_db_statement_foreach_row (db,
+                                             "SELECT group_id FROM OrgGroup WHERE "
+                                             "org_id = ?",
+                                             get_org_groups, &ret,
+                                             1, "int", org_id);
     } else {
-        snprintf (sql, sizeof(sql), "SELECT group_id FROM OrgGroup WHERE "
-                  "org_id = %d LIMIT %d, %d", org_id, start, limit);
+        rc = ccnet_db_statement_foreach_row (db,
+                                             "SELECT group_id FROM OrgGroup WHERE "
+                                             "org_id = ? LIMIT ?, ?",
+                                             get_org_groups, &ret,
+                                             3, "int", org_id, "int", start,
+                                             "int", limit);
     }
     
-    if (ccnet_db_foreach_selected_row (db, sql, get_org_groups, &ret) < 0) {
+    if (rc < 0) {
         g_list_free (ret);
         return NULL;
     }
@@ -584,12 +577,10 @@ ccnet_org_manager_org_user_exists (CcnetOrgManager *mgr,
                                    GError **error)
 {
     CcnetDB *db = mgr->priv->db;
-    char sql[512];
 
-    snprintf (sql, sizeof(sql), "SELECT org_id FROM OrgUser WHERE "
-              "org_id = %d AND email = '%s'", org_id, email);
-
-    return ccnet_db_check_for_existence (db, sql);
+    return ccnet_db_statement_exists (db, "SELECT org_id FROM OrgUser WHERE "
+                                      "org_id = ? AND email = ?",
+                                      2, "int", org_id, "string", email);
 }
 
 char *
@@ -598,12 +589,11 @@ ccnet_org_manager_get_url_prefix_by_org_id (CcnetOrgManager *mgr,
                                             GError **error)
 {
     CcnetDB *db = mgr->priv->db;
-    char sql[512];
+    char *sql;
 
-    snprintf (sql, sizeof(sql), "SELECT url_prefix FROM Organization "
-              "WHERE org_id = %d", org_id);
+    sql = "SELECT url_prefix FROM Organization WHERE org_id = ?";
 
-    return ccnet_db_get_string (db, sql);
+    return ccnet_db_statement_get_string (db, sql, 1, "int", org_id);
 }
 
 int
@@ -613,10 +603,9 @@ ccnet_org_manager_is_org_staff (CcnetOrgManager *mgr,
                                 GError **error)
 {
     CcnetDB *db = mgr->priv->db;
-    char sql[256];
+    char *sql;
 
-    snprintf (sql, sizeof(sql), "SELECT is_staff FROM OrgUser "
-              "WHERE org_id=%d AND email='%s'", org_id, email);
+    sql = "SELECT is_staff FROM OrgUser WHERE org_id=? AND email=?";
 
-    return ccnet_db_get_int (db, sql);    
+    return ccnet_db_statement_get_int (db, sql, 2, "int", org_id, "string", email);
 }
