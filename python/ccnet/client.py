@@ -10,7 +10,9 @@ from ccnet.packet import write_packet
 
 from ccnet.errors import NetworkError
 
-from .utils import make_socket_closeonexec
+from .utils import is_win32, make_socket_closeonexec
+
+CCNET_PIPE_NAME = 'ccnet.sock'
 
 def parse_response(body):
     '''Parse the content of the response
@@ -85,7 +87,17 @@ class Client(object):
         self.peer_id = self.config.get('General', 'ID')
         self.peer_name = self.config.get('General', 'NAME')
 
-    def connect_daemon(self):
+    def connect_daemon_with_pipe(self):
+        self._connfd = socket.socket(socket.AF_UNIX)
+        pipe_name = os.path.join(self.config_dir, CCNET_PIPE_NAME)
+        try:
+            self._connfd.connect(pipe_name)
+        except:
+            raise NetworkError("Can't connect to daemon")
+
+        make_socket_closeonexec(self._connfd.fileno())
+
+    def connect_daemon_with_socket(self):
         self._connfd = socket.socket()
         self._connfd.setsockopt(socket.SOL_TCP, socket.TCP_NODELAY, 1)
         try:
@@ -94,6 +106,12 @@ class Client(object):
             raise NetworkError("Can't connect to daemon")
 
         make_socket_closeonexec(self._connfd.fileno())
+
+    def connect_daemon(self):
+        if is_win32():
+            return self.connect_daemon_with_socket()
+        else:
+            return self.connect_daemon_with_pipe()
 
     def is_connected(self):
         return self._connfd != None

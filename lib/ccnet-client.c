@@ -17,6 +17,7 @@
     #include <sys/socket.h>
     #include <netinet/in.h>
     #include <arpa/inet.h>
+    #include <sys/un.h>
 #endif
 
 #include "message.h"
@@ -209,7 +210,6 @@ int
 ccnet_client_connect_daemon (CcnetClient *client, CcnetClientMode mode)
 {
     evutil_socket_t sockfd;
-    struct sockaddr_in servaddr;
     /* CcnetProcessor *processor; */
 
 #ifdef WIN32
@@ -225,15 +225,26 @@ ccnet_client_connect_daemon (CcnetClient *client, CcnetClientMode mode)
 
     client->mode = mode;
 
+#ifdef WIN32
     sockfd = socket(AF_INET, SOCK_STREAM, 0);
-    
+    struct sockaddr_in servaddr;
     memset (&servaddr, 0, sizeof(servaddr));
     servaddr.sin_family = AF_INET;
     servaddr.sin_port = htons (client->daemon_port);
     ccnet_util_inet_pton (AF_INET, "127.0.0.1", &servaddr.sin_addr);
-    
-    if (connect (sockfd, (struct sockaddr *) &servaddr, sizeof(servaddr)) < 0)
+    if (connect (sockfd, (struct sockaddr *) &servaddr, (socklen_t)sizeof(servaddr)) < 0)
         return -1;
+#else
+    sockfd = socket(AF_UNIX, SOCK_STREAM, 0);
+    struct sockaddr_un servaddr;
+    servaddr.sun_family = AF_UNIX;
+    char *un_path = g_build_filename (client->config_dir, CCNET_PIPE_NAME);
+    memcpy(servaddr.sun_path, un_path, strlen(un_path) + 1);
+    g_free (un_path);
+    if (connect(sockfd, (struct sockaddr *)&servaddr, (socklen_t)sizeof(servaddr)) < 0) {
+        return -1;
+    }
+#endif
 
     client->connfd = sockfd;
     client->io = ccnet_packet_io_new (client->connfd);

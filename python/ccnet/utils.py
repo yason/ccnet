@@ -1,4 +1,4 @@
-import sys
+import os
 import socket
 
 from ccnet.errors import NetworkError
@@ -35,8 +35,11 @@ def sendall(fd, data):
         else:
             offset += n
 
+def is_win32():
+    return os.name == 'nt'
+
 def make_socket_closeonexec(fd):
-    if 'win32' not in sys.platform:
+    if not is_win32():
         import fcntl
         old_flags = fcntl.fcntl(fd, fcntl.F_GETFD)
         fcntl.fcntl(fd, fcntl.F_SETFD, old_flags | fcntl.FD_CLOEXEC)

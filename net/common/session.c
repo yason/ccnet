@@ -82,6 +82,7 @@ static int load_rsakey(CcnetSession *session)
 }
 
 static void listen_on_localhost (CcnetSession *session);
+static void listen_on_pipe (CcnetSession *session);
 static void save_pubinfo (CcnetSession *session);
 
 CcnetSession *
@@ -226,7 +227,11 @@ ccnet_session_prepare (CcnetSession *session, const char *config_dir_r, gboolean
         /* Open localhost, if failed, then the program will exists. This is used
          * to prevent two instance of ccnet on the same port.
          */
+#ifdef WIN32        
         listen_on_localhost (session);
+#else
+        listen_on_pipe (session);
+#endif
         
         /* refresh pubinfo on every startup */
         save_pubinfo (session);
@@ -389,6 +394,66 @@ static void listen_on_localhost (CcnetSession *session)
                accept_local_client, session);
     event_add (&session->local_event, NULL);
 }
+
+#ifndef WIN32
+
+static void listen_on_pipe (CcnetSession *session)
+{
+    int sockfd;
+    int pipe_fd = socket (AF_UNIX, SOCK_STREAM, 0);
+    char *un_path = NULL;
+    if (pipe_fd < 0) {
+        ccnet_warning ("Failed to create unix socket fd : %s\n",
+                      strerror(errno));
+        goto failed;
+    }
+    
+    struct sockaddr_un saddr;
+    saddr.sun_family = AF_UNIX;
+    un_path = g_build_filename (session->config_dir, CCNET_PIPE_NAME, NULL);
+    if (g_file_test (un_path, G_FILE_TEST_EXISTS)) {
+        ccnet_warning ("socket file exists, delete it anyway\n");
+        if (g_unlink (un_path) < 0) {
+            ccnet_warning ("delete socket file failed : %s\n", strerror(errno));
+            goto failed;
+        }
+    }
+    
+    memcpy(saddr.sun_path, un_path, strlen(un_path) + 1);
+    if (bind(pipe_fd, (struct sockaddr *)&saddr, sizeof(saddr)) < 0) {
+        ccnet_warning ("failed to bind unix socket fd to %s : %s\n",
+                      un_path, strerror(errno));
+        goto failed;
+    }
+
+    if (listen(pipe_fd, 3) < 0) {
+        ccnet_warning ("failed to listen to unix socket: %s\n", strerror(errno));
+        goto failed;
+    }
+
+    if (chmod(un_path, 0700) < 0) {
+        ccnet_warning ("failed to set permisson for unix socket %s: %s\n",
+                      un_path, strerror(errno));
+        goto failed;
+    }
+
+    event_set (&session->local_pipe_event, pipe_fd, EV_READ | EV_PERSIST, 
+               accept_local_client, session);
+    event_add (&session->local_pipe_event, NULL);
+
+    ccnet_message ("Listen on %s for local clients\n", un_path);
+
+    g_free (un_path);
+
+    return;
+
+failed:
+    ccnet_warning ("listen on unix socket failed\n");
+    exit (1);
+}
+
+#endif // WIN32
+
 
 void
 ccnet_session_start_network (CcnetSession *session)
