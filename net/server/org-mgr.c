@@ -288,12 +288,19 @@ ccnet_org_manager_get_all_orgs (CcnetOrgManager *mgr,
     CcnetDB *db = mgr->priv->db;
     char *sql;
     GList *ret = NULL;
+    int rc;
 
-    sql = "SELECT * FROM Organization ORDER BY org_id LIMIT ? OFFSET ?";
-    if (ccnet_db_statement_foreach_row (db, sql, get_all_orgs_cb, &ret,
-                                        2, "int", limit, "int", start) < 0) {
-        return NULL;
+    if (start == -1 && limit == -1) {
+        sql = "SELECT * FROM Organization ORDER BY org_id";
+        rc = ccnet_db_statement_foreach_row (db, sql, get_all_orgs_cb, &ret, 0);
+    } else {
+        sql = "SELECT * FROM Organization ORDER BY org_id LIMIT ? OFFSET ?";
+        rc = ccnet_db_statement_foreach_row (db, sql, get_all_orgs_cb, &ret,
+                                             2, "int", limit, "int", start);
     }
+
+    if (rc < 0)
+        return NULL;
 
     return g_list_reverse (ret);
 }
@@ -465,14 +472,25 @@ ccnet_org_manager_get_org_emailusers (CcnetOrgManager *mgr,
     CcnetDB *db = mgr->priv->db;
     char *sql;
     GList *ret = NULL;
+    int rc;
 
-    sql = "SELECT email FROM OrgUser WHERE org_id ="
-        " (SELECT org_id FROM Organization WHERE url_prefix = ?)"
-        " ORDER BY email LIMIT ? OFFSET ?";
-    
-    ccnet_db_statement_foreach_row (db, sql, get_org_emailusers, &ret,
-                                    3, "string", url_prefix, "int", limit,
-                                    "int", start);
+    if (start == -1 && limit == -1) {
+        sql = "SELECT email FROM OrgUser WHERE org_id ="
+            " (SELECT org_id FROM Organization WHERE url_prefix = ?)"
+            " ORDER BY email";
+        rc = ccnet_db_statement_foreach_row (db, sql, get_org_emailusers, &ret,
+                                             1, "string", url_prefix);
+    } else {
+        sql = "SELECT email FROM OrgUser WHERE org_id ="
+            " (SELECT org_id FROM Organization WHERE url_prefix = ?)"
+            " ORDER BY email LIMIT ? OFFSET ?";
+        rc = ccnet_db_statement_foreach_row (db, sql, get_org_emailusers, &ret,
+                                             3, "string", url_prefix,
+                                             "int", limit, "int", start);
+    }
+
+    if (rc < 0)
+        return NULL;
 
     return g_list_reverse (ret);
 }
@@ -608,4 +626,30 @@ ccnet_org_manager_is_org_staff (CcnetOrgManager *mgr,
     sql = "SELECT is_staff FROM OrgUser WHERE org_id=? AND email=?";
 
     return ccnet_db_statement_get_int (db, sql, 2, "int", org_id, "string", email);
+}
+
+int
+ccnet_org_manager_set_org_staff (CcnetOrgManager *mgr,
+                                 int org_id,
+                                 const char *email,
+                                 GError **error)
+{
+    CcnetDB *db = mgr->priv->db;
+
+    return ccnet_db_statement_query (db, "UPDATE OrgUser SET is_staff = 1 "
+                                     "WHERE org_id=? AND email=?", 2,
+                                     "int", org_id, "string", email);
+}
+
+int
+ccnet_org_manager_unset_org_staff (CcnetOrgManager *mgr,
+                                   int org_id,
+                                   const char *email,
+                                   GError **error)
+{
+    CcnetDB *db = mgr->priv->db;
+
+    return ccnet_db_statement_query (db, "UPDATE OrgUser SET is_staff = 0 "
+                                     "WHERE org_id=? AND email=?", 2,
+                                     "int", org_id, "string", email);
 }

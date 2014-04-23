@@ -343,6 +343,15 @@ ccnet_start_rpc(CcnetSession *session)
                                      ccnet_rpc_is_org_staff,
                                      "is_org_staff",
                                      searpc_signature_int__int_string());
+    searpc_server_register_function ("ccnet-threaded-rpcserver",
+                                     ccnet_rpc_set_org_staff,
+                                     "set_org_staff",
+                                     searpc_signature_int__int_string());
+    searpc_server_register_function ("ccnet-threaded-rpcserver",
+                                     ccnet_rpc_unset_org_staff,
+                                     "unset_org_staff",
+                                     searpc_signature_int__int_string());
+    
 
 #endif  /* CCNET_SERVER */
 
@@ -1261,11 +1270,6 @@ ccnet_rpc_get_all_orgs (int start, int limit, GError **error)
     CcnetOrgManager *org_mgr = ((CcnetServerSession *)session)->org_mgr;    
     GList *ret = NULL;
     
-    if (start < 0 || limit < 0) {
-        g_set_error (error, CCNET_DOMAIN, CCNET_ERR_INTERNAL, "Bad arguments");
-        return NULL;
-    }
-
     ret = ccnet_org_manager_get_all_orgs (org_mgr, start, limit);
 
     return ret;
@@ -1355,7 +1359,7 @@ ccnet_rpc_get_org_emailusers (const char *url_prefix, int start , int limit,
     GList *email_list = NULL, *ptr;
     GList *ret = NULL;
 
-    if (!url_prefix || start < 0 || limit < 0) {
+    if (!url_prefix) {
         g_set_error (error, CCNET_DOMAIN, CCNET_ERR_INTERNAL, "Bad arguments");
         return NULL;
     }
@@ -1491,5 +1495,30 @@ ccnet_rpc_is_org_staff (int org_id, const char *email, GError **error)
     return ccnet_org_manager_is_org_staff (org_mgr, org_id, email, error);
 }
 
+int
+ccnet_rpc_set_org_staff (int org_id, const char *email, GError **error)
+{
+    CcnetOrgManager *org_mgr = ((CcnetServerSession *)session)->org_mgr;
+    
+    if (org_id < 0 || !email) {
+        g_set_error (error, CCNET_DOMAIN, CCNET_ERR_INTERNAL, "Bad arguments");
+        return -1;
+    }
+
+    return ccnet_org_manager_set_org_staff (org_mgr, org_id, email, error);
+}
+
+int
+ccnet_rpc_unset_org_staff (int org_id, const char *email, GError **error)
+{
+    CcnetOrgManager *org_mgr = ((CcnetServerSession *)session)->org_mgr;
+    
+    if (org_id < 0 || !email) {
+        g_set_error (error, CCNET_DOMAIN, CCNET_ERR_INTERNAL, "Bad arguments");
+        return -1;
+    }
+
+    return ccnet_org_manager_unset_org_staff (org_mgr, org_id, email, error);
+}
 
 #endif  /* CCNET_SERVER */
