@@ -5,7 +5,12 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <getopt.h>
+
+#if defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__)
+#include <event2/dns.h>
+#else
 #include <evdns.h>
+#endif
 
 #include "inner-session.h"
 #include "outer-session.h"

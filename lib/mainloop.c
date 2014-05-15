@@ -3,7 +3,13 @@
 #include "include.h"
 #include <ccnet.h>
 
+#if defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__)
+#include <event2/event.h>
+#include <event2/event_compat.h>
+#include <event2/event_struct.h>
+#else
 #include <event.h>
+#endif
 
 static int
 cmdrsp_cb (const char *code, char *content, int clen, void *data)

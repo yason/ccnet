@@ -3,7 +3,11 @@
 #ifndef CCNET_CONNECTION_MANAGER
 #define CCNET_CONNECTION_MANAGER
 
+#if defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__)
+#include <event2/event.h>
+#else
 #include <event.h>
+#endif
 
 #include "timer.h"
 

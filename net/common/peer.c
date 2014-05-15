@@ -2,7 +2,15 @@
 
 #include "common.h"
 
+#if defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__)
+#include <event2/event.h>
+#include <event2/bufferevent.h>
+#include <event2/bufferevent_compat.h>
+#include <event2/bufferevent_struct.h>
+#else
 #include <event.h>
+#endif
+
 #include <stdio.h>
 #include <stdlib.h>
 

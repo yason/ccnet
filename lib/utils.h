@@ -10,7 +10,12 @@
 #include <glib.h>
 #include <glib-object.h>
 #include <stdlib.h>
+
+#if defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__)
+#include <event2/util.h>
+#else
 #include <evutil.h>
+#endif
 
 #ifdef WIN32
 #include <errno.h>

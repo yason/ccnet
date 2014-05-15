@@ -1,6 +1,11 @@
 /* -*- Mode: C; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
 
+#if defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__)
+#include <event2/event.h>
+#include <event2/event_compat.h>
+#else
 #include <event.h>
+#endif
 
 #include <string.h>
 #include <stdlib.h>
