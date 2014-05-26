@@ -100,14 +100,14 @@ static int check_db_table (CcnetDB *db)
         
         sql = "CREATE TABLE IF NOT EXISTS OrgUser (org_id INTEGER, "
             "email VARCHAR(255), is_staff BOOL NOT NULL, "
-            "INDEX (email), UNIQUE INDEX (org_id, email))"
+            "INDEX (email), PRIMARY KEY (org_id, email))"
             "ENGINE=INNODB";
         if (ccnet_db_query (db, sql) < 0)
             return -1;
 
         sql = "CREATE TABLE IF NOT EXISTS OrgGroup (org_id INTEGER, "
             "group_id INTEGER, INDEX (group_id), "
-            "UNIQUE INDEX (org_id, group_id))"
+            "PRIMARY KEY (org_id, group_id))"
             "ENGINE=INNODB";
         if (ccnet_db_query (db, sql) < 0)
             return -1;

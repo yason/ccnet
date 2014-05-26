@@ -101,7 +101,7 @@ static int check_db_table (CcnetDB *db)
             return -1;
 
         sql = "CREATE TABLE IF NOT EXISTS `GroupUser` (`group_id` INTEGER,"
-            " `user_name` VARCHAR(255), `is_staff` tinyint, UNIQUE INDEX"
+            " `user_name` VARCHAR(255), `is_staff` tinyint, PRIMARY KEY"
             " (`group_id`, `user_name`), INDEX (`user_name`))"
             "ENGINE=INNODB";
         if (ccnet_db_query (db, sql) < 0)
