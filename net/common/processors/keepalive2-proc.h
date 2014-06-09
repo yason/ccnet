@@ -1,6 +1,6 @@
 /* -*- Mode: C; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
 
-#ifndef CCNET_KEERALIVE2_PROC_H
+#ifndef CCNET_KEEPALIVE2_PROC_H
 #define CCNET_KEEPALIVE2_PROC_H
 
 #include <glib-object.h>
