@@ -210,7 +210,9 @@ main (int argc, char **argv)
     if (daemon_mode)
         daemon (1, 0);
 #endif
+#if !GLIB_CHECK_VERSION(2, 36, 0)
     g_type_init ();
+#endif
 
     /* log */
     if (!debug_str)

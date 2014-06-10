@@ -144,7 +144,9 @@ main (int argc, char **argv)
     WSAStartup(0x0101, &wsadata);
 #endif
 
+#if !GLIB_CHECK_VERSION(2, 36, 0)
     g_type_init ();
+#endif
 
     /* log */
     if (!debug_str)

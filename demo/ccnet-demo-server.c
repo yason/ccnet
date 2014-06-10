@@ -52,7 +52,9 @@ main(int argc, char *argv[])
         }
     }
 
+#if !GLIB_CHECK_VERSION(2, 36, 0)
     g_type_init();
+#endif
 
     client = ccnet_init(config_dir);
     if (!client)
