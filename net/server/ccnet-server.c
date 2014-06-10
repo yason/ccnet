@@ -132,7 +132,9 @@ static void usage()
 
 int test_ccnet_config(const char *config_dir, int max_users)
 {
+#if !GLIB_CHECK_VERSION(2, 36, 0)
     g_type_init ();
+#endif
 
     config_dir = ccnet_expand_path (config_dir);
 
@@ -238,7 +240,9 @@ main (int argc, char **argv)
     WSAStartup(0x0101, &wsadata);
 #endif
 
+#if !GLIB_CHECK_VERSION(2, 36, 0)
     g_type_init ();
+#endif
 
     /* log */
     if (!debug_str)

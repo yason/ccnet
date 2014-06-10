@@ -118,7 +118,9 @@ main (int argc, char **argv)
     g_setenv ("G_SLICE", "always-malloc", 0);
 
     config_dir = "../../tests/basic/conf1";
+#if !GLIB_CHECK_VERSION(2, 36, 0)
     g_type_init ();
+#endif
 
     /* log */
     if (!debug_str)
