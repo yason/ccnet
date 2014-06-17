@@ -15,6 +15,7 @@ before_install:
  - ./autogen.sh
 script:
  - cd lib && python `which searpc-codegen.py` ./rpc_table.py && cd -
+ - cd lib && valac -C --pkg posix ccnetobj.vala && cd -
  - ./configure --enable-server --enable-client
  - make -j8
  - make check
