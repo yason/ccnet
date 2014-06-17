@@ -110,6 +110,10 @@ ccnet_user_manager_update_emailuser (CcnetUserManager *manager,
                                      int id, const char* passwd,
                                      int is_staff, int is_active);
 
+int
+ccnet_user_manager_update_role_emailuser (CcnetUserManager *manager,
+                                     const char* email, const char* role);
+
 GList*
 ccnet_user_manager_get_superusers(CcnetUserManager *manager);
 

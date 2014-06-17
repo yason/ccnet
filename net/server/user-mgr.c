@@ -492,6 +492,13 @@ static int check_db_table (CcnetDB *db)
         if (ccnet_db_query (db, sql) < 0)
             return -1;
 
+        sql = "CREATE TABLE IF NOT EXISTS UserRole ("
+          "id INTEGER NOT NULL PRIMARY KEY AUTO_INCREMENT, "
+          "email VARCHAR(255), role VARCHAR(255), UNIQUE INDEX (email)) "
+          "ENGINE=INNODB";
+        if (ccnet_db_query (db, sql) < 0)
+            return -1;
+
     } else if (db_type == CCNET_DB_TYPE_SQLITE) {
         sql = "CREATE TABLE IF NOT EXISTS EmailUser ("
             "id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,"
@@ -515,6 +522,19 @@ static int check_db_table (CcnetDB *db)
         sql = "CREATE UNIQUE INDEX IF NOT EXISTS peer_index on Binding (peer_id)";
         if (ccnet_db_query (db, sql) < 0)
             return -1;
+
+        sql = "CREATE TABLE IF NOT EXISTS UserRole (email TEXT, role TEXT)";
+        if (ccnet_db_query (db, sql) < 0)
+            return -1;
+
+        sql = "CREATE INDEX IF NOT EXISTS userrole_email_index on UserRole (email)";
+        if (ccnet_db_query (db, sql) < 0)
+            return -1;
+
+        sql = "CREATE UNIQUE INDEX IF NOT EXISTS userrole_userrole_index on UserRole (email, role)";
+        if (ccnet_db_query (db, sql) < 0)
+            return -1;
+
     } else if (db_type == CCNET_DB_TYPE_PGSQL) {
         sql = "CREATE TABLE IF NOT EXISTS EmailUser ("
             "id SERIAL PRIMARY KEY, "
@@ -528,6 +548,16 @@ static int check_db_table (CcnetDB *db)
         if (ccnet_db_query (db, sql) < 0)
             return -1;
 
+        sql = "CREATE TABLE IF NOT EXISTS UserRole (email VARCHAR(255), "
+          " role VARCHAR(255), UNIQUE (email, role))";
+        if (ccnet_db_query (db, sql) < 0)
+            return -1;
+
+        if (!pgsql_index_exists (db, "userrole_email_idx")) {
+            sql = "CREATE INDEX userrole_email_idx ON UserRole (email)";
+            if (ccnet_db_query (db, sql) < 0)
+                return -1;
+        }
     }
 
     return 0;
@@ -781,6 +811,10 @@ ccnet_user_manager_remove_emailuser (CcnetUserManager *manager,
     CcnetDB *db = manager->priv->db;
     int ret;
 
+    ccnet_db_statement_query (db,
+                              "DELETE FROM UserRole WHERE email=?",
+                              1, "string", email);
+
     ret = ccnet_db_statement_query (db,
                                     "DELETE FROM EmailUser WHERE email=?",
                                     1, "string", email);
@@ -879,6 +913,10 @@ get_emailuser_cb (CcnetDBRow *row, void *data)
     return FALSE;
 }
 
+static char*
+ccnet_user_manager_get_role_emailuser (CcnetUserManager *manager,
+                                     const char* email);
+
 CcnetEmailUser*
 ccnet_user_manager_get_emailuser (CcnetUserManager *manager,
                                   const char *email)
@@ -891,12 +929,23 @@ ccnet_user_manager_get_emailuser (CcnetUserManager *manager,
     sql = "SELECT id, email, is_staff, is_active, ctime"
         " FROM EmailUser WHERE email=?";
     if (ccnet_db_statement_foreach_row (db, sql, get_emailuser_cb, &emailuser,
-                                        1, "string", email) > 0)
+                                        1, "string", email) > 0) {
+        char *role = ccnet_user_manager_get_role_emailuser (manager, email);
+        if (role) {
+            g_object_set (emailuser, "role", role, NULL);
+            g_free (role);
+        }
         return emailuser;
+    }
 
     email_down = g_ascii_strdown (email, strlen(email));
     if (ccnet_db_statement_foreach_row (db, sql, get_emailuser_cb, &emailuser,
                                         1, "string", email_down) > 0) {
+        char *role = ccnet_user_manager_get_role_emailuser(manager, email_down);
+        if (role) {
+            g_object_set (emailuser, "role", role, NULL);
+            g_free (role);
+        }
         g_free (email_down);
         return emailuser;
     }
@@ -916,6 +965,11 @@ ccnet_user_manager_get_emailuser (CcnetUserManager *manager,
             g_object_unref (ptr->data);
         g_list_free (users);
 
+        char *role = ccnet_user_manager_get_role_emailuser(manager, email);
+        if (role) {
+            g_object_set (emailuser, "role", role, NULL);
+            g_free (role);
+        }
         return emailuser;
     }
 #endif
@@ -951,6 +1005,7 @@ get_emailusers_cb (CcnetDBRow *row, void *data)
     int is_staff = ccnet_db_row_get_column_int (row, 3);
     int is_active = ccnet_db_row_get_column_int (row, 4);
     gint64 ctime = ccnet_db_row_get_column_int64 (row, 5);
+    const char *role = (const char *)ccnet_db_row_get_column_text (row, 7);
 
     char *email_l = g_ascii_strdown (email, -1);
     emailuser = g_object_new (CCNET_TYPE_EMAIL_USER,
@@ -959,6 +1014,7 @@ get_emailusers_cb (CcnetDBRow *row, void *data)
                               "is_staff", is_staff,
                               "is_active", is_active,
                               "ctime", ctime,
+                              "role", role ? role : "",
                               "source", "DB", 
                               NULL);
     g_free (email_l);
@@ -989,13 +1045,17 @@ ccnet_user_manager_get_emailusers (CcnetUserManager *manager,
 
     int rc;
     if (start == -1 && limit == -1)
-        rc = ccnet_db_statement_foreach_row (db, "SELECT * FROM EmailUser",
+        rc = ccnet_db_statement_foreach_row (db, "SELECT * FROM EmailUser AS t1 "
+                                             "LEFT JOIN UserRole AS t2 "
+                                             "ON t1.email = t2.email ",
                                              get_emailusers_cb, &ret,
                                              0);
     else
         rc = ccnet_db_statement_foreach_row (db,
-                                             "SELECT * FROM EmailUser ORDER BY id "
-                                             "LIMIT ? OFFSET ?",
+                                             "SELECT * FROM EmailUser AS t1 "
+                                             "LEFT JOIN UserRole AS t2 "
+                                             "ON t1.email = t2.email "
+                                             "ORDER BY id LIMIT ? OFFSET ?",
                                              get_emailusers_cb, &ret,
                                              2, "int", limit, "int", start);
 
@@ -1043,13 +1103,19 @@ ccnet_user_manager_search_emailusers (CcnetUserManager *manager,
     int rc;
     if (start == -1 && limit == -1)
         rc = ccnet_db_statement_foreach_row (db,
-                                             "SELECT * FROM EmailUser WHERE Email LIKE ? "
+                                             "SELECT * FROM EmailUser AS t1 "
+                                             "LEFT JOIN UserRole AS t2 "
+                                             "ON t1.email = t2.email "
+                                             "WHERE t1.Email LIKE ? "
                                              "ORDER BY id",
                                              get_emailusers_cb, &ret,
                                              1, "string", email_patt);
     else
         rc = ccnet_db_statement_foreach_row (db,
-                                             "SELECT * FROM EmailUser WHERE Email LIKE ? "
+                                             "SELECT * FROM EmailUser AS t1 "
+                                             "LEFT JOIN UserRole AS t2 "
+                                             "ON t1.email = t2.email "
+                                             "WHERE t1.Email LIKE ? "
                                              "ORDER BY id LIMIT ? OFFSET ?",
                                              get_emailusers_cb, &ret,
                                              3, "string", email_patt,
@@ -1155,6 +1221,48 @@ ccnet_user_manager_update_emailuser (CcnetUserManager *manager,
                                          4, "string", db_passwd, "int", is_staff,
                                          "int", is_active, "int", id);
     }
+}
+
+static gboolean
+get_role_emailuser_cb (CcnetDBRow *row, void *data)
+{
+    *((char **)data) = g_strdup (ccnet_db_row_get_column_text (row, 0));
+
+    return FALSE;
+}
+
+static char*
+ccnet_user_manager_get_role_emailuser (CcnetUserManager *manager,
+                                     const char* email)
+{
+
+    CcnetDB *db = manager->priv->db;
+    const char *sql;
+    char* role;
+
+    sql = "SELECT role FROM UserRole WHERE email=?";
+    if (ccnet_db_statement_foreach_row (db, sql, get_role_emailuser_cb, &role,
+                                        1, "string", email) > 0)
+        return role;
+
+    return NULL;
+}
+
+int
+ccnet_user_manager_update_role_emailuser (CcnetUserManager *manager,
+                                     const char* email, const char* role)
+{
+    CcnetDB* db = manager->priv->db;
+    char *old_role = ccnet_user_manager_get_role_emailuser (manager, email);
+    if (old_role) {
+        g_free (old_role);
+        return ccnet_db_statement_query (db, "UPDATE UserRole SET role=? "
+                                         "WHERE email=?",
+                                         2, "string", role, "string", email);
+    } else
+        return ccnet_db_statement_query (db, "INSERT INTO UserRole(role, email)"
+                                         " VALUES (?, ?)",
+                                         2, "string", role, "string", email);
 }
 
 GList*
