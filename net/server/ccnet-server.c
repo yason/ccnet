@@ -27,20 +27,25 @@ static void sigintHandler (int fd, short event, void *user_data)
     exit (1);
 }
 
+static void sigusr1Handler (int fd, short event, void *user_data)
+{
+    ccnet_log_reopen ();
+}
+
 static void setSigHandlers ()
 {
     signal (SIGPIPE, SIG_IGN);
 
     event_set(&sigint, SIGINT, EV_SIGNAL, sigintHandler, NULL);
-	event_add(&sigint, NULL);
+    event_add(&sigint, NULL);
 
     /* same as sigint */
     event_set(&sigterm, SIGTERM, EV_SIGNAL, sigintHandler, NULL);
-	event_add(&sigterm, NULL);
+    event_add(&sigterm, NULL);
 
-    /* same as sigint */
-    event_set(&sigusr1, SIGUSR1, EV_SIGNAL, sigintHandler, NULL);
-	event_add(&sigusr1, NULL);
+    /* redesign as reopen log */
+    event_set(&sigusr1, SIGUSR1, EV_SIGNAL | EV_PERSIST, sigusr1Handler, NULL);
+    event_add(&sigusr1, NULL);
 }
 #endif
 
