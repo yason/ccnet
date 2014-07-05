@@ -12,6 +12,8 @@
 #define CCNET_IS_SESSION_BASE_CLASS(klass)       (G_TYPE_CHECK_CLASS_TYPE ((klass), CCNET_TYPE_SESSION_BASE))
 #define CCNET_SESSION_BASE_GET_CLASS(obj)        (G_TYPE_INSTANCE_GET_CLASS ((obj), CCNET_TYPE_SESSION_BASE, CcnetSessionBaseClass))
 
+#define CCNET_PIPE_NAME "ccnet.sock"
+
 typedef struct _CcnetSessionBase CcnetSessionBase;
 typedef struct _CcnetSessionBaseClass CcnetSessionBaseClass;
 

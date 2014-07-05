@@ -75,6 +75,7 @@ struct CcnetSession
 
     int                         local_port;
     struct event                local_event;
+    struct event                local_pipe_event;
 
     int                         start_failure;  /* how many times failed 
                                                    to start the network */
