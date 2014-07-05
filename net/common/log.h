@@ -16,6 +16,7 @@
 #endif
 
 int ccnet_log_init (const char *logfile, const char *log_level_str);
+int ccnet_log_reopen ();
 
 typedef enum
 {

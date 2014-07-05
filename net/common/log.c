@@ -18,6 +18,7 @@ extern CcnetSession  *session;
 
 /* message with greater log levels will be ignored */
 static int ccnet_log_level;
+static char *logfile;
 static FILE *logfp;
 
 static void 
@@ -70,7 +71,7 @@ get_debug_level(const char *str, int default_level)
 }
 
 int
-ccnet_log_init (const char *logfile, const char *debug_level_str)
+ccnet_log_init (const char *_logfile, const char *debug_level_str)
 {
     g_log_set_handler (NULL, G_LOG_LEVEL_MASK | G_LOG_FLAG_FATAL
                        | G_LOG_FLAG_RECURSION, ccnet_log, NULL);
@@ -81,15 +82,42 @@ ccnet_log_init (const char *logfile, const char *debug_level_str)
     /* record all log message */
     ccnet_log_level = get_debug_level(debug_level_str, G_LOG_LEVEL_INFO);
 
-    if (strcmp(logfile, "-") == 0)
+    if (strcmp(_logfile, "-") == 0) {
         logfp = stdout;
+        logfile = g_strdup (_logfile);
+    }
     else {
-        char *file = ccnet_expand_path (logfile);
+        logfile = ccnet_expand_path (_logfile);
 
-        if ((logfp = g_fopen (file, "a+")) == NULL)
+        if ((logfp = fopen (logfile, "a+")) == NULL) {
+            ccnet_message ("Failed to open file %s\n", logfile);
             return -1;
-        
-        g_free (file);
+        }
+    }
+
+    return 0;
+}
+
+int
+ccnet_log_reopen ()
+{
+    FILE *fp, *oldfp;
+
+    if (strcmp(logfile, "-") == 0)
+        return 0;
+
+    if ((fp = fopen (logfile, "a+")) == NULL) {
+        ccnet_message ("Failed to open file %s\n", logfile);
+        return -1;
+    }
+
+    //TODO: check file's health
+
+    oldfp = logfp;
+    logfp = fp;
+    if (fclose(oldfp) < 0) {
+        ccnet_message ("Failed to close file %s\n", logfile);
+        return -1;
     }
 
     return 0;
