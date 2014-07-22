@@ -89,7 +89,7 @@ ccnet_log_init (const char *_logfile, const char *debug_level_str)
     else {
         logfile = ccnet_expand_path (_logfile);
 
-        if ((logfp = fopen (logfile, "a+")) == NULL) {
+        if ((logfp = g_fopen (logfile, "a+")) == NULL) {
             ccnet_message ("Failed to open file %s\n", logfile);
             return -1;
         }
@@ -106,7 +106,7 @@ ccnet_log_reopen ()
     if (strcmp(logfile, "-") == 0)
         return 0;
 
-    if ((fp = fopen (logfile, "a+")) == NULL) {
+    if ((fp = g_fopen (logfile, "a+")) == NULL) {
         ccnet_message ("Failed to open file %s\n", logfile);
         return -1;
     }
