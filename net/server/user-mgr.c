@@ -1280,7 +1280,13 @@ ccnet_user_manager_get_superusers(CcnetUserManager *manager)
     GList *ret = NULL;
     char sql[512];
 
-    snprintf (sql, 512, "SELECT * FROM EmailUser WHERE is_staff = 1;");
+    snprintf (sql, 512,
+              "SELECT t1.id, t1.email, "
+              "t1.is_staff, t1.is_active, t1.ctime, "
+              "t2.role FROM EmailUser AS t1 "
+              "LEFT JOIN UserRole AS t2 "
+              "ON t1.email = t2.email "
+              "WHERE is_staff = 1;");
 
     if (ccnet_db_foreach_selected_row (db, sql, get_emailusers_cb, &ret) < 0) {
         while (ret != NULL) {
