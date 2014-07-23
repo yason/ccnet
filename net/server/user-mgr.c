@@ -1001,11 +1001,10 @@ get_emailusers_cb (CcnetDBRow *row, void *data)
 
     int id = ccnet_db_row_get_column_int (row, 0);
     const char *email = (const char *)ccnet_db_row_get_column_text (row, 1);
-    /* const char* passwd = (const char *)ccnet_db_row_get_column_text (row, 2); */
-    int is_staff = ccnet_db_row_get_column_int (row, 3);
-    int is_active = ccnet_db_row_get_column_int (row, 4);
-    gint64 ctime = ccnet_db_row_get_column_int64 (row, 5);
-    const char *role = (const char *)ccnet_db_row_get_column_text (row, 7);
+    int is_staff = ccnet_db_row_get_column_int (row, 2);
+    int is_active = ccnet_db_row_get_column_int (row, 3);
+    gint64 ctime = ccnet_db_row_get_column_int64 (row, 4);
+    const char *role = (const char *)ccnet_db_row_get_column_text (row, 5);
 
     char *email_l = g_ascii_strdown (email, -1);
     emailuser = g_object_new (CCNET_TYPE_EMAIL_USER,
@@ -1045,17 +1044,22 @@ ccnet_user_manager_get_emailusers (CcnetUserManager *manager,
 
     int rc;
     if (start == -1 && limit == -1)
-        rc = ccnet_db_statement_foreach_row (db, "SELECT * FROM EmailUser AS t1 "
+        rc = ccnet_db_statement_foreach_row (db,
+                                             "SELECT t1.id, t1.email, "
+                                             "t1.is_staff, t1.is_active, t1.ctime, "
+                                             "t2.role FROM EmailUser AS t1 "
                                              "LEFT JOIN UserRole AS t2 "
                                              "ON t1.email = t2.email ",
                                              get_emailusers_cb, &ret,
                                              0);
     else
         rc = ccnet_db_statement_foreach_row (db,
-                                             "SELECT * FROM EmailUser AS t1 "
+                                             "SELECT t1.id, t1.email, "
+                                             "t1.is_staff, t1.is_active, t1.ctime, "
+                                             "t2.role FROM EmailUser AS t1 "
                                              "LEFT JOIN UserRole AS t2 "
                                              "ON t1.email = t2.email "
-                                             "ORDER BY id LIMIT ? OFFSET ?",
+                                             "ORDER BY t1.id LIMIT ? OFFSET ?",
                                              get_emailusers_cb, &ret,
                                              2, "int", limit, "int", start);
 
@@ -1103,20 +1107,24 @@ ccnet_user_manager_search_emailusers (CcnetUserManager *manager,
     int rc;
     if (start == -1 && limit == -1)
         rc = ccnet_db_statement_foreach_row (db,
-                                             "SELECT * FROM EmailUser AS t1 "
+                                             "SELECT t1.id, t1.email, "
+                                             "t1.is_staff, t1.is_active, t1.ctime, "
+                                             "t2.role FROM EmailUser AS t1 "
                                              "LEFT JOIN UserRole AS t2 "
                                              "ON t1.email = t2.email "
                                              "WHERE t1.Email LIKE ? "
-                                             "ORDER BY id",
+                                             "ORDER BY t1.id",
                                              get_emailusers_cb, &ret,
                                              1, "string", email_patt);
     else
         rc = ccnet_db_statement_foreach_row (db,
-                                             "SELECT * FROM EmailUser AS t1 "
+                                             "SELECT t1.id, t1.email, "
+                                             "t1.is_staff, t1.is_active, t1.ctime, "
+                                             "t2.role FROM EmailUser AS t1 "
                                              "LEFT JOIN UserRole AS t2 "
                                              "ON t1.email = t2.email "
                                              "WHERE t1.Email LIKE ? "
-                                             "ORDER BY id LIMIT ? OFFSET ?",
+                                             "ORDER BY t1.id LIMIT ? OFFSET ?",
                                              get_emailusers_cb, &ret,
                                              3, "string", email_patt,
                                              "int", limit, "int", start);
