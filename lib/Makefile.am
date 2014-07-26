@@ -47,7 +47,7 @@ libccnet_la_SOURCES = ccnet-client.c packet-io.c libccnet_utils.c \
 EXTRA_DIST = ccnetobj.vala rpc_table.py
 
 libccnet_la_LDFLAGS = -no-undefined -version-info 0:0:0
-libccnet_la_LIBADD = -lpthread @GLIB2_LIBS@  @GOBJECT_LIBS@ -lssl -lcrypto @LIB_GDI32@ \
+libccnet_la_LIBADD = -lpthread @GLIB2_LIBS@  @GOBJECT_LIBS@ @SSL_LIBS@ @LIB_GDI32@ \
 				     @LIB_UUID@ @LIB_WS32@ @LIB_PSAPI@ -lsqlite3 \
 					 -levent @SEARPC_LIBS@ @LIB_SHELL32@
 
@@ -59,7 +59,7 @@ libccnetd_la_SOURCES = utils.c db.c job-mgr.c \
 	ccnetobj.c
 
 libccnetd_la_LDFLAGS = -no-undefined
-libccnetd_la_LIBADD = @GLIB2_LIBS@  @GOBJECT_LIBS@ -lssl -lcrypto @LIB_GDI32@ \
+libccnetd_la_LIBADD = @GLIB2_LIBS@  @GOBJECT_LIBS@ @SSL_LIBS@ @LIB_GDI32@ \
 	                  -lsqlite3 -levent @LIB_WS32@ @LIB_UUID@ \
 					  @LIB_SHELL32@ @LIB_PSAPI@ @SEARPC_LIBS@
 
