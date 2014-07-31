@@ -111,24 +111,6 @@ ccnet_start_rpc(CcnetSession *session)
 
 
     searpc_server_register_function ("ccnet-rpcserver",
-                                     ccnet_rpc_get_procs_alive,
-                                     "get_procs_alive",
-                                     searpc_signature_objlist__int_int());
-    searpc_server_register_function ("ccnet-rpcserver",
-                                     ccnet_rpc_count_procs_alive,
-                                     "count_procs_alive",
-                                     searpc_signature_int__void());
-
-    searpc_server_register_function ("ccnet-rpcserver",
-                                     ccnet_rpc_get_procs_dead,
-                                     "get_procs_dead",
-                                     searpc_signature_objlist__int_int());
-    searpc_server_register_function ("ccnet-rpcserver",
-                                     ccnet_rpc_count_procs_dead,
-                                     "count_procs_dead",
-                                     searpc_signature_int__void());
-    
-    searpc_server_register_function ("ccnet-rpcserver",
                                      ccnet_rpc_get_config,
                                      "get_config",
                                      searpc_signature_string__string());
@@ -534,65 +516,6 @@ ccnet_rpc_remove_role(const char *peer_id, const char *role, GError **error)
     g_object_unref (peer);
     return 0;
 }
-
-
-GList *
-ccnet_rpc_get_procs_alive(int offset, int limit, GError **error)
-{
-    GList *res = NULL;
-    struct list_head *pos, *tmp;
-    struct list_head *list = &(session->proc_factory->procs_list);
-    CcnetProcessor *processor;
-    int index = 0, cnt = 0;
-    
-    list_for_each_safe (pos, tmp, list) {
-        if (index++ < offset) continue;
-        if (limit >= 0 && cnt >= limit) break;
-
-        processor = list_entry (pos, CcnetProcessor, list);
-        CcnetProc *proc = ccnet_proc_new();
-        g_object_set (proc, "name", GET_PNAME(processor),
-                      "peer-name", processor->peer->name,
-                      "ctime", (int) processor->start_time,
-                      "dtime", 0, NULL);
-        res = g_list_prepend (res, proc);
-        ++cnt;
-    }
-    return g_list_reverse (res);
-}
-
-int
-ccnet_rpc_count_procs_alive(GError **error)
-{
-    return session->proc_factory->procs_alive_cnt;
-}
-
-GList *
-ccnet_rpc_get_procs_dead(int offset, int limit, GError **error)
-{
-    GList *procs = session->proc_factory->procs;
-    GList *res = NULL, *ptr;
-    int index = 0, cnt = 0;
-
-    for (ptr = procs; ptr; ptr = ptr->next, index++) {
-        if (index < offset) continue;
-        if (limit >= 0 && cnt >= limit) break;
-
-        CcnetProc *proc = (CcnetProc *)ptr->data;
-        g_object_ref (proc);
-        res = g_list_prepend (res, proc);
-        ++cnt;
-    }
-
-    return g_list_reverse (res);
-}
-
-int
-ccnet_rpc_count_procs_dead(GError **error)
-{
-    return g_list_length (session->proc_factory->procs); 
-}
-
 
 char *
 ccnet_rpc_get_config (const char *key, GError **error)

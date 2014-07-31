@@ -8,8 +8,6 @@
 
 #include <status-code.h>
 
-#include "list.h"
-
 struct CcnetSession;
 struct _CcnetPeer;
 struct CcnetTimer;
@@ -58,8 +56,6 @@ struct _CcnetProcessor {
 
     /* Set to 1 if removed from peer->processors */
     unsigned int           detached  : 1;
-
-    struct list_head       list;
 
     /* last time when a packet received  */
     time_t                 t_packet_recv;

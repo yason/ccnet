@@ -574,7 +574,7 @@ dns_lookup (void *vdata)
         goto out;
     }
 
-    if (!inet_ntop(answer->ai_family, addr, addr_str, size)) {
+    if (!evutil_inet_ntop(answer->ai_family, addr, addr_str, size)) {
         ccnet_warning("Peer %s domain name %s lookup fail\n",
                       data->peer->name, data->peer->public_addr);
         free(addr_str);

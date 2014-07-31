@@ -41,6 +41,8 @@
 #include <glib/gstdio.h>
 #include <searpc-utils.h>
 
+#include <event2/util.h>
+
 extern int inet_pton(int af, const char *src, void *dst);
 
 
@@ -648,10 +650,10 @@ gboolean is_ipaddr_valid (const char *ip)
 {
     unsigned char buf[sizeof(struct in6_addr)];
 
-    if (inet_pton(AF_INET, ip, buf) == 1)
+    if (evutil_inet_pton(AF_INET, ip, buf) == 1)
         return TRUE;
 
-    if (inet_pton(AF_INET6, ip, buf) == 1)
+    if (evutil_inet_pton(AF_INET6, ip, buf) == 1)
         return TRUE;
 
     return FALSE;

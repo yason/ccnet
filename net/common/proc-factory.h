@@ -24,9 +24,7 @@ struct _CcnetProcFactory
     /* protected */
     struct CcnetSession  *session;
 
-    struct list_head      procs_list; /* for keepalive */
     int                   procs_alive_cnt; /*number of processors alive*/
-    struct CcnetTimer    *keepalive_timer;
 
     GList                *procs;   /* TODO: need to recyle the space
                                     * when it grows verylarge  */

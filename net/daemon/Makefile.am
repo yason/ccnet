@@ -51,7 +51,7 @@ common_headers = ../common/algorithms.h \
 	../common/getgateway.h ../common/message-manager.h \
 	../common/processor.h \
 	../common/peermgr-message.h \
-	../common/list.h ../common/rpc-service.h \
+	../common/rpc-service.h \
 	../common/ccnet-db.h
 
 # ../common/group.h

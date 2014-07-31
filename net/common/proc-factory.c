@@ -111,7 +111,6 @@ ccnet_proc_factory_new (CcnetSession *session)
     factory = g_object_new (CCNET_TYPE_PROC_FACTORY, NULL);
     factory->session = session;
     factory->no_packet_timeout = DEFAULT_NO_PACKET_TIMEOUT;
-    INIT_LIST_HEAD(&(factory->procs_list));
     factory->procs = NULL;
 
     /* register fundamental processors */
@@ -220,7 +219,6 @@ create_processor_common (CcnetProcFactory *factory,
                      PRINT_ID(processor->id), processor->name);
     ccnet_peer_add_processor (processor->peer, processor);
 
-    list_add (&processor->list, &factory->procs_list);
     factory->procs_alive_cnt++;
 
     return processor;
@@ -250,7 +248,6 @@ ccnet_proc_factory_create_master_processor (CcnetProcFactory *factory,
 static void inline
 recycle (CcnetProcFactory *factory, CcnetProcessor *processor)
 {
-    list_del (&processor->list);
     factory->procs_alive_cnt--;
 
 #ifdef DEBUG_PROC
@@ -332,138 +329,6 @@ compare_procs (gconstpointer a, gconstpointer b)
     const CcnetProcessor *proc_a = a, *proc_b = b;
 
     return (proc_a->t_keepalive_sent - proc_b->t_keepalive_sent);
-}
-
-/* keep processors alive by sending keepalive packets. 
-
-   Three different status codes are used for this purpose:
-
-        SC_PROC_KEEPALIVE "100"
-        SS_PROC_KEEPALIVE "processor keep alive"
-        SC_PROC_ALIVE "101"
-        SS_PROC_ALIVE "processor is alive"
-        SC_PROC_DEAD "102"
-        SS_PROC_DEAD "processor is dead"
-
-   If we have not received packets from the peer processor for
-   `no_packet_timeout`, send a SC_PROC_KEEPALIVE
-   packet to the peer processor. The peer may:
-  
-   1. send SC_PROC_ALIVE back, then the `processor->t_packet_recv`
-      is updated.
-   2. send SC_PROC_DEAD back, then shutdown the processor.
-   3. no response, then when if `no_packet_timeout + 30`
-      threshold is reached, shutdown the processor.
-*/
-
-static void
-peer_processors_keepalive (CcnetProcFactory *factory, CcnetPeer *peer)
-{
-    time_t now = time(NULL);
-    const int no_packet_timeout1 = factory->no_packet_timeout;
-    const int no_packet_timeout2 = factory->no_packet_timeout + CONNECTION_TIMEOUT;
-    struct list_head *pos, *tmp;
-    CcnetProcessor *processor;
-    int count = 0;
-    char *code, *code_msg;
-    GList *keepalive_list = NULL, *ptr;
-
-    /*
-     * Use list_for_each_safe since we may delete an entry when looping. 
-     */
-    list_for_each_safe (pos, tmp, &(peer->procs_list)) {
-        processor = list_entry (pos, CcnetProcessor, per_peer_list);
-
-        if (CCNET_IS_KEEPALIVE2_PROC(processor))
-            continue;
-
-        if (processor->peer->is_local) {
-            /* No need to call keepalive to local peer */
-            continue;
-        }
-
-        /* The server don't send keep alive. */
-#ifndef CCNET_SERVER        
-        /* a just started master processor */
-        if (processor->t_packet_recv == 0) {
-            g_assert (processor->start_time != 0);
-            if (now - processor->start_time >= CONNECTION_TIMEOUT) {
-                ccnet_debug ("[proc-fact] Shutdown processsor %s(%d) when connect timeout %ds\n",
-                             GET_PNAME(processor), PRINT_ID(processor->id),
-                             now - processor->start_time);
-                code = g_strdup (SC_CON_TIMEOUT);
-                code_msg = g_strdup (SS_CON_TIMEOUT);
-                shutdown_processor (processor, code, code_msg);
-                g_free (code);
-                g_free (code_msg);
-            }
-            continue;
-        }
-
-        if (now - processor->t_packet_recv <= no_packet_timeout1)
-            continue;
-
-        if (processor->t_keepalive_sent <= processor->t_packet_recv) {
-            /* has not send a keepalive packet yet */
-            keepalive_list = g_list_prepend (keepalive_list, processor);
-
-            continue;
-        }
-#endif
-
-        /* if keepalive is already sent and timeout */
-        if (now - processor->t_packet_recv > no_packet_timeout2) {
-            ccnet_debug ("Shutdown processsor %s(%d) when timeout\n", 
-                         GET_PNAME(processor), PRINT_ID(processor->id));
-            /* receive command processor should only be called by 
-               local, and they may only timeout when debuging. */
-            /* g_assert (!CCNET_IS_RCVCMD_PROC(processor)); */
-            code = g_strdup (SC_KEEPALIVE_TIMEOUT);
-            code_msg = g_strdup (SS_KEEPALIVE_TIMEOUT);
-            shutdown_processor (processor, code, code_msg);
-            g_free (code);
-            g_free (code_msg);
-            continue;
-        }
-    }
-
-    /* Sort the processors that need keep alive by its last
-     * keepalive sent time, so that no processor is starved.
-     */
-    keepalive_list = g_list_sort (keepalive_list, compare_procs);
-    for (ptr = keepalive_list; ptr; ptr = ptr->next) {
-        processor = ptr->data;
-
-        if (++count > MAX_PROCS_KEEPALIVE)
-            break;
-
-        ccnet_debug ("sending keepalive, %s(%d), last sent: %d.\n",
-                     GET_PNAME(processor), PRINT_ID(processor->id),
-                     (int)processor->t_keepalive_sent);
-        ccnet_processor_keep_alive (processor);
-    }
-    g_list_free (keepalive_list);
-}
-
-static int
-keepalive_pulse (CcnetProcFactory *factory)
-{
-    GList *peers, *ptr;
-    CcnetPeer *peer;
-
-    /* Maintain a separate processor keep-alive list for each peer.
-     * So we don't need to worry about removing proxy proc and stub
-     * proc from the same list in one loop, since they are bound to
-     * different peers.
-     */
-    peers = ccnet_peer_manager_get_peer_list (factory->session->peer_mgr);
-    for (ptr = peers; ptr != NULL; ptr = ptr->next) {
-        peer = ptr->data;
-        peer_processors_keepalive (factory, peer);
-    }
-    g_list_free (peers);
-
-    return TRUE;
 }
 
 #endif  /* 0 */

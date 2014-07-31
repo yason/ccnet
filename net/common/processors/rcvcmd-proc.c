@@ -125,7 +125,6 @@ static int shutdown_session (CcnetProcessor *, int, char **);
 static int register_service (CcnetProcessor *, int, char **);
 static int echo (CcnetProcessor *, int, char **);
 static int list_proc (CcnetProcessor *, int, char **);
-static int show_proc (CcnetProcessor *, int, char **);
 static int set_timeout (CcnetProcessor *, int, char **);
 
 static int add_role  (CcnetProcessor *, int, char **);
@@ -155,7 +154,6 @@ static struct cmd cmdtab[] =  {
     { "register-service", register_service },
     { "echo", echo },
 	{ "list-proc", list_proc },
-    { "show-proc", show_proc },
     { "set-timeout", set_timeout },
     { "add-role", add_role },
     { "add-peer", add_peer },
@@ -360,30 +358,6 @@ list_proc (CcnetProcessor *processor, int argc, char **argv)
     
     g_string_free (buf, TRUE);
     
-    return 0;
-}
-
-static int
-show_proc (CcnetProcessor *processor, int argc, char **argv)
-{
-    argc--;
-    argv++;
-    
-    CcnetProcessor *proc;
-    GString *buf = g_string_new (NULL);
-    struct list_head *pos;
-    CcnetProcFactory *factory = processor->session->proc_factory;
-
-    list_for_each (pos, &(factory->procs_list)) {
-        proc = (CcnetProcessor *) list_entry (pos, CcnetProcessor, list);
-        g_string_append_printf (buf, "%d\t%s\n", PRINT_ID(proc->id),
-                                GET_PNAME(proc));
-    }
-    ccnet_processor_send_response (processor, SC_OK, SS_OK, 
-                                   buf->str, buf->len+1);
-
-    g_string_free (buf, TRUE);
-
     return 0;
 }
 

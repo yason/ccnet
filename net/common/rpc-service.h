@@ -48,12 +48,6 @@ ccnet_rpc_remove_role(const char *user_id, const char *role, GError **error);
 GList *ccnet_rpc_get_events(int offset, int limit, GError **error);
 int ccnet_rpc_count_event (GError **error);
 
-GList *ccnet_rpc_get_procs_alive(int offset, int limit, GError **error);
-int ccnet_rpc_count_procs_alive(GError **error);
-
-GList *ccnet_rpc_get_procs_dead(int offset, int limit, GError **error);
-int ccnet_rpc_count_procs_dead(GError **error);
-
 
 /**
  * ccnet_get_config:
