@@ -4,7 +4,12 @@
 #include "common.h"
 
 #include <stdio.h>
+
+#if defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__)
+#include <event2/dns.h>
+#else
 #include <evdns.h>
+#endif
 
 #include "utils.h"
 

@@ -4,7 +4,12 @@
 #define CCNET_CLI_IO_H
 
 #include <packet.h>
+
+#if defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__)
+#include <event2/util.h>
+#else
 #include <evutil.h>
+#endif
 
 struct buffer;
 

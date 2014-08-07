@@ -3,7 +3,12 @@
 #include "include.h"
 
 #include <pthread.h>
+
+#if defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__)
+#include <event2/event.h>
+#else
 #include <event.h>
+#endif
 
 #include "ccnet-client.h"
 #include "processor.h"

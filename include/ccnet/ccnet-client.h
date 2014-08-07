@@ -9,7 +9,12 @@
 
 #include <glib.h>
 #include <glib-object.h>
+
+#if defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__)
+#include <event2/util.h>
+#else
 #include <evutil.h>
+#endif
 
 #include "ccnet-session-base.h"
 

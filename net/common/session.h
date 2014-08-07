@@ -3,8 +3,14 @@
 #ifndef CCNET_SESSION_H
 #define CCNET_SESSION_H
 
-
+#if defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__)
+#include <event2/event.h>
+#include <event2/event_compat.h>
+#include <event2/event_struct.h>
+#else
 #include <event.h>
+#endif
+
 #include <glib.h>
 #include <glib/gstdio.h>
 #include "ccnet-session-base.h"
