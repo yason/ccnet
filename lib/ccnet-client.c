@@ -134,7 +134,7 @@ int
 ccnet_client_load_confdir (CcnetClient *client, const char *config_dir_r)
 {
     char *config_file, *config_dir;
-    char *id = NULL, *name = NULL, *port_str = NULL, 
+    char *id = NULL, *name = NULL, *port_str = NULL, *un_path = NULL,
         *user_name = NULL, *service_url = NULL;
     unsigned char sha1[20];
     GKeyFile *key_file;
@@ -162,6 +162,7 @@ ccnet_client_load_confdir (CcnetClient *client, const char *config_dir_r)
     name = ccnet_util_key_file_get_string (key_file, "General", "NAME");
     service_url = ccnet_util_key_file_get_string (key_file, "General", "SERVICE_URL");
     port_str = ccnet_util_key_file_get_string (key_file, "Client", "PORT");
+    un_path = ccnet_util_key_file_get_string (key_file, "Client", "UNIX_SOCKET");
 
     if ( (id == NULL) || (strlen (id) != SESSION_ID_LENGTH) 
          || (ccnet_util_hex_to_sha1 (id, sha1) < 0) ) 
@@ -185,6 +186,7 @@ ccnet_client_load_confdir (CcnetClient *client, const char *config_dir_r)
 
     if (port_str)
         client->daemon_port = atoi (port_str);
+    client->un_path = un_path;
 
     g_free (id);
     g_free (name);
@@ -235,11 +237,18 @@ ccnet_client_connect_daemon (CcnetClient *client, CcnetClientMode mode)
     if (connect (sockfd, (struct sockaddr *) &servaddr, (socklen_t)sizeof(servaddr)) < 0)
         return -1;
 #else
+    char *un_path = NULL;
+
     sockfd = socket(AF_UNIX, SOCK_STREAM, 0);
     struct sockaddr_un servaddr;
     servaddr.sun_family = AF_UNIX;
-    char *un_path = g_build_filename (client->config_dir, CCNET_PIPE_NAME, NULL);
-    memcpy(servaddr.sun_path, un_path, strlen(un_path) + 1);
+
+    if (!client->un_path)
+        un_path = g_build_filename (client->config_dir, CCNET_PIPE_NAME, NULL);
+    else
+        un_path = g_strdup(client->un_path);
+
+    g_strlcpy (servaddr.sun_path, un_path, sizeof(servaddr.sun_path));
     g_free (un_path);
     if (connect(sockfd, (struct sockaddr *)&servaddr, (socklen_t)sizeof(servaddr)) < 0) {
         return -1;

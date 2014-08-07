@@ -96,8 +96,9 @@ ccnet_session_load_config (CcnetSession *session, const char *config_dir_r)
 {
     int ret = 0;
     char *config_file, *config_dir;
-    char *id = 0, *name = 0, *port_str = 0, *lport_str,
-        *user_name = 0;
+    char *id = NULL, *name = NULL, *port_str = NULL,
+        *lport_str = NULL, *un_path = NULL,
+        *user_name = NULL;
 #ifdef CCNET_SERVER
     char *service_url;
 #endif
@@ -130,15 +131,14 @@ ccnet_session_load_config (CcnetSession *session, const char *config_dir_r)
     service_url = ccnet_key_file_get_string (key_file, "General", "SERVICE_URL");
 #endif
     port_str = ccnet_key_file_get_string (key_file, "Network", "PORT");
+
     lport_str = ccnet_key_file_get_string (key_file, "Client", "PORT");
+    un_path = ccnet_key_file_get_string (key_file, "Client", "UNIX_SOCKET");
     
     if (port_str == NULL)
         port = DEFAULT_PORT;
     else
         port = atoi (port_str);
-
-    if (lport_str != NULL)
-        local_port = atoi (lport_str);
 
     if ( (id == NULL) || (strlen (id) != SESSION_ID_LENGTH) 
          || (hex_to_sha1 (id, sha1) < 0) ) {
@@ -146,6 +146,9 @@ ccnet_session_load_config (CcnetSession *session, const char *config_dir_r)
         ret = -1;
         goto onerror;
     }
+
+    if (lport_str)
+        local_port = atoi (lport_str);
 
     memcpy (session->base.id, id, 40);
     session->base.id[40] = '\0';
@@ -157,6 +160,7 @@ ccnet_session_load_config (CcnetSession *session, const char *config_dir_r)
 #endif
     session->config_file = config_file;
     session->config_dir = config_dir;
+    session->un_path = un_path;
     session->local_port = local_port;
     session->keyf = key_file;
 
@@ -169,6 +173,7 @@ onerror:
     g_free (name);
     g_free (user_name);
     g_free (port_str);
+    g_free (lport_str);
 #ifdef CCNET_SERVER
     g_free (service_url);
 #endif
@@ -399,7 +404,6 @@ static void listen_on_localhost (CcnetSession *session)
 
 static void listen_on_pipe (CcnetSession *session)
 {
-    int sockfd;
     int pipe_fd = socket (AF_UNIX, SOCK_STREAM, 0);
     char *un_path = NULL;
     if (pipe_fd < 0) {
@@ -410,7 +414,20 @@ static void listen_on_pipe (CcnetSession *session)
     
     struct sockaddr_un saddr;
     saddr.sun_family = AF_UNIX;
-    un_path = g_build_filename (session->config_dir, CCNET_PIPE_NAME, NULL);
+
+    if (!session->un_path)
+        un_path = g_build_filename (session->config_dir, CCNET_PIPE_NAME, NULL);
+    else
+        un_path = g_strdup(session->un_path);
+
+    if (strlen(un_path) > sizeof(saddr.sun_path)-1) {
+        ccnet_warning ("Unix socket path %s is too long."
+                       "Please set or modify UNIX_SOCKET option in ccnet.conf.\n",
+                       un_path);
+        g_free (un_path);
+        goto failed;
+    }
+
     if (g_file_test (un_path, G_FILE_TEST_EXISTS)) {
         ccnet_warning ("socket file exists, delete it anyway\n");
         if (g_unlink (un_path) < 0) {
@@ -419,7 +436,7 @@ static void listen_on_pipe (CcnetSession *session)
         }
     }
     
-    memcpy(saddr.sun_path, un_path, strlen(un_path) + 1);
+    g_strlcpy (saddr.sun_path, un_path, sizeof(saddr.sun_path));
     if (bind(pipe_fd, (struct sockaddr *)&saddr, sizeof(saddr)) < 0) {
         ccnet_warning ("failed to bind unix socket fd to %s : %s\n",
                       un_path, strerror(errno));

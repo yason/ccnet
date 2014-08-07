@@ -84,12 +84,18 @@ class Client(object):
         self.config = ConfigParser.ConfigParser()
         self.config.read(self.config_file)
         self.port = self.config.getint('Client', 'PORT')
+        self.un_path = ''
+        if self.config.has_option('Client', 'UNIX_SOCKET'):
+            self.un_path = self.config.get('Client', 'UNIX_SOCKET')
         self.peer_id = self.config.get('General', 'ID')
         self.peer_name = self.config.get('General', 'NAME')
 
     def connect_daemon_with_pipe(self):
         self._connfd = socket.socket(socket.AF_UNIX)
-        pipe_name = os.path.join(self.config_dir, CCNET_PIPE_NAME)
+        if not self.un_path:
+            pipe_name = os.path.join(self.config_dir, CCNET_PIPE_NAME)
+        else:
+            pipe_name = self.un_path
         try:
             self._connfd.connect(pipe_name)
         except:
