@@ -25,7 +25,7 @@ install-data-local:
 if MACOS
 	sed -i '' -e "s|(DESTDIR)|${DESTDIR}|g" $(pcfiles)
 else
-	sed -i "s|(DESTDIR)|${DESTDIR}|g" $(pcfiles)
+	${SED} -i "s|(DESTDIR)|${DESTDIR}|g" $(pcfiles)
 endif
 
 dist-hook:
