@@ -79,6 +79,8 @@ net/daemon/ccnet
 net/server/ccnet-server
 lib/searpc-marshal.h
 lib/searpc-signature.h
+lib/rpc_table.stamp
+lib/rpc_table.tmp
 net/cluster/ccnet-cserver
 tests/common-conf.sh
 libccnet.pc
