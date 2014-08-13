@@ -23,7 +23,7 @@ AC_PROG_CC
 AC_C_CONST
 AC_PROG_MAKE_SET
 # AC_PROG_RANLIB
-AC_PROG_LIBTOOL
+LT_INIT
 
 # Checks for headers.
 AC_CHECK_HEADERS([sys/ioctl.h sys/time.h stdarg.h])
