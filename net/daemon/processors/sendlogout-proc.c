@@ -4,8 +4,8 @@
 
 #include "session.h"
 #include "processor.h"
-#include "log.h"
 #include "peer.h"
+#include "log.h"
 
 G_DEFINE_TYPE (CcnetSendlogoutProc, ccnet_sendlogout_proc, CCNET_TYPE_PROCESSOR)
 

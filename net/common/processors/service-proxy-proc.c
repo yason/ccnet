@@ -43,7 +43,7 @@ release_resource(CcnetProcessor *processor)
 {
     ServiceProxyPriv *priv = GET_PRIV(processor);
     if (priv->name) {
-        free (priv->name);
+        g_free (priv->name);
         priv->name = NULL;
     }
 
