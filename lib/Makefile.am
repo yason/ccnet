@@ -19,6 +19,7 @@ noinst_HEADERS = buffer.h \
 	peer-common.h \
 	string-util.h \
 	libccnet_utils.h \
+	ccnet-object.h \
 	rpc-common.h \
 	net.h \
 	utils.h \
