@@ -163,12 +163,6 @@ if test "$bwin32" != true; then
       AC_CHECK_LIB(uuid, uuid_create,[echo "found library uuid"] ,
           AC_MSG_ERROR([*** Unable to find uuid library]), )
       , )
-
-  AC_CHECK_LIB(event, event_init,[echo "found library event"] ,
-    AC_MSG_ERROR([*** Unable to find libevent library]), )
-else
-  AC_CHECK_LIB(event, event_init, [echo "found library event"],
-    AC_MSG_ERROR([*** Unable to find libevent library]), [-lwsock32])
 fi
 
 AC_CHECK_LIB(pthread, pthread_create, [echo "found library pthread"], AC_MSG_ERROR([*** Unable to find pthread library]), )
@@ -239,7 +233,7 @@ AC_SUBST(LIB_PSAPI)
 AC_SUBST(MSVC_CFLAGS)
 AC_SUBST(LIB_DIRWATCH)
 
-
+LIBEVENT_REQUIRED=2.0
 # gtk and glib
 APPINDICATOR_REQUIRED=0.0.7
 GLIB_REQUIRED=2.16.0
@@ -265,6 +259,10 @@ AC_SUBST(GOBJECT_LIBS)
 PKG_CHECK_MODULES(SEARPC, [libsearpc >= $SEARPC_REQUIRED])
 AC_SUBST(SEARPC_CFLAGS)
 AC_SUBST(SEARPC_LIBS)
+
+PKG_CHECK_MODULES(LIBEVENT, [libevent >= $LIBEVENT_REQUIRED])
+AC_SUBST(LIBEVENT_CFLAGS)
+AC_SUBST(LIBEVENT_LIBS)
 
 if test x${compile_python} = xyes; then
    AM_PATH_PYTHON([2.6])
