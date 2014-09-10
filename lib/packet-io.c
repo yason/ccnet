@@ -103,7 +103,6 @@ void
 ccnet_packet_prepare (CcnetPacketIO *io, int type, int id)
 {
     ccnet_header header;
-    assert (io->buffer && BUFFER_LENGTH(io->buffer) == 0);
 
     header.version = 1;
     header.type = type;
@@ -118,7 +117,6 @@ ccnet_packet_write_string (CcnetPacketIO *io, const char *str)
 {
     int len;
 
-    assert (str);
     len = strlen(str);
     buffer_add (io->buffer, str, len);
 }

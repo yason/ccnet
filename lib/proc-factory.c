@@ -55,7 +55,6 @@ ccnet_proc_factory_register_processor (CcnetProcFactory *factory,
 
     CcnetProcessorClass *proc_class = 
         (CcnetProcessorClass *)g_type_class_ref(proc_type);
-    g_assert (proc_class->start != NULL);
     g_type_class_unref (proc_class);
 
     /* check dumplication */

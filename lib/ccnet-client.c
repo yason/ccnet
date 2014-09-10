@@ -278,7 +278,6 @@ ccnet_client_run_synchronizer (CcnetClient *client)
 int
 ccnet_client_disconnect_daemon (CcnetClient *client)
 {
-    g_assert (client->io);
     ccnet_packet_io_free (client->io);
     client->io = NULL;
     client->connfd = -1;
@@ -406,7 +405,6 @@ ccnet_client_add_processor (CcnetClient *client, CcnetProcessor *processor)
     int *key = g_new0 (int, 1);
 
     *key = processor->id;
-    g_assert (*key != 0);
     g_hash_table_insert (client->processors, key, processor);
 }
 
@@ -465,7 +463,6 @@ ccnet_client_send_event (CcnetClient *client, GObject *event)
     CcnetProcessor *processor = NULL;
     processor = ccnet_proc_factory_create_master_processor 
         (client->proc_factory, "send-event");
-    g_assert (processor);
     ccnet_sendevent_proc_set_event (CCNET_SENDEVENT_PROC(processor),
                                   (CcnetEvent *)event);
     ccnet_processor_start (processor, 0, NULL);
@@ -481,7 +478,7 @@ handle_request (CcnetClient *client, int req_id, char *data, int len)
     int  i;
 
     /* TODO: remove string copy */
-    g_assert (len >= 1);
+    g_return_if_fail (len >= 1);
     msg = g_malloc (len+1);
     memcpy (msg, data, len);
     msg[len] = '\0';
@@ -489,7 +486,6 @@ handle_request (CcnetClient *client, int req_id, char *data, int len)
     commands = g_strsplit_set (msg, " \t", 10);
     for (i=0, pcmd = commands; *pcmd; pcmd++)
         i++;
-    g_assert (i > 0);
     g_free (msg);
 
     create_processor (client, req_id, i, commands);
@@ -505,7 +501,7 @@ handle_response (CcnetClient *client, int req_id, char *data, int len)
     int clen;
     char *ptr, *end;
 
-    g_assert (len >= 4);
+    g_return_if_fail (len >= 4);
     
     code = data;
     
@@ -570,7 +566,7 @@ handle_update (CcnetClient *client, int req_id, char *data, int len)
     int clen;
     char *ptr, *end;
 
-    g_assert (len >= 4);
+    g_return_if_fail (len >= 4);
     
     code = data;
     
@@ -648,7 +644,7 @@ static void handle_packet (ccnet_packet *packet, void *vclient)
                          packet->data, packet->header.length);
         break;
     default:
-        g_assert (0);
+        g_return_if_reached ();
     }
 }
 
@@ -677,8 +673,8 @@ ccnet_client_send_update (CcnetClient *client, int req_id,
                           const char *code, const char *reason,
                           const char *content, int clen)
 {
-    g_assert (req_id > 0);
-    g_assert (clen < CCNET_PACKET_MAX_PAYLOAD_LEN);
+    g_return_if_fail (req_id > 0);
+    g_return_if_fail (clen < CCNET_PACKET_MAX_PAYLOAD_LEN);
 
     ccnet_packet_prepare (client->io, CCNET_MSG_UPDATE, req_id);
     /* code line */
@@ -703,7 +699,7 @@ ccnet_client_send_response (CcnetClient *client, int req_id,
                             const char *code, const char *reason,
                             const char *content, int clen)
 {
-    g_assert (clen < CCNET_PACKET_MAX_PAYLOAD_LEN);
+    g_return_if_fail (clen < CCNET_PACKET_MAX_PAYLOAD_LEN);
 
     ccnet_packet_prepare (client->io, CCNET_MSG_RESPONSE, req_id);
     /* code line */
@@ -753,7 +749,7 @@ restart:
     data = packet->data;
     len = packet->header.length;
 
-    g_assert (len >= 4);
+    g_return_val_if_fail (len >= 4, -1);
     
     code = data;
     

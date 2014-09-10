@@ -69,7 +69,6 @@ send_msg_start (CcnetProcessor *processor, int argc, char **argv)
     int len;
 
     len = snprintf (buf, 256, "receive-msg");
-    g_assert(len < 256);
     ccnet_processor_send_request (processor, buf);
     processor->state = REQUEST_SENT;
 

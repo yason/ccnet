@@ -75,7 +75,6 @@ invoke_service (CcnetClient *session,
     }
 
     /* Never reach here. */
-    g_assert (0);
     return NULL;
 }
 
@@ -116,7 +115,6 @@ ccnetrpc_transport_send (void *arg, const gchar *fcall_str,
                                fcall_str, fcall_len, ret_len);
     } else {
         /* Use client pool as transport. */
-        g_assert (priv->pool != NULL);
 
         session = ccnet_client_pool_get_client (priv->pool);
         if (!session) {

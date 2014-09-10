@@ -151,7 +151,6 @@ static void proc_shutdown (CcnetProcessor *processor)
     } else {
         /* Otherwise the shutdown of keepalive is only be called in
          * peer shutdown */
-        g_assert (peer->in_shutdown);
     }
 }
 
@@ -197,7 +196,6 @@ static void send_keepalive(CcnetProcessor *processor)
     GString *cntstr = g_string_new(NULL);
 
     g_string_append_printf(cntstr, "%d", priv->count++);
-    g_assert (priv->used_version >= 2);
 
     g_string_append_printf (buf, "timestamp %"G_GINT64_FORMAT"\n",
                             processor->session->timestamp);
@@ -326,7 +324,6 @@ static int keepalive_start (CcnetProcessor *processor,
     }
 
     /* master */
-    g_assert (processor->peer->keepalive_sending == 0);
     priv->count = 0;
     processor->state = INIT;
     processor->peer->keepalive_sending = 1;
@@ -487,8 +484,6 @@ static void recv_pubkey(CcnetProcessor *processor,
                         char *code, char *code_msg,
                         char *content, int clen)
 {
-    g_assert (processor->state == WAIT_PUBKEY);
-
     if (clen == 0 || content[clen-1] != '\0') {
         ccnet_debug ("[Conn] Bad public key format\n");
         close_processor (processor);
@@ -551,8 +546,6 @@ static void recv_pubkey_user(CcnetProcessor *processor,
                              char *code, char *code_msg,
                              char *content, int clen)
 {
-    g_assert (processor->state == WAIT_PUBKEY_USER);
-
     if (clen == 0 || content[clen-1] != '\0') {
         ccnet_debug ("[Conn] Bad public key format\n");
         close_processor (processor);
@@ -560,7 +553,6 @@ static void recv_pubkey_user(CcnetProcessor *processor,
     }
 
     CcnetUser *user = ccnet_peer_get_user(processor->peer);
-    g_assert(user != NULL);
     ccnet_user_set_pubkey (user, content);
 
     if (user->pubkey == NULL) {

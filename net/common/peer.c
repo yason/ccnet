@@ -147,8 +147,9 @@ ccnet_peer_new (const char *id)
 {
     CcnetPeer *peer;
 
+    g_return_val_if_fail (strlen(id) == 40, NULL);
+
     peer = g_object_new (CCNET_TYPE_PEER, NULL);
-    g_assert (strlen(id) == 40);
     memcpy (peer->id, id, 40);
     peer->id[40] = '\0';
 
@@ -300,8 +301,6 @@ ccnet_peer_set_net_state (CcnetPeer *peer, int net_state)
     peer->last_net_state = peer->net_state;
 
     if (net_state == PEER_DOWN) {
-        g_assert (peer->io == NULL);
-        g_assert (g_hash_table_size(peer->processors) == 0);
         if (!peer->is_local)
             --peer->manager->connected_peer;
     } else
@@ -442,8 +441,6 @@ static void remove_write_callbacks (CcnetPeer *peer)
 static void
 _peer_shutdown (CcnetPeer *peer)
 {
-    g_assert (!peer->in_processor_call);
-    g_assert (!peer->in_shutdown);
     peer->in_shutdown = 1;
 
     if (peer->net_state == PEER_CONNECTED) {
@@ -562,8 +559,6 @@ static void create_processor (CcnetPeer *peer, int req_id,
 
     if (strcmp(argv[0], "remote") == 0) {
         /* we have check this before (in permission checking) */
-        g_assert (peer->is_local);
-
         CcnetPeer *remote_peer;
 
         remote_peer = ccnet_peer_manager_get_peer (peer->manager, argv[1]);
@@ -888,8 +883,6 @@ ccnet_peer_remove_write_callback (CcnetPeer *peer,
 {
     GList *ptr;
 
-    g_assert (!peer->in_writecb);
-
     for (ptr = peer->write_cbs; ptr; ptr = ptr->next) {
         struct WriteCallback *wcb = ptr->data;
         if (wcb->func == func && wcb->user_data == user_data) {
@@ -972,8 +965,6 @@ gotError (struct bufferevent *evbuf, short what, void *vpeer)
 void
 ccnet_peer_set_io (CcnetPeer *peer, CcnetPacketIO *io)
 {
-    g_assert (peer->io == NULL);
-
     peer->io = io;
     /* libevent remove a previous timeout seems not work in libevent 2.0, 
        so we have to disable timeout by set it to a large value */
@@ -998,7 +989,6 @@ void
 ccnet_peer_packet_prepare (const CcnetPeer *peer, int type, int id)
 {
     ccnet_header header;
-    g_assert (peer->packet && EVBUFFER_LENGTH(peer->packet) == 0);
 
     header.version = 1;
     header.type = type;
@@ -1012,7 +1002,6 @@ ccnet_peer_packet_write_string (const CcnetPeer *peer, const char *str)
 {
     int len;
 
-    g_assert (str);
     len = strlen(str);
     evbuffer_add (peer->packet, str, len);
 }
@@ -1094,7 +1083,6 @@ ccnet_peer_send_response (const CcnetPeer *peer, int req_id,
                           const char *code, const char *reason,
                           const char *content, int clen)
 {
-    g_assert (req_id > 0);
     if ( (strlen(code) != 3) || !isdigit(code[0]) || !isdigit(code[1])
          || !isdigit(code[1]) ) {
         ccnet_warning ("Bad code number\n");
@@ -1128,8 +1116,6 @@ ccnet_peer_send_update (const CcnetPeer *peer, int req_id,
                         const char *code, const char *reason,
                         const char *content, int clen)
 {
-    g_assert (req_id > 0);
-
     ccnet_peer_packet_prepare (peer, CCNET_MSG_UPDATE, req_id);
 
     /* code line */

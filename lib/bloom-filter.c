@@ -128,8 +128,6 @@ int bloom_add(Bloom *bloom, const char *s)
     unsigned char sha1[20];
     int16_t *sha_int = (int16_t *)&sha1;
     
-    assert (s && *s);
-
     SHA1_Init(&c);
     SHA1_Update(&c, s, strlen(s));
     SHA1_Final (sha1, &c);
@@ -147,8 +145,6 @@ int bloom_remove(Bloom *bloom, const char *s)
     unsigned char sha1[20];
     int16_t *sha_int = (int16_t *)&sha1;
     
-    assert (s && *s);
-
     if (!bloom->counting)
         return -1;
 
@@ -169,8 +165,6 @@ int bloom_test(Bloom *bloom, const char *s)
     unsigned char sha1[20];
     int16_t *sha_int = (int16_t *)&sha1;
     
-    assert (s && *s);
-
     SHA1_Init(&c);
     SHA1_Update(&c, s, strlen(s));
     SHA1_Final (sha1, &c);

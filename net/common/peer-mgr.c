@@ -180,7 +180,6 @@ add_peer (CcnetPeerManager *manager, CcnetPeer *peer)
 {
     peer->manager = manager;
 
-    g_assert (peer->id != NULL);
     g_object_ref (peer);
     g_hash_table_insert (manager->peer_hash, peer->id, peer);
 
@@ -386,7 +385,6 @@ open_db (CcnetPeerManager *manager)
 
 static gboolean load_peer_addr_cb (CcnetDBRow *row, void *data)
 {
-    g_assert (data);
     CcnetPeer *peer = (CcnetPeer *)data;
     char *addr = (char *) ccnet_db_row_get_column_text (row, 0);
     int port = ccnet_db_row_get_column_int (row, 1);
@@ -432,7 +430,6 @@ save_peer_addr(CcnetPeerManager *manager, CcnetPeer *peer)
 
 static gboolean load_peer_role_cb (CcnetDBRow *row, void *data)
 {
-    g_assert (data);
     CcnetPeer *peer = (CcnetPeer *)data;
     char *roles = (char *) ccnet_db_row_get_column_text (row, 0);
 
@@ -566,7 +563,7 @@ ccnet_peer_manager_load_peer_by_id (CcnetPeerManager *manager,
 {
     char path[PATH_MAX];
 
-    g_assert (strlen(peer_id) == 40);
+    g_return_val_if_fail (strlen(peer_id) == 40, NULL);
 
     sprintf (path, "%s" G_DIR_SEPARATOR_S "%s", manager->peerdb_path, peer_id);
 
@@ -669,7 +666,7 @@ ccnet_peer_manager_get_peer_by_name (CcnetPeerManager *manager,
 void
 ccnet_peer_manager_add_local_peer (CcnetPeerManager *manager, CcnetPeer *peer)
 {
-    g_assert (peer->is_local);
+    g_return_if_fail (peer->is_local);
 
     peer->manager = manager;
     manager->local_peers = g_list_append (manager->local_peers, peer);
@@ -680,7 +677,7 @@ void
 ccnet_peer_manager_remove_local_peer (CcnetPeerManager *manager,
                                       CcnetPeer *peer)
 {
-    g_assert (peer->is_local);
+    g_return_if_fail (peer->is_local);
 
     manager->local_peers = g_list_remove (manager->local_peers, peer);
     g_object_unref (peer);
@@ -986,8 +983,6 @@ ccnet_peer_manager_redirect_peer (CcnetPeerManager *manager,
                                   CcnetPeer *peer,
                                   CcnetPeer *to)
 {
-    g_assert (peer && to);
-
     ccnet_debug ("[PeerMgr] redirect peer %s(%.8s) to %s(%.8s)\n",
                  peer->name, peer->id,
                  to->name, to->id);

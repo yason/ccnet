@@ -51,12 +51,9 @@ ccnet_send_msg_to_peer (CcnetSession *session, CcnetPeer *peer,
     CcnetProcessor *processor;
     CcnetProcFactory *factory = session->proc_factory;
 
-    g_assert (!peer->is_self);
-
     if (peer->net_state == PEER_CONNECTED) {
         processor = ccnet_proc_factory_create_master_processor 
             (factory, "send-msg", peer);
-        g_assert (processor);
 
         ccnet_sendmsg_proc_set_msg (CCNET_SENDMSG_PROC(processor), msg);
         /* g_signal_connect (processor, "done", */

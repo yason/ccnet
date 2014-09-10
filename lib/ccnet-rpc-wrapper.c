@@ -16,7 +16,6 @@ ccnet_create_rpc_client (CcnetClient *cclient,
     SearpcClient *rpc_client;
     CcnetrpcTransportParam *priv;
     
-    g_assert (cclient->mode == CCNET_CLIENT_SYNC);
     priv = g_new0(CcnetrpcTransportParam, 1);
     priv->session = cclient;
     priv->peer_id = g_strdup(peer_id);
@@ -56,7 +55,6 @@ ccnet_create_async_rpc_client (CcnetClient *cclient, const char *peer_id,
     SearpcClient *rpc_client;
     CcnetrpcAsyncTransportParam *async_priv;
 
-    g_assert (cclient->mode == CCNET_CLIENT_ASYNC);
     async_priv = g_new0 (CcnetrpcAsyncTransportParam, 1);
     async_priv->session = cclient;
     async_priv->peer_id = g_strdup(peer_id);

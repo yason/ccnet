@@ -73,7 +73,6 @@ ccnet_proc_factory_register_processor (CcnetProcFactory *factory,
 
     CcnetProcessorClass *proc_class = 
         (CcnetProcessorClass *)g_type_class_ref(type);
-    g_assert (proc_class->start != NULL);
     g_type_class_unref (proc_class);
 
     g_hash_table_insert (priv->proc_type_table, g_strdup (serv_name), 

@@ -180,9 +180,6 @@ ccnet_perm_manager_register_service (CcnetPermManager *mgr,
                                      const char *group,
                                      CcnetPeer *peer)
 {
-    g_assert (peer->is_local);
-    g_assert (group);
-
     if (g_hash_table_lookup (mgr->priv->serv2group, service))
         return -1;
 

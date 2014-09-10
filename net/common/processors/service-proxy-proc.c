@@ -85,7 +85,6 @@ static char* proc_name_strjoin_n (const char *seperator, int argc, char **argv)
     GString *buf;
     int i;
     char *str;
-    g_assert(argc >= 1);
 
     buf = g_string_new (argv[0]);
     for (i = 1; i < argc; ++i) {

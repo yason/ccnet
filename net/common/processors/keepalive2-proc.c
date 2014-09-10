@@ -228,7 +228,6 @@ static int keepalive2_start (CcnetProcessor *processor,
     }
 
     /* master */
-    g_assert (processor->peer->keepalive_sending == 0);
     priv->count = 0;
     processor->state = INIT;
     processor->peer->keepalive_sending = 1;

@@ -70,7 +70,6 @@ handle_update (CcnetProcessor *processor,
         char *svc_name = processor->name;
         char *ret = searpc_server_call_function (svc_name, content, clen, &ret_len);
 
-        g_assert (ret != NULL);
         if (ret_len < MAX_TRANSFER_LENGTH) {
             ccnet_processor_send_response (
                 processor, SC_SERVER_RET, SS_SERVER_RET, ret, ret_len);

@@ -491,7 +491,6 @@ add_relay (CcnetProcessor *processor, int argc, char **argv)
         if (!peer) {
             ccnet_message("Add server %.8s %s:%d\n", peer_id, addr, port);
             peer = ccnet_peer_new (peer_id);
-            g_assert (peer);
             ccnet_peer_manager_add_peer (mgr, peer);
             ccnet_peer_manager_set_peer_public_addr (mgr, peer, addr, port);
             ccnet_peer_manager_add_role (mgr, peer, "MyRelay");
@@ -518,7 +517,6 @@ add_relay (CcnetProcessor *processor, int argc, char **argv)
         peer = ccnet_peer_manager_get_peer (mgr, peer_id);
         if (!peer) {
             peer = ccnet_peer_new (peer_id);
-            g_assert (peer);
             ccnet_peer_manager_add_peer (mgr, peer);
         }
 
@@ -690,7 +688,6 @@ add_peer (CcnetProcessor *processor, int argc, char **argv)
         peer = ccnet_peer_manager_get_peer (mgr, peer_id);
         if (!peer) {
             peer = ccnet_peer_new (peer_id);
-            g_assert (peer);
             ccnet_peer_manager_add_peer (mgr, peer);
         }
 
@@ -722,7 +719,6 @@ add_peer (CcnetProcessor *processor, int argc, char **argv)
         }
 
         peer = ccnet_peer_new (peer_id);
-        g_assert (peer);
         ccnet_peer_manager_add_peer (mgr, peer);
         if (role)
             ccnet_peer_manager_add_role (mgr, peer, role);
@@ -988,7 +984,6 @@ add_member (CcnetProcessor *processor, int argc, char **argv)
     peer = ccnet_peer_manager_get_peer (mgr, peer_id);
     if (!peer) {
         peer = ccnet_peer_new (peer_id);
-        g_assert (peer);
         ccnet_peer_manager_add_peer (mgr, peer);
     }
     if (addr)
@@ -1078,7 +1073,6 @@ add_master (CcnetProcessor *processor, int argc, char **argv)
     peer = ccnet_peer_manager_get_peer (mgr, peer_id);
     if (!peer) {
         peer = ccnet_peer_new (peer_id);
-        g_assert (peer);
         ccnet_peer_manager_add_peer (mgr, peer);
     }
 

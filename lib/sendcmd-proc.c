@@ -53,7 +53,6 @@ static int
 send_cmd_start (CcnetProcessor *processor, int argc, char **argv)
 {
     char buf[256];
-    int len;
     CcnetSendcmdProcPriv *priv = GET_PRIV (processor);
 
     priv->persist = 0;
@@ -69,11 +68,10 @@ send_cmd_start (CcnetProcessor *processor, int argc, char **argv)
         argc--; argv++;
     }
     if (priv->persist) {
-        len = snprintf (buf, 256, "receive-cmd -p");
+        snprintf (buf, 256, "receive-cmd -p");
     } else {
-        len = snprintf (buf, 256, "receive-cmd");
+        snprintf (buf, 256, "receive-cmd");
     }
-    g_assert(len < 256);
     ccnet_client_send_request (processor->session,
                                REQUEST_ID (processor->id), buf);
     processor->state = REQUEST_SENT;
@@ -96,7 +94,6 @@ static void handle_response (CcnetProcessor *processor,
 
     switch (processor->state) {
     case REQUEST_SENT:
-        g_assert (code[0] == '2');
         processor->state = CONNECTED;
         return;
 

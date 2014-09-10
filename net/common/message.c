@@ -20,8 +20,8 @@ ccnet_message_new_full (const char *from,
 {
     CcnetMessage *message = g_new0 (CcnetMessage, 1);
 
-    g_assert (flags >= 0);
-    g_assert (from != NULL && to != NULL && app != NULL);
+    g_return_val_if_fail (flags >= 0, NULL);
+    g_return_val_if_fail (from != NULL && to != NULL && app != NULL, NULL);
 
     message->flags = flags;
     memcpy (message->from, from, 40);

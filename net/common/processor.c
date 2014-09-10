@@ -66,7 +66,6 @@ int ccnet_processor_start (CcnetProcessor *processor, int argc, char **argv)
     /* set this value to now even if this is a master processor and
        has not received any packet yet for simplifying the keepalive
        logic. */
-    g_assert (processor->start_time == 0);
 
     time_t now = time(NULL);
     processor->start_time = now;
@@ -467,8 +466,6 @@ ccnet_processor_thread_create (CcnetProcessor *processor,
                                void *data)
 {
     ProcThreadData *tdata;
-
-    g_assert (job_mgr || processor->session->job_mgr);
 
     tdata = g_new(ProcThreadData, 1);
     tdata->proc = processor;

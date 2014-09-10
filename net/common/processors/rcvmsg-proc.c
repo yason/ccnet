@@ -54,6 +54,12 @@ static void handle_update (CcnetProcessor *processor,
         ccnet_message_unref (msg);
     } else {
         msg = ccnet_message_from_string (content, clen);
+        if (!msg) {
+            g_warning ("Wrong message format.\n");
+            ccnet_processor_done (processor, FALSE);
+            return;
+        }
+
         msg->rtime = time(NULL);
         ccnet_debug ("[msg] Received a message : %s - %.10s\n", 
                      msg->app, msg->body);

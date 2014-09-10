@@ -89,7 +89,7 @@ void start_keepalive (CcnetPeer *peer)
 
 static void on_peer_connected (CcnetPeer *peer, CcnetPacketIO *io)
 {
-    g_assert (peer->net_state == PEER_DOWN);
+    g_return_if_fail (peer->net_state == PEER_DOWN);
 
     ccnet_peer_set_io (peer, io);
     ccnet_peer_set_net_state (peer, PEER_CONNECTED);
@@ -256,8 +256,8 @@ myHandshakeDoneCB (CcnetHandshake *handshake,
         g_object_ref (peer);
     } else {
         /* incoming */
-        if (peer_id == NULL) {
-            ccnet_warning ("Unknown peer (no-id) connecting\n");
+        if (!peer_id_valid (peer_id)) {
+            ccnet_warning ("Invalid peer (no-id) connecting\n");
             ccnet_packet_io_free (io);
             return;
         }

@@ -32,7 +32,6 @@ release_resource(CcnetProcessor *processor)
 {
     CcnetAsyncRpcProcPriv *priv = GET_PRIV (processor);
     g_free (priv->fcall_str);
-    g_assert (priv->buf == NULL);
 
     CCNET_PROCESSOR_CLASS (ccnet_async_rpc_proc_parent_class)->release_resource (processor);
 }

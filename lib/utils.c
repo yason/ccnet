@@ -1537,7 +1537,6 @@ ccnet_object_type_from_id (const char *object_id)
 
     if ( !(ptr = strchr(object_id, '/')) )
         return NULL;
-    g_assert (ptr != object_id); /* object_id should not start with '/' */
 
     return g_strndup(object_id, ptr - object_id);
 }

@@ -102,6 +102,11 @@ static void handle_response (CcnetProcessor *processor,
         /* message notification. */
         if (code[0] == '3' && code[2] == '0') {
             msg = ccnet_message_from_string (content, clen);
+            if (!msg) {
+                g_warning ("Wrong message format.\n");
+                ccnet_processor_done (processor, FALSE);
+                break;
+            }
             if (proc->message_got_cb)
                 proc->message_got_cb (msg, proc->cb_data);
             g_signal_emit (proc, signals[RECV_MSG_SIG], 0, msg);

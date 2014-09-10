@@ -54,12 +54,12 @@ canReadWrapper (struct bufferevent *e, void *user_data)
     ccnet_packet *packet;
     uint32_t len;
 
-    g_assert (sizeof(ccnet_header) == CCNET_PACKET_LENGTH_HEADER);
+    g_return_if_fail (sizeof(ccnet_header) == CCNET_PACKET_LENGTH_HEADER);
 
     c->handling = 1;
 
     /* We have set up the low watermark. The following must be true. */
-    g_assert (EVBUFFER_LENGTH (e->input) >= CCNET_PACKET_LENGTH_HEADER);
+    g_return_if_fail (EVBUFFER_LENGTH (e->input) >= CCNET_PACKET_LENGTH_HEADER);
 
     if (c->canRead == NULL) {
         c->handling = 0;
@@ -159,9 +159,6 @@ ccnet_packet_io_new_incoming (CcnetSession             *session,
                               struct sockaddr_storage  *addr,
                               evutil_socket_t socket)
 {
-    g_assert (session);
-    g_assert (socket >= 0);
-
     return ccnet_packet_io_new (session, addr, TRUE, socket);
 }
 
@@ -215,9 +212,6 @@ ccnet_packet_io_free (CcnetPacketIO *io)
 CcnetSession*
 ccnet_packet_io_get_session (CcnetPacketIO *io)
 {
-    g_assert (io);
-    g_assert (io->session);
-
     return io->session;
 }
 

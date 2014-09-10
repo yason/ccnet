@@ -285,7 +285,7 @@ ccnet_db_foreach_selected_row (CcnetDB *db, const char *sql,
 const char *
 ccnet_db_row_get_column_text (CcnetDBRow *row, guint32 idx)
 {
-    g_assert (idx < ResultSet_getColumnCount(row->res));
+    g_return_val_if_fail (idx < ResultSet_getColumnCount(row->res), NULL);
 
     return ResultSet_getString (row->res, idx+1);
 }
@@ -293,7 +293,7 @@ ccnet_db_row_get_column_text (CcnetDBRow *row, guint32 idx)
 int
 ccnet_db_row_get_column_int (CcnetDBRow *row, guint32 idx)
 {
-    g_assert (idx < ResultSet_getColumnCount(row->res));
+    g_return_val_if_fail (idx < ResultSet_getColumnCount(row->res), -1);
 
     return ResultSet_getInt (row->res, idx+1);
 }
@@ -301,7 +301,7 @@ ccnet_db_row_get_column_int (CcnetDBRow *row, guint32 idx)
 gint64
 ccnet_db_row_get_column_int64 (CcnetDBRow *row, guint32 idx)
 {
-    g_assert (idx < ResultSet_getColumnCount(row->res));
+    g_return_val_if_fail (idx < ResultSet_getColumnCount(row->res), -1);
 
     return ResultSet_getLLong (row->res, idx+1);
 }

@@ -496,8 +496,6 @@ ccnet_session_shutdown_network (CcnetSession *session)
 static int
 restart_network (CcnetSession *session)
 {
-    g_assert (session->base.net_status == NET_STATUS_DOWN);
-
     ccnet_session_start_network (session);
     if (session->base.net_status != NET_STATUS_DOWN) {
         session->start_failure = 0;
@@ -539,9 +537,6 @@ ccnet_session_register_service (CcnetSession *session,
                                 CcnetPeer *peer)
 {
     CcnetService *service = g_new0 (CcnetService, 1);
-
-    g_assert (peer->is_local);
-    g_assert (group);
 
     if (g_hash_table_lookup (session->service_hash, svc_name)) {
         ccnet_debug ("[Service] Service %s has already been registered\n",

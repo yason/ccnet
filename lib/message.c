@@ -196,7 +196,7 @@ ccnet_message_from_string (char *buf, int len)
     int ctime, rcv_time = 0;
     CcnetMessage *message;
 
-    g_assert (buf[len-1] == '\0');
+    g_return_val_if_fail (buf[len-1] == '\0', NULL);
 
     p = buf + 1;
     while (*p != ' ' && *p) ++p;
@@ -208,7 +208,7 @@ ccnet_message_from_string (char *buf, int len)
 
     from_id = ++p;
     p += 40;
-    g_assert (*p == ' ');
+    g_return_val_if_fail (*p == ' ', NULL);
     *p = '\0';
 
     to_id = ++p;
@@ -216,12 +216,12 @@ ccnet_message_from_string (char *buf, int len)
         p += 40;                /* SHA-1 */
     else
         p += 36;                /* UUID */
-    g_assert (*p == ' ');
+    g_return_val_if_fail (*p == ' ', NULL);
     *p = '\0';
 
     msg_id = ++p;
     p += 36;
-    g_assert (*p == ' ');
+    g_return_val_if_fail (*p == ' ', NULL);
     *p++ = '\0';
 
     end = strchr (p, ' ');

@@ -39,7 +39,7 @@ ccnet_register_service (CcnetClient *client,
                         RegisterServiceCB cb)
 {
     char buf[512];
-    g_assert (group);
+    g_return_if_fail (group);
 
     ccnet_proc_factory_register_processor (client->proc_factory, 
                                            service,
@@ -131,36 +131,30 @@ void ccnet_send_command (CcnetClient *client, const char *command,
  */
 void ccnet_add_peer (CcnetClient *client, const char *id, const char *addr)
 {
-    int ret;
     char buf[256];
     if (id == NULL || strlen(id) != 40 || addr == NULL)
         return;
 
-    ret = snprintf (buf, 256, "add-peer --id %s --addr %s", id, addr);
-    g_assert (ret < 256);
+    snprintf (buf, 256, "add-peer --id %s --addr %s", id, addr);
     ccnet_send_command (client, buf, NULL, NULL);
 }
 
 void ccnet_connect_peer (CcnetClient *client, const char *id)
 {
-    int ret;
     char buf[256];
     if (id == NULL || strlen(id) != 40)
         return;
 
-    ret = snprintf (buf, 256, "connect %s", id);
-    g_assert (ret < 256);
+    snprintf (buf, 256, "connect %s", id);
     ccnet_send_command (client, buf, NULL, NULL);
 }
 
 void ccnet_disconnect_peer (CcnetClient *client, const char *id)
 {
-    int ret;
     char buf[256];
     if (id == NULL || strlen(id) != 40)
         return;
 
-    ret = snprintf (buf, 256, "disconnect %s", id);
-    g_assert (ret < 256);
+    snprintf (buf, 256, "disconnect %s", id);
     ccnet_send_command (client, buf, NULL, NULL);
 }

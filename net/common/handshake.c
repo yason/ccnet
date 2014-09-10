@@ -115,8 +115,7 @@ read_peer_id (CcnetHandshake *handshake, ccnet_packet *packet)
 
         send_ack (handshake);
         ccnet_handshake_done (handshake, TRUE);
-    } else
-        g_assert (0);
+    }
 }
 
 
@@ -151,7 +150,8 @@ canRead (ccnet_packet *packet, void *arg)
     case ID_RECEIVED:
         read_ok (handshake, packet);
         break;
-    default: g_assert(0) ;
+    default:
+        g_return_if_reached ();
     }
 }
 

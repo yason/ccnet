@@ -338,8 +338,6 @@ ccnet_processor_thread_create (CcnetProcessor *processor,
 {
     ProcThreadData *tdata;
 
-    g_assert (job_mgr || processor->session->job_mgr);
-
     tdata = g_new(ProcThreadData, 1);
     tdata->proc = processor;
     tdata->func = func;
