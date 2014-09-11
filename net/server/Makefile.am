@@ -99,7 +99,7 @@ ccnet_server_SOURCES = ccnet-server.c \
 	server-session.c user-mgr.c group-mgr.c org-mgr.c \
 	$(common_srcs)
 
-ccnet_server_LDADD = -levent $(top_builddir)/lib/libccnetd.la \
+ccnet_server_LDADD = @LIBEVENT_LIBS@ $(top_builddir)/lib/libccnetd.la \
            @GLIB2_LIBS@ @GOBJECT_LIBS@ @SSL_LIBS@ @LIB_RT@ @LIB_UUID@ -lsqlite3 \
 	       -lpthread \
            @LIB_WS32@ @LIB_INTL@ @LIB_IPHLPAPI@ @SEARPC_LIBS@ @ZDB_LIBS@ \

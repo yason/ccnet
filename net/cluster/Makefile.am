@@ -77,7 +77,7 @@ ccnet_cserver_SOURCES = server.c \
 	../server/processors/recvlogin-proc.c ../server/processors/recvlogout-proc.c \
     $(common_srcs)
 
-ccnet_cserver_LDADD = -levent $(top_builddir)/lib/libccnetd.la \
+ccnet_cserver_LDADD = @LIBEVENT_LIBS@ $(top_builddir)/lib/libccnetd.la \
            @GLIB2_LIBS@ @GOBJECT_LIBS@ @SSL_LIBS@ @LIB_RT@ @LIB_UUID@ -lsqlite3 \
            @LIB_WS32@ @LIB_INTL@ @LIB_IPHLPAPI@ @SEARPC_LIBS@ @ZDB_LIBS@
 

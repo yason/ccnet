@@ -93,7 +93,7 @@ ccnet_SOURCES = ccnet-daemon.c \
 	$(common_srcs)
 
 
-ccnet_LDADD = -levent $(top_builddir)/lib/libccnetd.la \
+ccnet_LDADD = @LIBEVENT_LIBS@ $(top_builddir)/lib/libccnetd.la \
            @GLIB2_LIBS@ @GOBJECT_LIBS@ @SSL_LIBS@ @LIB_RT@ @LIB_UUID@ -lsqlite3 \
            @LIB_WS32@ @LIB_INTL@ @LIB_IPHLPAPI@ @SEARPC_LIBS@
 
@@ -104,7 +104,7 @@ noinst_PROGRAMS = ccnet-test
 
 ccnet_test_SOURCES = ccnet-test.c daemon-session.c $(common_srcs)
 
-ccnet_test_LDADD = -levent $(top_builddir)/lib/libccnetd.la \
+ccnet_test_LDADD = @LIBEVENT_LIBS@ $(top_builddir)/lib/libccnetd.la \
 	@GLIB2_LIBS@ @GOBJECT_LIBS@ @SSL_LIBS@ @LIB_RT@ @LIB_UUID@ -lsqlite3 \
 	@LIB_WS32@ @LIB_INTL@ @LIB_IPHLPAPI@ @SEARPC_LIBS@
 
